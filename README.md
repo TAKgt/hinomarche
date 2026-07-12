@@ -1,0 +1,113 @@
+# ヒノマルシェ (hinomarche.com)
+
+日本とのかかわりが深い商品を中心に集めたセレクト型アフィリエイトサイト。
+楽天市場・AmazonのAPIから商品を自動収集し、Claude AIが「日本関連度」を判定根拠つきでスコア化して掲載する。
+低スコア商品もスコアを明示して掲載し、「日本度は高いが価格も高い」「日本度は低いが手頃」の
+2軸でユーザーが選べるのがコンセプト(※これは運営側の意図。サイト上でユーザーに向けて
+「選ぶのはあなた」等と説明する文言は載せない方針)。
+低スコア商品の表示は `SHOW_LOW_TIER=false` でいつでもオフにできる。
+
+※ コピーライティング注意: 「日本製の商品**だけ**を集めた」のような断定表現は使わない。
+実際の生産国はAI推定であり、断定すると虚偽表示になるリスクがある。
+
+- 設計書: `~/Claude/japan-ec-site/設計書.md`
+- スタック: Next.js (App Router) + Tailwind v4 + Supabase + Claude Haiku
+
+## いますぐ動かす(デモモード)
+
+APIキーが一切なくても、サンプル商品12件で動作確認できます。
+
+```bash
+npm install
+npm run dev
+# http://localhost:3000
+```
+
+環境変数が未設定のときは自動的にデモモード(`src/data/demo-products.json` を表示)になります。
+
+## 本番セットアップ手順
+
+### 1. 環境変数を用意
+
+```bash
+cp .env.example .env.local
+```
+
+`.env.example` の各項目のコメントに、キーの入手先を書いてあります。
+
+| キー | 入手先 |
+|---|---|
+| `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | supabase.com → New Project → Settings > API(service_roleの方) |
+| `RAKUTEN_APP_ID` | webservice.rakuten.co.jp → アプリID発行(楽天会員なら即時) |
+| `MOSHIMO_A_ID` | もしも管理画面 → 楽天市場プロモーション → どこでもリンクのa_id |
+| `AMAZON_CREDENTIAL_ID` / `AMAZON_CREDENTIAL_SECRET` / `AMAZON_PARTNER_TAG` | アソシエイト管理画面 → ツール → Creators API(旧PA-APIは2026年5月廃止) |
+| `ANTHROPIC_API_KEY` | platform.claude.com → API Keys |
+| `CRON_SECRET` | ランダムな長い文字列を自分で生成(例: `openssl rand -hex 32`) |
+
+### 2. Supabaseにテーブルを作る
+
+Supabaseダッシュボード → SQL Editor に `supabase/schema.sql` の中身を貼り付けて実行。
+categories(kitchen有効、towel/stationery無効)まで自動で入ります。
+
+### 3. 商品を収集する
+
+```bash
+npm run ingest
+```
+
+カテゴリの検索キーワードで楽天・Amazonを検索 → 新商品をAI判定 → 判定済み商品を自動公開(低スコアも公開)。
+1回の実行で判定するのは新規30件まで(`INGEST_MAX_NEW`で変更可)。
+`npm run dev` で実データが表示されるようになります。
+
+### 4. Vercelにデプロイ
+
+1. GitHubにpush → vercel.com でImport
+2. 環境変数(`.env.local` と同じもの)をVercelのプロジェクト設定に登録
+3. `vercel.json` のCron設定により、毎日 03:00 JST に `/api/cron/ingest` が自動実行される
+   (VercelがCRON_SECRETを`Authorization`ヘッダーに付けて叩く)
+4. Settings > Domains で `hinomarche.com` を追加し、ドメイン側のネームサーバー/DNSを案内どおり設定
+
+※ Vercel無料(Hobby)プランはCronが1日1回・関数実行時間に制限があります。
+収集が時間内に終わらない場合は `INGEST_MAX_NEW` を小さくするか、ローカルで `npm run ingest` を回してください。
+
+## カテゴリの増やし方(コード変更不要)
+
+SupabaseのSQL Editorで categories を操作するだけ:
+
+```sql
+-- フェーズ2カテゴリを有効化
+update categories set is_active = true where slug in ('towel', 'stationery');
+
+-- 検索キーワードを追加
+update categories
+set search_keywords = search_keywords || '["山中漆器"]'::jsonb
+where slug = 'kitchen';
+```
+
+次回の収集(Cronまたは `npm run ingest`)から反映されます。
+
+## 構成
+
+```
+src/
+  app/                  ページ(トップ / category / product / about / api/cron/ingest)
+  components/           ProductCard, ScoreRing(日の丸スコアゲージ)
+  lib/
+    db.ts               データ層(Supabase / デモモード自動切替)
+    rakuten.ts          楽天市場API + もしもリンク生成
+    amazon.ts           Amazon PA-API v5(SigV4署名を自前実装)
+    judge.ts            Claude Haiku 日本関連度判定(構造化出力)
+    ingest.ts           収集パイプライン
+  data/demo-products.json  デモ商品
+scripts/ingest.ts       ローカル収集: npm run ingest
+supabase/schema.sql     DBスキーマ(SQL Editorで実行)
+vercel.json             日次Cron設定
+```
+
+## 法令対応で守っていること(変更時に注意)
+
+- スコアには必ず「**AI推定**」と明記し、判定根拠を添える(景品表示法・優良誤認の回避)
+- 「日本製」と断定表記するのは evidence_type が産地表記のときだけ
+- 価格には取得日時を表示(モール規約の価格鮮度ルール)
+- 全ページフッターにアフィリエイト参加の明示(ステマ規制対応)
+- 低スコア商品も掲載するが、スコアと根拠(例: 「生産国: 中国と明記」)を必ず表示する

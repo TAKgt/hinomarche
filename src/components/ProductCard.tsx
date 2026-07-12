@@ -1,0 +1,60 @@
+import Link from "next/link";
+import type { Product } from "@/lib/types";
+import { formatPrice, SOURCE_LABEL } from "@/lib/format";
+import { ScoreRing } from "./ScoreRing";
+import { CheckMarksCompact } from "./CheckMarks";
+
+export function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
+  return (
+    <Link
+      href={`/product/${product.id}`}
+      className={`group block border border-line bg-white/60 hover:border-hinomaru hover:shadow-[0_8px_24px_rgba(34,31,26,0.08)] transition-all duration-300 rise rise-${Math.min(index % 4 + 1, 4)}`}
+    >
+      <div className="relative aspect-square overflow-hidden bg-washi-deep">
+        {product.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- 外部モール画像はドメインが多岐に渡るためimgで表示
+          <img
+            src={product.imageUrl}
+            alt={product.title}
+            loading="lazy"
+            className="size-full object-contain transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className="size-full flex items-center justify-center p-6">
+            <span className="tategaki font-mincho text-sumi-soft/70 text-sm max-h-full overflow-hidden">
+              {product.title.slice(0, 12)}
+            </span>
+          </div>
+        )}
+        <span className="absolute left-0 top-3 bg-sumi text-washi text-[11px] tracking-wider px-2.5 py-1">
+          {SOURCE_LABEL[product.source]}
+        </span>
+      </div>
+
+      <div className="p-4 flex gap-3">
+        <div className="shrink-0 pt-0.5">
+          <ScoreRing score={product.score} size={52} />
+          <p className="mt-1 text-center text-[10px] text-sumi-soft leading-tight">
+            AI日本度
+          </p>
+        </div>
+        <div className="min-w-0">
+          <h3 className="text-sm font-medium leading-snug line-clamp-2 group-hover:text-hinomaru-deep transition-colors">
+            {product.title}
+          </h3>
+          <p className="mt-1.5 font-mincho text-lg font-semibold">
+            {formatPrice(product.price)}
+          </p>
+          {product.checks && (
+            <p className="mt-1">
+              <CheckMarksCompact checks={product.checks} />
+            </p>
+          )}
+          <p className="mt-1 text-xs text-sumi-soft line-clamp-2">
+            {product.evidenceText}
+          </p>
+        </div>
+      </div>
+    </Link>
+  );
+}
