@@ -304,6 +304,9 @@ export async function getUnjudgedProducts(
     .from("products")
     .select("*")
     .eq("is_published", false)
+    .order("featured_score", { ascending: false })
+    .order("demand_score", { ascending: false })
+    .order("search_rank", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true })
     .limit(limit);
   if (error) throw error;
