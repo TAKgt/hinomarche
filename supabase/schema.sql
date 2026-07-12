@@ -24,6 +24,13 @@ create table products (
   affiliate_url text not null,
   item_url text,
   category_slug text not null references categories(slug),
+  review_count integer,
+  review_average numeric(3,2),
+  affiliate_rate numeric(5,2),
+  search_rank integer,
+  demand_score integer not null default 0 check (demand_score between 0 and 100),
+  featured_score integer not null default 0 check (featured_score between 0 and 100),
+  last_seen_at timestamptz,
   is_published boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -46,6 +53,7 @@ create table judgments (
 );
 
 create index idx_products_category on products (category_slug) where is_published;
+create index idx_products_featured on products (is_published, featured_score desc, demand_score desc, updated_at desc);
 create index idx_judgments_product on judgments (product_id, judged_at desc);
 
 -- 最新の判定を結合したビュー(サイト表示はこれを読む)

@@ -37,6 +37,12 @@ export interface Product {
   priceUpdatedAt: string | null;
   affiliateUrl: string;
   categorySlug: string;
+  reviewCount: number | null;
+  reviewAverage: number | null;
+  affiliateRate: number | null;
+  searchRank: number | null;
+  demandScore: number;
+  featuredScore: number;
   score: number;
   tier: Tier;
   evidenceType: EvidenceType;
@@ -58,6 +64,10 @@ export interface RawProduct {
   affiliateUrl: string;
   itemUrl: string;
   categorySlug: string;
+  reviewCount?: number | null;
+  reviewAverage?: number | null;
+  affiliateRate?: number | null;
+  searchRank?: number | null;
 }
 
 export interface Judgment {

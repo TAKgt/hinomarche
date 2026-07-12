@@ -51,7 +51,7 @@ export async function searchRakuten(
     format: "json",
     formatVersion: "2",
     elements:
-      "itemCode,itemName,itemCaption,itemUrl,itemPrice,mediumImageUrls,shopName",
+      "itemCode,itemName,itemCaption,itemUrl,itemPrice,mediumImageUrls,shopName,reviewCount,reviewAverage,affiliateRate",
   });
 
   // 楽天APIの「許可されたWebサイト」制限に対応: 登録ドメインをRefererとして名乗る。
@@ -68,7 +68,7 @@ export async function searchRakuten(
   // formatVersion=2なら商品オブジェクトの配列、非対応時は {Item: {...}} でラップされる
   const items = (json.Items ?? []).map((it: any) => it.Item ?? it);
 
-  return items.map((item: any): RawProduct => {
+  return items.map((item: any, index: number): RawProduct => {
     const imageUrl: string | null =
       item.mediumImageUrls?.[0]?.replace("?_ex=128x128", "?_ex=400x400") ?? null;
     return {
@@ -83,6 +83,10 @@ export async function searchRakuten(
       affiliateUrl: wrapMoshimoRakuten(item.itemUrl),
       itemUrl: item.itemUrl,
       categorySlug,
+      reviewCount: item.reviewCount ?? null,
+      reviewAverage: item.reviewAverage ?? null,
+      affiliateRate: item.affiliateRate ?? null,
+      searchRank: index + 1,
     };
   });
 }

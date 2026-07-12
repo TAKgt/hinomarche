@@ -62,6 +62,17 @@ export default function AboutPage() {
 
       <section className="mt-12 space-y-4 leading-relaxed">
         <h2 className="font-mincho text-xl font-semibold border-l-4 border-hinomaru pl-3">
+          注目順の考え方
+        </h2>
+        <p>
+          TOPページやカテゴリの「注目順」では、AI日本度の高さを前提に、モール内の検索順位、
+          レビュー件数、レビュー平均、紹介料率などの市場性シグナルも加味しています。
+          日本度が高くても、購入ニーズが弱いと推定される商品は後ろに回ることがあります。
+        </p>
+      </section>
+
+      <section className="mt-12 space-y-4 leading-relaxed">
+        <h2 className="font-mincho text-xl font-semibold border-l-4 border-hinomaru pl-3">
           運営情報
         </h2>
         <ul className="space-y-2 text-sm">

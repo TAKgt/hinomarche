@@ -91,7 +91,7 @@ export async function searchAmazon(
   }
   const json = await res.json();
 
-  return (json.searchResult?.items ?? []).map((item: any): RawProduct => {
+  return (json.searchResult?.items ?? []).map((item: any, index: number): RawProduct => {
     const features: string[] = item.itemInfo?.features?.displayValues ?? [];
     const amount = item.offersV2?.listings?.[0]?.price?.money?.amount;
     return {
@@ -106,6 +106,7 @@ export async function searchAmazon(
       affiliateUrl: item.detailPageURL, // partnerTag付きで返る
       itemUrl: item.detailPageURL,
       categorySlug,
+      searchRank: index + 1,
     };
   });
 }

@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { getCategories, getPublishedProducts } from "@/lib/db";
+import { getCategories, getTopProducts } from "@/lib/db";
 import { ProductCard } from "@/components/ProductCard";
 
 export default async function Home() {
   const [products, categories] = await Promise.all([
-    getPublishedProducts({ sort: "score", limit: 12 }),
+    getTopProducts(12),
     getCategories(),
   ]);
 
@@ -40,10 +40,10 @@ export default async function Home() {
         <div className="flex items-end justify-between mb-8">
           <div>
             <p className="text-xs tracking-[0.35em] text-hinomaru font-medium">
-              JAPAN SCORE
+              FEATURED
             </p>
             <h2 className="mt-2 font-mincho text-2xl md:text-3xl font-semibold">
-              日本度の高い商品
+              日本度が高い注目商品
             </h2>
           </div>
           <Link

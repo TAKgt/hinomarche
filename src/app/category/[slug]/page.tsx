@@ -6,6 +6,7 @@ import type { Tier } from "@/lib/types";
 import { ProductCard } from "@/components/ProductCard";
 
 const SORTS: { key: SortKey; label: string }[] = [
+  { key: "featured", label: "注目順" },
   { key: "score", label: "日本度順" },
   { key: "new", label: "新着順" },
   { key: "price_asc", label: "価格が安い順" },
@@ -26,7 +27,7 @@ type Props = {
 
 function buildQuery(sort: SortKey, tier: Tier | undefined): string {
   const params = new URLSearchParams();
-  if (sort !== "score") params.set("sort", sort);
+  if (sort !== "featured") params.set("sort", sort);
   if (tier) params.set("tier", tier);
   const qs = params.toString();
   return qs ? `?${qs}` : "";
@@ -47,7 +48,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const { sort: sortParam, tier: tierParam } = await searchParams;
   const sort: SortKey = SORTS.some((s) => s.key === sortParam)
     ? (sortParam as SortKey)
-    : "score";
+    : "featured";
   const tier: Tier | undefined = ["high", "mid", "low"].includes(tierParam ?? "")
     ? (tierParam as Tier)
     : undefined;

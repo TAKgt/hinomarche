@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import type { Category, Judgment, Product, RawProduct, Tier } from "./types";
+import { calculateDemandScore, calculateFeaturedScore } from "./market";
 import demoProducts from "../data/demo-products.json";
 
 /**
@@ -78,6 +79,12 @@ function rowToProduct(row: any): Product {
     priceUpdatedAt: row.price_updated_at,
     affiliateUrl: row.affiliate_url,
     categorySlug: row.category_slug,
+    reviewCount: row.review_count ?? null,
+    reviewAverage: row.review_average ?? null,
+    affiliateRate: row.affiliate_rate ?? null,
+    searchRank: row.search_rank ?? null,
+    demandScore: row.demand_score ?? 0,
+    featuredScore: row.featured_score ?? row.score ?? 0,
     score: row.score,
     tier: row.tier,
     evidenceType: row.evidence_type,
@@ -109,7 +116,16 @@ export async function getCategories(): Promise<Category[]> {
   }));
 }
 
-export type SortKey = "score" | "price_asc" | "price_desc" | "new";
+export type SortKey = "featured" | "score" | "price_asc" | "price_desc" | "new";
+
+function productFeaturedScore(product: Product): number {
+  return product.featuredScore ?? calculateFeaturedScore(product.score, product.demandScore ?? 0);
+}
+
+function timeValue(value: string | null): number {
+  const parsed = Date.parse(value ?? "");
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
 
 export async function getPublishedProducts(opts: {
   categorySlug?: string;
@@ -117,7 +133,7 @@ export async function getPublishedProducts(opts: {
   tier?: Tier;
   limit?: number;
 }): Promise<Product[]> {
-  const { categorySlug, sort = "score", tier, limit = 60 } = opts;
+  const { categorySlug, sort = "featured", tier, limit = 60 } = opts;
 
   if (isDemoMode()) {
     let items = demoProducts as unknown as Product[];
@@ -127,6 +143,12 @@ export async function getPublishedProducts(opts: {
     items = [...items].sort((a, b) => {
       if (sort === "price_asc") return (a.price ?? 0) - (b.price ?? 0);
       if (sort === "price_desc") return (b.price ?? 0) - (a.price ?? 0);
+      if (sort === "new") {
+        return timeValue(b.priceUpdatedAt) - timeValue(a.priceUpdatedAt);
+      }
+      if (sort === "featured") {
+        return productFeaturedScore(b) - productFeaturedScore(a) || b.score - a.score;
+      }
       return b.score - a.score;
     });
     return items.slice(0, limit);
@@ -143,11 +165,28 @@ export async function getPublishedProducts(opts: {
   if (sort === "price_asc") query = query.order("price", { ascending: true });
   else if (sort === "price_desc") query = query.order("price", { ascending: false });
   else if (sort === "new") query = query.order("created_at", { ascending: false });
-  else query = query.order("score", { ascending: false });
+  else if (sort === "featured") {
+    query = query
+      .order("featured_score", { ascending: false })
+      .order("demand_score", { ascending: false })
+      .order("score", { ascending: false });
+  } else query = query.order("score", { ascending: false });
 
   const { data, error } = await query;
   if (error) throw error;
   return data.map(rowToProduct);
+}
+
+export async function getTopProducts(limit = 12): Promise<Product[]> {
+  const high = await getPublishedProducts({ sort: "featured", tier: "high", limit });
+  if (high.length >= limit) return high;
+
+  const mid = await getPublishedProducts({
+    sort: "featured",
+    tier: "mid",
+    limit: limit - high.length,
+  });
+  return [...high, ...mid];
 }
 
 export async function getProduct(id: string): Promise<Product | null> {
@@ -167,10 +206,31 @@ export async function getProduct(id: string): Promise<Product | null> {
   return data ? rowToProduct(data) : null;
 }
 
+async function latestJudgmentScore(
+  db: SupabaseClient,
+  productId: string
+): Promise<number | null> {
+  const { data, error } = await db
+    .from("judgments")
+    .select("score")
+    .eq("product_id", productId)
+    .order("judged_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.score ?? null;
+}
+
 /** 収集パイプライン用: 商品をupsertし、新規作成ならidを返す(既存なら価格だけ更新してnull) */
 export async function upsertProduct(raw: RawProduct): Promise<string | null> {
   const now = new Date().toISOString();
   const db = adminSupabase();
+  const demandScore = calculateDemandScore({
+    searchRank: raw.searchRank,
+    reviewCount: raw.reviewCount,
+    reviewAverage: raw.reviewAverage,
+    affiliateRate: raw.affiliateRate,
+  });
 
   const { data: existing, error: selErr } = await db
     .from("products")
@@ -181,6 +241,7 @@ export async function upsertProduct(raw: RawProduct): Promise<string | null> {
   if (selErr) throw selErr;
 
   if (existing) {
+    const score = await latestJudgmentScore(db, existing.id);
     const { error } = await db
       .from("products")
       .update({
@@ -188,6 +249,13 @@ export async function upsertProduct(raw: RawProduct): Promise<string | null> {
         price_updated_at: now,
         affiliate_url: raw.affiliateUrl,
         image_url: raw.imageUrl,
+        review_count: raw.reviewCount ?? null,
+        review_average: raw.reviewAverage ?? null,
+        affiliate_rate: raw.affiliateRate ?? null,
+        search_rank: raw.searchRank ?? null,
+        demand_score: demandScore,
+        featured_score: score == null ? 0 : calculateFeaturedScore(score, demandScore),
+        last_seen_at: now,
         updated_at: now,
       })
       .eq("id", existing.id);
@@ -210,6 +278,13 @@ export async function upsertProduct(raw: RawProduct): Promise<string | null> {
       affiliate_url: raw.affiliateUrl,
       item_url: raw.itemUrl,
       category_slug: raw.categorySlug,
+      review_count: raw.reviewCount ?? null,
+      review_average: raw.reviewAverage ?? null,
+      affiliate_rate: raw.affiliateRate ?? null,
+      search_rank: raw.searchRank ?? null,
+      demand_score: demandScore,
+      featured_score: 0,
+      last_seen_at: now,
       is_published: false,
     })
     .select("id")
@@ -246,6 +321,10 @@ export async function getUnjudgedProducts(
       affiliateUrl: row.affiliate_url,
       itemUrl: row.item_url ?? "",
       categorySlug: row.category_slug,
+      reviewCount: row.review_count ?? null,
+      reviewAverage: row.review_average ?? null,
+      affiliateRate: row.affiliate_rate ?? null,
+      searchRank: row.search_rank ?? null,
     },
   }));
 }
@@ -271,9 +350,20 @@ export async function saveJudgment(productId: string, j: Judgment): Promise<void
   });
   if (error) throw error;
 
+  const { data: product, error: productErr } = await db
+    .from("products")
+    .select("demand_score")
+    .eq("id", productId)
+    .single();
+  if (productErr) throw productErr;
+
   const { error: pubErr } = await db
     .from("products")
-    .update({ is_published: true, updated_at: new Date().toISOString() })
+    .update({
+      is_published: true,
+      featured_score: calculateFeaturedScore(j.score, product.demand_score ?? 0),
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", productId);
   if (pubErr) throw pubErr;
 }
