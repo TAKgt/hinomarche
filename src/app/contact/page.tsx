@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ContactForm } from "./ContactForm";
 
 export const metadata: Metadata = {
   title: "お問い合わせ",
@@ -6,8 +7,6 @@ export const metadata: Metadata = {
 };
 
 export default function ContactPage() {
-  const email = process.env.NEXT_PUBLIC_CONTACT_EMAIL;
-
   return (
     <div className="mx-auto max-w-3xl px-5 py-14">
       <p className="text-xs tracking-[0.35em] text-hinomaru font-medium uppercase">
@@ -19,25 +18,12 @@ export default function ContactPage() {
 
       <section className="mt-10 space-y-4 leading-relaxed">
         <p className="text-sm text-sumi-soft leading-relaxed">
-          当サイトへのお問い合わせは、下記の窓口までお願いいたします。
+          当サイトへのお問い合わせは、下記のフォームからお願いいたします。
           内容を確認のうえ、必要に応じてご返信いたします(すべてのお問い合わせへの
           返信をお約束するものではありません)。
         </p>
 
-        {email ? (
-          <p className="border border-line bg-white/60 p-5 text-center">
-            <a
-              href={`mailto:${email}`}
-              className="font-mincho text-lg text-hinomaru hover:underline"
-            >
-              {email}
-            </a>
-          </p>
-        ) : (
-          <p className="border border-line bg-white/60 p-5 text-center text-sm text-sumi-soft">
-            お問い合わせ窓口は現在準備中です。
-          </p>
-        )}
+        <ContactForm />
       </section>
 
       <section className="mt-10 space-y-3 leading-relaxed">

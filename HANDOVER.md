@@ -50,7 +50,8 @@ src/
     about/page.tsx          サイト趣旨+判定基準の説明
     disclaimer/page.tsx     免責事項(訴訟リスク対策の核。安易に変更しない)
     privacy/page.tsx        プライバシーポリシー(Amazonアソシエイト必須文言入り)
-    contact/page.tsx        お問い合わせ(NEXT_PUBLIC_CONTACT_EMAIL未設定時は準備中表示)
+    contact/page.tsx        お問い合わせフォーム(メールアドレスは公開しない)
+    api/contact/route.ts    フォーム送信先。service_roleで非公開テーブルに保存
     not-found.tsx           404
     sitemap.ts / robots.ts / icon.svg / opengraph-image.tsx  SEO・メタ系
     api/cron/ingest/route.ts Vercel Cron入口(Authorization: Bearer CRON_SECRET必須)
@@ -156,7 +157,6 @@ supabase/
 | CRON_SECRET | Cronエンドポイント認証(VercelがAuthorizationヘッダーに付ける) |
 | INGEST_MAX_NEW | 1回の収集でAI判定する上限(既定30) |
 | SHOW_LOW_TIER | falseで低スコア商品を非表示(既定true) |
-| NEXT_PUBLIC_CONTACT_EMAIL | 問い合わせ先(未設定=準備中表示。サイト専用Gmail作成待ち) |
 
 **全部未設定でも動く**: デモモード(サンプル12商品)になる。UI開発はキーなしで可能。
 
@@ -202,7 +202,7 @@ supabase/
    - GitHub push → Vercelインポート → 環境変数登録 → ドメイン接続
    - CRON_SECRETをVercelに設定するとCronが認証付きで動く
    - Vercel Hobbyは関数最大300秒。収集が収まらなければINGEST_MAX_NEWを下げる
-2. サイト専用Gmail作成 → NEXT_PUBLIC_CONTACT_EMAIL設定(問い合わせページが有効になる)
+2. Supabase SQL Editorで `supabase/migrations/006_contact_messages.sql` を適用
 3. Amazon売上3件 → Creators API資格獲得(自動でAmazon商品収集開始)
 4. AI判定プロンプトのブラッシュアップ(ユーザー意向。特に根拠文の品質)
 5. 産地特集ページ(/region/燕三条 など)= SEOの本命(設計書に構想あり)

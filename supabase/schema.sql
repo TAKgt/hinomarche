@@ -52,9 +52,21 @@ create table judgments (
   judged_at timestamptz not null default now()
 );
 
+create table contact_messages (
+  id bigserial primary key,
+  name text,
+  email text,
+  topic text not null check (topic in ('correction', 'removal', 'feedback', 'other')),
+  message text not null check (char_length(message) between 10 and 3000),
+  page_url text,
+  status text not null default 'unread' check (status in ('unread', 'read', 'archived')),
+  created_at timestamptz not null default now()
+);
+
 create index idx_products_category on products (category_slug) where is_published;
 create index idx_products_featured on products (is_published, featured_score desc, demand_score desc, updated_at desc);
 create index idx_judgments_product on judgments (product_id, judged_at desc);
+create index idx_contact_messages_created_at on contact_messages (created_at desc);
 
 -- 最新の判定を結合したビュー(サイト表示はこれを読む)
 -- security_invoker=true により、anon/authenticated から見た場合も下位テーブルのRLSを適用する。
@@ -84,9 +96,12 @@ join lateral (
 alter table categories enable row level security;
 alter table products enable row level security;
 alter table judgments enable row level security;
+alter table contact_messages enable row level security;
 
 grant usage on schema public to anon, authenticated;
 grant select on categories, products, judgments, products_with_judgment to anon, authenticated;
+revoke all on contact_messages from anon, authenticated;
+revoke all on sequence contact_messages_id_seq from anon, authenticated;
 
 create policy "public read categories" on categories for select using (is_active);
 create policy "public read published products" on products for select using (is_published);

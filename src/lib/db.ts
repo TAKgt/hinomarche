@@ -367,3 +367,26 @@ export async function saveJudgment(productId: string, j: Judgment): Promise<void
     .eq("id", productId);
   if (pubErr) throw pubErr;
 }
+
+export type ContactMessageInput = {
+  name: string | null;
+  email: string | null;
+  topic: string;
+  message: string;
+  pageUrl: string | null;
+};
+
+export async function saveContactMessage(input: ContactMessageInput): Promise<void> {
+  if (isDemoMode()) {
+    throw new Error("Contact form is not configured");
+  }
+
+  const { error } = await adminSupabase().from("contact_messages").insert({
+    name: input.name,
+    email: input.email,
+    topic: input.topic,
+    message: input.message,
+    page_url: input.pageUrl,
+  });
+  if (error) throw error;
+}

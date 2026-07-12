@@ -16,7 +16,7 @@
 ## 推奨
 
 - Supabase Network Restrictionsを有効にできるプラン・運用か確認する
-- サイト専用メールを作成し、`NEXT_PUBLIC_CONTACT_EMAIL` を設定する
+- お問い合わせフォーム用の `contact_messages` テーブルを作成し、anon/authenticated へ公開権限を付けない
 - Vercelデプロイ後に `/api/cron/ingest` が認証なしで401になることを確認する
 - Vercelデプロイ後にレスポンスヘッダーを確認する
   - `X-Content-Type-Options: nosniff`
