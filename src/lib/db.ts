@@ -6,7 +6,7 @@ import demoProducts from "../data/demo-products.json";
  * データアクセス層。
  * SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY が設定されていればSupabaseを使い、
  * 未設定ならデモデータ(src/data/demo-products.json)で動作する。
- * 公開ページの読み取りは SUPABASE_ANON_KEY があればanonキーを使い、RLSを効かせる。
+ * 公開ページの読み取りは SUPABASE_ANON_KEY でRLSを効かせる。
  */
 
 export function isDemoMode(): boolean {
@@ -24,11 +24,19 @@ function showLowTier(): boolean {
 let publicClient: SupabaseClient | null = null;
 let adminClient: SupabaseClient | null = null;
 
+function publicSupabaseKey(): string {
+  if (process.env.SUPABASE_ANON_KEY) return process.env.SUPABASE_ANON_KEY;
+  if (process.env.NODE_ENV !== "production") {
+    return process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  }
+  throw new Error("SUPABASE_ANON_KEY is required in production");
+}
+
 function publicSupabase(): SupabaseClient {
   if (!publicClient) {
     publicClient = createClient(
       process.env.SUPABASE_URL!,
-      process.env.SUPABASE_ANON_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      publicSupabaseKey(),
       { auth: { persistSession: false } }
     );
   }
