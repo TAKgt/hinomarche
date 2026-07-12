@@ -10,7 +10,7 @@
 - Supabase / Vercel / GitHubアカウントでMFAを有効にする
 - Vercel Environment Variablesに `.env.local` 相当を登録する
 - 本番では `SUPABASE_ANON_KEY` を設定し、公開ページの読み取りをRLS経由にする
-- `NEXT_PUBLIC_SITE_URL=https://hinomarche.com` を設定する
+- `NEXT_PUBLIC_SITE_URL=https://www.hinomarche.com` を設定する
 - `CRON_SECRET` は十分長いランダム値にし、Vercel以外へ共有しない
 
 ## 推奨
