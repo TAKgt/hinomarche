@@ -1,14 +1,15 @@
 import type { MetadataRoute } from "next";
-
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://hinomarche.com";
+import { siteOrigin } from "@/lib/site-url";
 
 export default function robots(): MetadataRoute.Robots {
+  const baseUrl = siteOrigin();
+
   return {
     rules: {
       userAgent: "*",
       allow: "/",
       disallow: ["/api/"],
     },
-    sitemap: `${BASE_URL}/sitemap.xml`,
+    sitemap: `${baseUrl}/sitemap.xml`,
   };
 }

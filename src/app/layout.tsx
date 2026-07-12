@@ -2,16 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Shippori_Mincho, Zen_Kaku_Gothic_New } from "next/font/google";
 import { getCategories } from "@/lib/db";
+import { siteUrl } from "@/lib/site-url";
 import "./globals.css";
-
-function siteUrl(): URL {
-  const raw = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.hinomarche.com";
-  const url = new URL(raw);
-  if (url.hostname === "hinomarche.com") {
-    url.hostname = "www.hinomarche.com";
-  }
-  return url;
-}
 
 const shippori = Shippori_Mincho({
   variable: "--font-shippori",
