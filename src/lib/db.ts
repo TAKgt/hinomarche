@@ -393,3 +393,24 @@ export async function saveContactMessage(input: ContactMessageInput): Promise<vo
   });
   if (error) throw error;
 }
+
+export type OutboundClickInput = {
+  productId: string;
+  destination: "primary" | "cross";
+  merchant: "rakuten" | "amazon";
+};
+
+/**
+ * 購入導線の匿名集計用。IP、User-Agent、Cookie等は保存しない。
+ * 計測失敗で販売ページへの移動を妨げないよう、呼び出し側で例外を処理する。
+ */
+export async function recordOutboundClick(input: OutboundClickInput): Promise<void> {
+  if (isDemoMode()) return;
+
+  const { error } = await adminSupabase().from("outbound_clicks").insert({
+    product_id: input.productId,
+    destination: input.destination,
+    merchant: input.merchant,
+  });
+  if (error) throw error;
+}

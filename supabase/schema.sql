@@ -63,10 +63,20 @@ create table contact_messages (
   created_at timestamptz not null default now()
 );
 
+create table outbound_clicks (
+  id bigserial primary key,
+  product_id uuid not null references products(id) on delete cascade,
+  destination text not null check (destination in ('primary', 'cross')),
+  merchant text not null check (merchant in ('rakuten', 'amazon')),
+  clicked_at timestamptz not null default now()
+);
+
 create index idx_products_category on products (category_slug) where is_published;
 create index idx_products_featured on products (is_published, featured_score desc, demand_score desc, updated_at desc);
 create index idx_judgments_product on judgments (product_id, judged_at desc);
 create index idx_contact_messages_created_at on contact_messages (created_at desc);
+create index idx_outbound_clicks_clicked_at on outbound_clicks (clicked_at desc);
+create index idx_outbound_clicks_product_clicked_at on outbound_clicks (product_id, clicked_at desc);
 
 -- 最新の判定を結合したビュー(サイト表示はこれを読む)
 -- security_invoker=true により、anon/authenticated から見た場合も下位テーブルのRLSを適用する。
@@ -97,11 +107,14 @@ alter table categories enable row level security;
 alter table products enable row level security;
 alter table judgments enable row level security;
 alter table contact_messages enable row level security;
+alter table outbound_clicks enable row level security;
 
 grant usage on schema public to anon, authenticated;
 grant select on categories, products, judgments, products_with_judgment to anon, authenticated;
 revoke all on contact_messages from anon, authenticated;
 revoke all on sequence contact_messages_id_seq from anon, authenticated;
+revoke all on outbound_clicks from anon, authenticated;
+revoke all on sequence outbound_clicks_id_seq from anon, authenticated;
 
 create policy "public read categories" on categories for select using (is_active);
 create policy "public read published products" on products for select using (is_published);

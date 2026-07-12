@@ -59,6 +59,11 @@ categories(kitchen有効、towel/stationery無効)まで自動で入ります。
 TOP/カテゴリの「注目順」を有効にするには、続けて
 `supabase/migrations/005_market_ranking.sql` も実行してください。
 
+お問い合わせ保存先と匿名の販売サイト移動数を記録する場合は、続けて
+`supabase/migrations/006_contact_messages.sql` と
+`supabase/migrations/008_outbound_clicks.sql` を実行してください。
+`outbound_clicks` にIPアドレス、Cookie、User-Agent等は保存しません。
+
 ### 3. 商品を収集する
 
 ```bash

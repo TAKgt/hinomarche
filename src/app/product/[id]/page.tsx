@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getProduct } from "@/lib/db";
-import { amazonSearchUrl, rakutenSearchUrl } from "@/lib/crosslinks";
 import { formatDate, formatPrice, SOURCE_LABEL } from "@/lib/format";
 import { ScoreRing } from "@/components/ScoreRing";
 import { CheckMarks } from "@/components/CheckMarks";
@@ -28,9 +27,8 @@ export default async function ProductPage({ params }: Props) {
   const isRakuten = product.source === "rakuten";
   const buttonLabel = isRakuten ? "楽天市場で見る" : "Amazonで見る";
   const crossLabel = isRakuten ? "Amazonで探す" : "楽天市場で探す";
-  const crossUrl = isRakuten
-    ? amazonSearchUrl(product.title)
-    : rakutenSearchUrl(product.title);
+  const primaryUrl = `/go/${product.id}?target=primary`;
+  const crossUrl = `/go/${product.id}?target=cross`;
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-12">
@@ -116,7 +114,7 @@ export default async function ProductPage({ params }: Props) {
           </div>
 
           <a
-            href={product.affiliateUrl}
+            href={primaryUrl}
             target="_blank"
             rel="nofollow sponsored noopener"
             className={`mt-7 block text-center text-white px-8 py-4 text-sm tracking-[0.2em] font-medium transition-colors ${

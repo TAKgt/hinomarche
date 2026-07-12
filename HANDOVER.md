@@ -52,6 +52,7 @@ src/
     privacy/page.tsx        プライバシーポリシー(Amazonアソシエイト必須文言入り)
     contact/page.tsx        お問い合わせフォーム(メールアドレスは公開しない)
     api/contact/route.ts    フォーム送信先。service_roleで非公開テーブルに保存
+    go/[id]/route.ts        販売サイトへの安全なリダイレクト+匿名クリック集計
     not-found.tsx           404
     sitemap.ts / robots.ts / icon.svg / opengraph-image.tsx  SEO・メタ系
     api/cron/ingest/route.ts Vercel Cron入口(Authorization: Bearer CRON_SECRET必須)
@@ -89,6 +90,7 @@ supabase/
 - `judgments`: 判定履歴(追記型。表示は最新を使う)。score, tier('high'|'mid'|'low'),
   evidence_type, evidence_text, origin_check/company_check/material_check('yes'|'unknown'|'no')
 - `products_with_judgment`: 最新判定をJOINしたビュー。**サイト表示は必ずこのビューを読む**
+- `outbound_clicks`: 商品から販売サイトへの移動数。IP/Cookie/User-Agent/セッションIDは保存しない。anon/authenticatedに権限なし
 - AI判定待ちの商品は、古い順ではなく `featured_score` / `demand_score` / `search_rank`
   を優先して処理する。売れ筋候補を先に公開するため。
 - RLS有効。匿名キーは公開商品の読みのみ。書き込みはservice_roleキー経由のみ

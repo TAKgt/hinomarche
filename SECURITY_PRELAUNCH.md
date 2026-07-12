@@ -17,6 +17,8 @@
 
 - Supabase Network Restrictionsを有効にできるプラン・運用か確認する
 - お問い合わせフォーム用の `contact_messages` テーブルを作成し、anon/authenticated へ公開権限を付けない
+- 購入導線の集計用 `outbound_clicks` テーブルを作成し、anon/authenticated へ公開権限を付けない
+- `outbound_clicks` にIPアドレス、Cookie、User-Agent、セッションIDを保存しない
 - Vercelデプロイ後に `/api/cron/ingest` が認証なしで401になることを確認する
 - Vercelデプロイ後にレスポンスヘッダーを確認する
   - `X-Content-Type-Options: nosniff`
@@ -30,6 +32,7 @@
 - `products`: `is_published = true` の行だけ公開
 - `judgments`: 公開済み商品の判定だけ公開
 - `products_with_judgment`: `security_invoker = true` により、下位テーブルのRLSを適用
+- `contact_messages` / `outbound_clicks`: 公開ポリシーなし。service_roleからのみ読み書き
 
 ## ローカル検査
 
