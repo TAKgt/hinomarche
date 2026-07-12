@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getCategories, getTopProducts } from "@/lib/db";
 import { ProductCard } from "@/components/ProductCard";
 
+export const revalidate = 3600;
+
 export default async function Home() {
   const [products, categories] = await Promise.all([
     getTopProducts(12),
