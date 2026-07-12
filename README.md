@@ -45,7 +45,7 @@ cp .env.example .env.local
 | `AMAZON_CREDENTIAL_ID` / `AMAZON_CREDENTIAL_SECRET` / `AMAZON_PARTNER_TAG` | アソシエイト管理画面 → ツール → Creators API(旧PA-APIは2026年5月廃止) |
 | `ANTHROPIC_API_KEY` | platform.claude.com → API Keys |
 | `CRON_SECRET` | ランダムな長い文字列を自分で生成(例: `openssl rand -hex 32`) |
-| `NEXT_PUBLIC_SITE_URL` | 本番URL。通常は `https://hinomarche.com` |
+| `NEXT_PUBLIC_SITE_URL` | 本番URL。通常は `https://www.hinomarche.com` |
 
 ### 2. Supabaseにテーブルを作る
 
@@ -73,7 +73,7 @@ npm run ingest
 
 1. GitHubにpush → vercel.com でImport
 2. 環境変数(`.env.local` と同じもの)をVercelのプロジェクト設定に登録
-   - `SUPABASE_ANON_KEY` と `NEXT_PUBLIC_SITE_URL=https://hinomarche.com` も忘れずに設定
+   - `SUPABASE_ANON_KEY` と `NEXT_PUBLIC_SITE_URL=https://www.hinomarche.com` も忘れずに設定
 3. `vercel.json` のCron設定により、毎日 03:00 JST に `/api/cron/ingest` が自動実行される
    (VercelがCRON_SECRETを`Authorization`ヘッダーに付けて叩く)
 4. Settings > Domains で `hinomarche.com` を追加し、ドメイン側のネームサーバー/DNSを案内どおり設定

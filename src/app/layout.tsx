@@ -4,6 +4,15 @@ import { Shippori_Mincho, Zen_Kaku_Gothic_New } from "next/font/google";
 import { getCategories } from "@/lib/db";
 import "./globals.css";
 
+function siteUrl(): URL {
+  const raw = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.hinomarche.com";
+  const url = new URL(raw);
+  if (url.hostname === "hinomarche.com") {
+    url.hostname = "www.hinomarche.com";
+  }
+  return url;
+}
+
 const shippori = Shippori_Mincho({
   variable: "--font-shippori",
   weight: ["500", "600", "800"],
@@ -19,7 +28,7 @@ const zenKaku = Zen_Kaku_Gothic_New({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://hinomarche.com"),
+  metadataBase: siteUrl(),
   title: {
     default: "ヒノマルシェ | 日本製品 買って応援",
     template: "%s | ヒノマルシェ",
