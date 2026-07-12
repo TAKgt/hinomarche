@@ -37,17 +37,22 @@ cp .env.example .env.local
 
 | キー | 入手先 |
 |---|---|
-| `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | supabase.com → New Project → Settings > API(service_roleの方) |
+| `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` | supabase.com → Project Settings → API。公開読み取りはanon、収集・書き込みはservice_role |
 | `RAKUTEN_APP_ID` | webservice.rakuten.co.jp → アプリID発行(楽天会員なら即時) |
 | `MOSHIMO_A_ID` | もしも管理画面 → 楽天市場プロモーション → どこでもリンクのa_id |
 | `AMAZON_CREDENTIAL_ID` / `AMAZON_CREDENTIAL_SECRET` / `AMAZON_PARTNER_TAG` | アソシエイト管理画面 → ツール → Creators API(旧PA-APIは2026年5月廃止) |
 | `ANTHROPIC_API_KEY` | platform.claude.com → API Keys |
 | `CRON_SECRET` | ランダムな長い文字列を自分で生成(例: `openssl rand -hex 32`) |
+| `NEXT_PUBLIC_SITE_URL` | 本番URL。通常は `https://hinomarche.com` |
 
 ### 2. Supabaseにテーブルを作る
 
 Supabaseダッシュボード → SQL Editor に `supabase/schema.sql` の中身を貼り付けて実行。
 categories(kitchen有効、towel/stationery無効)まで自動で入ります。
+
+既存DBに公開前セキュリティ強化だけを適用する場合は、SQL Editorで
+`supabase/migrations/004_security_hardening.sql` を実行してください。
+`products_with_judgment` ビューにRLSを効かせ、未公開商品の判定履歴が匿名キーから見えないようにします。
 
 ### 3. 商品を収集する
 
@@ -63,6 +68,7 @@ npm run ingest
 
 1. GitHubにpush → vercel.com でImport
 2. 環境変数(`.env.local` と同じもの)をVercelのプロジェクト設定に登録
+   - `SUPABASE_ANON_KEY` と `NEXT_PUBLIC_SITE_URL=https://hinomarche.com` も忘れずに設定
 3. `vercel.json` のCron設定により、毎日 03:00 JST に `/api/cron/ingest` が自動実行される
    (VercelがCRON_SECRETを`Authorization`ヘッダーに付けて叩く)
 4. Settings > Domains で `hinomarche.com` を追加し、ドメイン側のネームサーバー/DNSを案内どおり設定
@@ -95,7 +101,7 @@ src/
   lib/
     db.ts               データ層(Supabase / デモモード自動切替)
     rakuten.ts          楽天市場API + もしもリンク生成
-    amazon.ts           Amazon PA-API v5(SigV4署名を自前実装)
+    amazon.ts           Amazon Creators API(2026年仕様、OAuth2)
     judge.ts            Claude Haiku 日本関連度判定(構造化出力)
     ingest.ts           収集パイプライン
   data/demo-products.json  デモ商品
