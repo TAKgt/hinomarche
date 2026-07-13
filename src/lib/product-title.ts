@@ -8,7 +8,12 @@ const LEADING_BLOCK = /^(?:【([^】]+)】|≪([^≫]+)≫|＼([^／]+)／|\[([^
  * DBの原文と販売先URLは変更しない。
  */
 export function displayProductTitle(title: string, maxLength = 64): string {
-  let cleaned = title.replace(/\s+/g, " ").trim();
+  let cleaned = title
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^[◎○●★☆♪♫※・ー\s]+/, "")
+    .replace(/^(?:注目商品|目玉商品)[!！★☆\s]*/i, "")
+    .trim();
 
   for (;;) {
     const match = cleaned.match(LEADING_BLOCK);
@@ -18,10 +23,7 @@ export function displayProductTitle(title: string, maxLength = 64): string {
     cleaned = cleaned.slice(match[0].length).trim();
   }
 
-  cleaned = cleaned
-    .replace(/^[◎○●★☆♪♫※・ー\s]+/, "")
-    .replace(/^(?:注目商品|目玉商品)[!！★☆\s]*/i, "")
-    .trim();
+  cleaned = cleaned.replace(/^[◎○●★☆♪♫※・ー\s]+/, "").trim();
 
   if (!cleaned) cleaned = title.trim();
   if (cleaned.length <= maxLength) return cleaned;
