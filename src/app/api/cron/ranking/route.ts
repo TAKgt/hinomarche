@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server";
-import { isAuthorizedCronRequest } from "@/lib/cron-auth";
+import { cronJsonResponse, isAuthorizedCronRequest } from "@/lib/cron-auth";
 import { runShadowRanking } from "@/lib/ranking";
 
 export const maxDuration = 60;
@@ -7,14 +6,14 @@ export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   if (!isAuthorizedCronRequest(request)) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    return cronJsonResponse({ error: "unauthorized" }, 401);
   }
 
   try {
     const ranking = await runShadowRanking();
-    return NextResponse.json(ranking);
+    return cronJsonResponse(ranking);
   } catch (error) {
     console.error("shadow ranking failed", error);
-    return NextResponse.json({ error: "ranking failed" }, { status: 500 });
+    return cronJsonResponse({ error: "ranking failed" }, 500);
   }
 }
