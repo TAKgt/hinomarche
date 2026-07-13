@@ -10,6 +10,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { JsonLd } from "@/components/JsonLd";
 import { productStructuredData } from "@/lib/structured-data";
 import { TIER_LABEL } from "@/lib/types";
+import { displayProductTitle } from "@/lib/product-title";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -17,16 +18,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const product = await getProduct(id);
   if (!product) return {};
+  const displayTitle = displayProductTitle(product.title);
   return {
-    title: product.title,
-    description: `${product.title} — AI日本度判定 ${product.score}%。${product.evidenceText}`,
+    title: displayTitle,
+    description: `${displayTitle} — AI日本度判定 ${product.score}%。${product.evidenceText}`,
     alternates: { canonical: `/product/${product.id}` },
     openGraph: {
-      title: product.title,
-      description: `${product.title} — AI日本度判定 ${product.score}%。${product.evidenceText}`,
+      title: displayTitle,
+      description: `${displayTitle} — AI日本度判定 ${product.score}%。${product.evidenceText}`,
       url: `/product/${product.id}`,
       type: "website",
-      images: product.imageUrl ? [{ url: product.imageUrl, alt: product.title }] : undefined,
+      images: product.imageUrl ? [{ url: product.imageUrl, alt: displayTitle }] : undefined,
     },
   };
 }
@@ -42,6 +44,7 @@ export default async function ProductPage({ params }: Props) {
   const categoryName =
     categories.find((category) => category.slug === product.categorySlug)?.name ??
     "商品カテゴリ";
+  const displayTitle = displayProductTitle(product.title);
 
   const isRakuten = product.source === "rakuten";
   const buttonLabel = isRakuten ? "楽天市場で見る" : "Amazonで見る";
@@ -60,7 +63,7 @@ export default async function ProductPage({ params }: Props) {
           {categoryName}
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-sumi">{product.title.slice(0, 24)}…</span>
+        <span className="text-sumi">{displayTitle.slice(0, 24)}…</span>
       </nav>
 
       <div className="grid md:grid-cols-2 gap-10">
@@ -70,12 +73,12 @@ export default async function ProductPage({ params }: Props) {
             // eslint-disable-next-line @next/next/no-img-element -- 外部モール画像
             <img
               src={product.imageUrl}
-              alt={product.title}
+              alt={displayTitle}
               className="size-full object-contain"
             />
           ) : (
             <span className="tategaki font-mincho text-2xl text-sumi-soft/60 max-h-[80%] overflow-hidden">
-              {product.title.slice(0, 14)}
+              {displayTitle.slice(0, 14)}
             </span>
           )}
           <span className="absolute left-0 top-4 bg-sumi text-washi text-xs tracking-wider px-3 py-1.5">
@@ -86,7 +89,7 @@ export default async function ProductPage({ params }: Props) {
         {/* 情報 */}
         <div>
           <h1 className="font-mincho text-2xl md:text-3xl font-semibold leading-snug">
-            {product.title}
+            {displayTitle}
           </h1>
 
           {(product.brand || product.maker) && (

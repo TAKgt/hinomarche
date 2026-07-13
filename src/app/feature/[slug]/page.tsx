@@ -6,6 +6,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { getFeatureProducts } from "@/lib/db";
 import { FEATURES, getFeature } from "@/lib/features";
 import { siteOrigin } from "@/lib/site-url";
+import { displayProductTitle } from "@/lib/product-title";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -61,7 +62,7 @@ export default async function FeaturePage({ params }: Props) {
         "@type": "ListItem",
         position: index + 1,
         url: `${origin}/product/${product.id}`,
-        name: product.title,
+        name: displayProductTitle(product.title),
       })),
     },
   ];

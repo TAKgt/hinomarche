@@ -1,16 +1,18 @@
 import type { Product } from "./types";
 import { siteOrigin } from "./site-url";
+import { displayProductTitle } from "./product-title";
 
 export function productStructuredData(product: Product, categoryName: string) {
   const origin = siteOrigin();
   const productUrl = `${origin}/product/${product.id}`;
+  const displayTitle = displayProductTitle(product.title);
   const productData: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Product",
     "@id": `${productUrl}#product`,
     url: productUrl,
-    name: product.title,
-    description: `${product.title}。AI日本度判定 ${product.score}%。${product.evidenceText}`,
+    name: displayTitle,
+    description: `${displayTitle}。AI日本度判定 ${product.score}%。${product.evidenceText}`,
     sku: `${product.source}-${product.sourceItemId}`,
   };
 
@@ -44,7 +46,7 @@ export function productStructuredData(product: Product, categoryName: string) {
       {
         "@type": "ListItem",
         position: 3,
-        name: product.title,
+        name: displayTitle,
         item: productUrl,
       },
     ],

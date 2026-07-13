@@ -3,8 +3,10 @@ import type { Product } from "@/lib/types";
 import { formatPrice, SOURCE_LABEL } from "@/lib/format";
 import { ScoreRing } from "./ScoreRing";
 import { CheckMarksCompact } from "./CheckMarks";
+import { displayProductTitle } from "@/lib/product-title";
 
 export function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
+  const displayTitle = displayProductTitle(product.title);
   return (
     <Link
       href={`/product/${product.id}`}
@@ -15,14 +17,14 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
           // eslint-disable-next-line @next/next/no-img-element -- 外部モール画像はドメインが多岐に渡るためimgで表示
           <img
             src={product.imageUrl}
-            alt={product.title}
+            alt={displayTitle}
             loading="lazy"
             className="size-full object-contain transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
           <div className="size-full flex items-center justify-center p-6">
             <span className="tategaki font-mincho text-sumi-soft/70 text-sm max-h-full overflow-hidden">
-              {product.title.slice(0, 12)}
+              {displayTitle.slice(0, 12)}
             </span>
           </div>
         )}
@@ -40,7 +42,7 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
         </div>
         <div className="min-w-0">
           <h3 className="text-sm font-medium leading-snug line-clamp-2 group-hover:text-hinomaru-deep transition-colors">
-            {product.title}
+            {displayTitle}
           </h3>
           <p className="mt-1.5 font-mincho text-lg font-semibold">
             {formatPrice(product.price)}

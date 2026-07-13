@@ -107,6 +107,7 @@ supabase/
   evidence_type, evidence_text, origin_check/company_check/material_check('yes'|'unknown'|'no')
 - `products_with_judgment`: 最新判定をJOINしたビュー。**サイト表示は必ずこのビューを読む**
 - 商品詳細はGoogleのProduct snippet向け構造化データとBreadcrumbListを出力。AI日本度をレビュ評価として送信しない
+- 表示用商品名は先頭の期限付き販促文を除き、64文字以内に整形。DBの原文と販売先リンクは変更しない
 - `outbound_clicks`: 商品から販売サイトへの移動数。IP/Cookie/User-Agent/セッションIDは保存しない。anon/authenticatedに権限なし
 - `product_page_views`: 商品閲覧数。商品IDと時刻のみ。anon/authenticatedに権限なし
 - `ranking_snapshots`: `commercial-v1` の日次計算結果。現在は `shadow` のみで表示順には未反映

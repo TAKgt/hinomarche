@@ -6,6 +6,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { getRegionProducts } from "@/lib/db";
 import { getRegion, REGIONS } from "@/lib/regions";
 import { siteOrigin } from "@/lib/site-url";
+import { displayProductTitle } from "@/lib/product-title";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -59,7 +60,7 @@ export default async function RegionPage({ params }: Props) {
         "@type": "ListItem",
         position: index + 1,
         url: `${origin}/product/${product.id}`,
-        name: product.title,
+        name: displayProductTitle(product.title),
       })),
     },
   ];
