@@ -50,7 +50,7 @@ cp .env.example .env.local
 ### 2. Supabaseにテーブルを作る
 
 Supabaseダッシュボード → SQL Editor に `supabase/schema.sql` の中身を貼り付けて実行。
-18カテゴリまで自動で入ります。
+23カテゴリまで自動で入ります。
 
 既存DBに公開前セキュリティ強化だけを適用する場合は、SQL Editorで
 `supabase/migrations/004_security_hardening.sql` を実行してください。
@@ -83,6 +83,8 @@ npm run judge:backlog
 各カテゴリの検索語は1日2件ずつ日替わりで巡回します
 (`INGEST_KEYWORDS_PER_CATEGORY`で変更可)。カテゴリ増加後もAPI費用とCron時間が
 急増しないための上限です。
+ローカルで特定カテゴリだけ収集する場合は、実行時に
+`INGEST_CATEGORY_SLUGS=smartphone,computer`のように指定できます。
 `npm run dev` で実データが表示されるようになります。
 
 ### 4. Vercelにデプロイ

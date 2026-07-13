@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getProduct } from "@/lib/db";
+import { getProduct, getRelatedProducts } from "@/lib/db";
 import { formatDate, formatPrice, SOURCE_LABEL } from "@/lib/format";
 import { ScoreRing } from "@/components/ScoreRing";
 import { CheckMarks } from "@/components/CheckMarks";
 import { ProductViewTracker } from "@/components/ProductViewTracker";
+import { ProductCard } from "@/components/ProductCard";
 import { TIER_LABEL } from "@/lib/types";
 
 type Props = { params: Promise<{ id: string }> };
@@ -24,6 +25,7 @@ export default async function ProductPage({ params }: Props) {
   const { id } = await params;
   const product = await getProduct(id);
   if (!product) notFound();
+  const relatedProducts = await getRelatedProducts(product);
 
   const isRakuten = product.source === "rakuten";
   const buttonLabel = isRakuten ? "楽天市場で見る" : "Amazonで見る";
@@ -151,6 +153,22 @@ export default async function ProductPage({ params }: Props) {
           <p className="mt-4 text-sm leading-relaxed text-sumi-soft whitespace-pre-line">
             {product.description}
           </p>
+        </section>
+      )}
+
+      {relatedProducts.length > 0 && (
+        <section className="mt-16 border-t border-line pt-10">
+          <p className="text-xs font-medium tracking-[0.3em] text-hinomaru">
+            RELATED
+          </p>
+          <h2 className="mt-2 font-mincho text-2xl font-semibold">
+            関連する日本度の高い商品
+          </h2>
+          <div className="mt-7 grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-5">
+            {relatedProducts.map((related, index) => (
+              <ProductCard key={related.id} product={related} index={index} />
+            ))}
+          </div>
         </section>
       )}
     </div>

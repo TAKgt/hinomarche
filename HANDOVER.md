@@ -90,13 +90,14 @@ supabase/
   migrations/008_outbound_clicks.sql  販売サイト移動計測(適用済み)
   migrations/009_shadow_ranking.sql   閲覧計測/shadow順位(適用済み)
   migrations/010_expand_commercial_categories.sql カテゴリ18種へ拡張(適用済み)
+  migrations/011_expand_digital_categories.sql デジタル系5カテゴリ追加(適用済み)
 ```
 
 ## 5. データモデル(Supabase)
 
 - `categories`: slug / name / search_keywords(jsonb配列) / is_active
   - **カテゴリ追加・キーワード変更はSQLだけで完結**(コード変更不要。ヘッダーのナビも自動反映)
-  - 010適用後は18カテゴリ。Amazon・楽天の主要売場をヒノマルシェ向けに再構成
+  - 011適用後は23カテゴリ。Amazon・楽天の主要売場をヒノマルシェ向けに再構成
 - `products`: source('rakuten'|'amazon') + source_item_id でユニーク。affiliate_url, price,
   price_updated_at, is_published など
 - `judgments`: 判定履歴(追記型。表示は最新を使う)。score, tier('high'|'mid'|'low'),
@@ -109,7 +110,7 @@ supabase/
   を優先し、カテゴリを一巡ずつ処理する。売れ筋優先とジャンル偏り防止を両立するため。
 - RLS有効。匿名キーは公開商品の読みのみ。書き込みはservice_roleキー経由のみ
 
-現状データ(2026-07-13時点): **公開商品809件**。未判定バックログは日次Cronでカテゴリを一巡しつつ需要順に消化する。
+現状データ(2026-07-13時点): **公開商品839件**。未判定バックログは日次Cronでカテゴリを一巡しつつ需要順に消化する。
 
 ## 6. 外部API仕様(2026年の重要変更を含む)
 
@@ -174,6 +175,7 @@ supabase/
 | CRON_SECRET | Cronエンドポイント認証(VercelがAuthorizationヘッダーに付ける) |
 | INGEST_MAX_NEW | 1回の収集でAI判定する上限(既定30) |
 | INGEST_KEYWORDS_PER_CATEGORY | 1カテゴリあたり1日に検索する語数(既定2、日替わり巡回) |
+| INGEST_CATEGORY_SLUGS | ローカルで特定カテゴリだけ収集する場合のslug(カンマ区切り) |
 | SHOW_LOW_TIER | falseで低スコア商品を非表示(既定true) |
 
 **全部未設定でも動く**: デモモード(サンプル12商品)になる。UI開発はキーなしで可能。

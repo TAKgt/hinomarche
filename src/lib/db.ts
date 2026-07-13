@@ -206,6 +206,34 @@ export async function getProduct(id: string): Promise<Product | null> {
   return data ? rowToProduct(data) : null;
 }
 
+export async function getRelatedProducts(product: Product, limit = 4): Promise<Product[]> {
+  if (isDemoMode()) {
+    return (demoProducts as unknown as Product[])
+      .filter(
+        (item) =>
+          item.id !== product.id &&
+          item.categorySlug === product.categorySlug &&
+          item.score >= 80
+      )
+      .sort((a, b) => productFeaturedScore(b) - productFeaturedScore(a))
+      .slice(0, limit);
+  }
+
+  const { data, error } = await publicSupabase()
+    .from("products_with_judgment")
+    .select("*")
+    .eq("is_published", true)
+    .eq("category_slug", product.categorySlug)
+    .neq("id", product.id)
+    .gte("score", 80)
+    .order("featured_score", { ascending: false })
+    .order("demand_score", { ascending: false })
+    .order("score", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data.map(rowToProduct);
+}
+
 async function latestJudgmentScore(
   db: SupabaseClient,
   productId: string
@@ -298,18 +326,20 @@ export async function upsertProduct(raw: RawProduct): Promise<string | null> {
  * 収集時に判定しきれなかったバックログを次回以降のCronで消化するために使う。
  */
 export async function getUnjudgedProducts(
-  limit: number
+  limit: number,
+  categorySlugs?: string[]
 ): Promise<{ id: string; raw: RawProduct }[]> {
   const candidateLimit = Math.max(limit * 20, limit);
-  const { data, error } = await adminSupabase()
+  let query = adminSupabase()
     .from("products")
     .select("*")
     .eq("is_published", false)
     .order("featured_score", { ascending: false })
     .order("demand_score", { ascending: false })
     .order("search_rank", { ascending: true, nullsFirst: false })
-    .order("created_at", { ascending: true })
-    .limit(candidateLimit);
+    .order("created_at", { ascending: true });
+  if (categorySlugs?.length) query = query.in("category_slug", categorySlugs);
+  const { data, error } = await query.limit(candidateLimit);
   if (error) throw error;
 
   // 各カテゴリ内の需要順を保ちつつ一巡ずつ選び、判定枠のジャンル偏りを防ぐ。

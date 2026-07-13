@@ -68,7 +68,18 @@ export async function runIngest(): Promise<IngestSummary> {
       process.env.AMAZON_PARTNER_TAG
   );
 
-  const categories = await getCategories();
+  const requestedSlugs = (process.env.INGEST_CATEGORY_SLUGS ?? "")
+    .split(",")
+    .map((slug) => slug.trim())
+    .filter(Boolean);
+  const allCategories = await getCategories();
+  const categories =
+    requestedSlugs.length > 0
+      ? allCategories.filter((category) => requestedSlugs.includes(category.slug))
+      : allCategories;
+  if (requestedSlugs.length > 0 && categories.length === 0) {
+    throw new Error("INGEST_CATEGORY_SLUGSに一致する有効カテゴリがありません");
+  }
 
   for (const category of categories) {
     // ジャンル増加後もCron時間とAPI費用を一定に保ち、全検索語を日替わりで巡回する。
@@ -112,7 +123,10 @@ export async function runIngest(): Promise<IngestSummary> {
   }
 
   // 未判定バックログを古い順にmaxNew件まで判定(今回の新規もここに含まれる)
-  const toJudge = await getUnjudgedProducts(maxNew);
+  const toJudge = await getUnjudgedProducts(
+    maxNew,
+    categories.map((category) => category.slug)
+  );
   for (const { id, raw } of toJudge) {
     try {
       const judgment = await judgeProduct(raw);
