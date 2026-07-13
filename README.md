@@ -83,8 +83,9 @@ npm run judge:backlog
 ```
 
 カテゴリの検索キーワードで楽天・Amazonを検索 → 新商品をAI判定 → 判定済み商品を自動公開(低スコアも公開)。
-1回の実行で判定するのは新規30件まで(`INGEST_MAX_NEW`で変更可)。
-各カテゴリの検索語は1日2件ずつ日替わりで巡回します
+1回の実行で判定するのは、ローカルは新規30件、Vercelは新規5件まで
+(`INGEST_MAX_NEW`で変更可)。Vercelでは1日4カテゴリを日替わりで巡回し、各1検索語を取得します。
+ローカルでは各カテゴリの検索語を1日2件ずつ巡回します
 (`INGEST_KEYWORDS_PER_CATEGORY`で変更可)。カテゴリ増加後もAPI費用とCron時間が
 急増しないための上限です。
 ローカルで特定カテゴリだけ収集する場合は、実行時に
@@ -96,11 +97,12 @@ npm run judge:backlog
 1. GitHubにpush → vercel.com でImport
 2. 環境変数(`.env.local` と同じもの)をVercelのプロジェクト設定に登録
    - `SUPABASE_ANON_KEY` と `NEXT_PUBLIC_SITE_URL=https://www.hinomarche.com` も忘れずに設定
-3. `vercel.json` のCron設定により、毎日 03:00 JST に `/api/cron/ingest` が自動実行される
+3. `vercel.json` のCron設定により、毎日 03:00 JST台に `/api/cron/ingest`、
+   05:00 JST台に `/api/cron/ranking` が自動実行される
    (VercelがCRON_SECRETを`Authorization`ヘッダーに付けて叩く)
 4. Settings > Domains で `hinomarche.com` を追加し、ドメイン側のネームサーバー/DNSを案内どおり設定
 
-日次Cronは商品収集の後に `commercial-v1` の候補順位を計算し、
+ランキング用Cronは `commercial-v1` の候補順位を収集と独立して計算し、
 `ranking_snapshots` に `shadow` として保存します。shadow期間中はサイトの表示順を変更しません。
 
 ### 5. 非公開の運営ランキング
@@ -111,7 +113,8 @@ Basic認証のユーザー名は既定で `hinomarche` です
 (`ANALYTICS_ADMIN_USERNAME` で変更可)。検索エンジン登録とブラウザキャッシュは禁止しています。
 この画面は読み取り専用で、表示順位や商品データを変更しません。
 
-※ Vercel無料(Hobby)プランはCronが1日1回・関数実行時間に制限があります。
+※ Vercel無料(Hobby)プランは各Cronが1日1回・実行時刻は指定時間内で最大59分の幅があり、
+関数実行は最大60秒です。
 収集が時間内に終わらない場合は `INGEST_MAX_NEW` を小さくするか、ローカルで `npm run ingest` を回してください。
 
 ## カテゴリの増やし方(コード変更不要)

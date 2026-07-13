@@ -17,6 +17,7 @@ import type { RawProduct } from "./types";
  */
 
 export interface IngestSummary {
+  categorySlugs: string[];
   fetched: number;
   created: number;
   updated: number;
@@ -28,14 +29,14 @@ export interface IngestSummary {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-function dailyKeywords(keywords: string[], requestedLimit: number): string[] {
-  if (keywords.length <= requestedLimit) return keywords;
+function dailyWindow<T>(items: T[], requestedLimit: number): T[] {
+  if (items.length <= requestedLimit) return items;
 
   const day = Math.floor(Date.now() / DAY_MS);
-  const start = (day * requestedLimit) % keywords.length;
+  const start = (day * requestedLimit) % items.length;
   return Array.from(
     { length: requestedLimit },
-    (_, offset) => keywords[(start + offset) % keywords.length]
+    (_, offset) => items[(start + offset) % items.length]
   );
 }
 
@@ -47,6 +48,7 @@ export async function runIngest(): Promise<IngestSummary> {
   }
 
   const summary: IngestSummary = {
+    categorySlugs: [],
     fetched: 0,
     created: 0,
     updated: 0,
@@ -56,12 +58,21 @@ export async function runIngest(): Promise<IngestSummary> {
   };
 
   // 1回のCron実行で判定する新商品数の上限(実行時間とAPIコストの暴走防止)
-  const maxNew = Number(process.env.INGEST_MAX_NEW ?? 30);
-  const configuredKeywordLimit = Number(process.env.INGEST_KEYWORDS_PER_CATEGORY ?? 2);
+  const isVercel = process.env.VERCEL === "1";
+  const configuredMaxNew = Number(process.env.INGEST_MAX_NEW ?? (isVercel ? 5 : 30));
+  const maxNew = Math.max(
+    0,
+    Math.floor(Number.isFinite(configuredMaxNew) ? configuredMaxNew : isVercel ? 5 : 30),
+  );
+  const configuredKeywordLimit = Number(
+    process.env.INGEST_KEYWORDS_PER_CATEGORY ?? (isVercel ? 1 : 2),
+  );
   const keywordLimit =
     Number.isFinite(configuredKeywordLimit) && configuredKeywordLimit > 0
       ? Math.floor(configuredKeywordLimit)
-      : 2;
+      : isVercel
+        ? 1
+        : 2;
   let amazonEnabled = Boolean(
     process.env.AMAZON_CREDENTIAL_ID &&
       process.env.AMAZON_CREDENTIAL_SECRET &&
@@ -73,17 +84,31 @@ export async function runIngest(): Promise<IngestSummary> {
     .map((slug) => slug.trim())
     .filter(Boolean);
   const allCategories = await getCategories();
-  const categories =
+  const matchedCategories =
     requestedSlugs.length > 0
       ? allCategories.filter((category) => requestedSlugs.includes(category.slug))
       : allCategories;
-  if (requestedSlugs.length > 0 && categories.length === 0) {
+  if (requestedSlugs.length > 0 && matchedCategories.length === 0) {
     throw new Error("INGEST_CATEGORY_SLUGSに一致する有効カテゴリがありません");
   }
+  const configuredCategoryLimit = Number(
+    process.env.INGEST_CATEGORIES_PER_RUN ?? (isVercel ? 4 : matchedCategories.length),
+  );
+  const categoryLimit =
+    Number.isFinite(configuredCategoryLimit) && configuredCategoryLimit > 0
+      ? Math.floor(configuredCategoryLimit)
+      : isVercel
+        ? 4
+        : matchedCategories.length;
+  const categories =
+    requestedSlugs.length > 0
+      ? matchedCategories
+      : dailyWindow(matchedCategories, categoryLimit);
+  summary.categorySlugs = categories.map((category) => category.slug);
 
   for (const category of categories) {
     // ジャンル増加後もCron時間とAPI費用を一定に保ち、全検索語を日替わりで巡回する。
-    for (const keyword of dailyKeywords(category.searchKeywords, keywordLimit)) {
+    for (const keyword of dailyWindow(category.searchKeywords, keywordLimit)) {
       const batches: RawProduct[][] = [];
 
       try {

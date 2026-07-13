@@ -59,7 +59,8 @@ src/
     go/[id]/route.ts        販売サイトへの安全なリダイレクト+匿名クリック集計
     not-found.tsx           404
     sitemap.ts / robots.ts / icon.svg / opengraph-image.tsx  SEO・メタ系
-    api/cron/ingest/route.ts Vercel Cron入口(Authorization: Bearer CRON_SECRET必須)
+    api/cron/ingest/route.ts Vercel商品収集Cron入口(Authorization: Bearer CRON_SECRET必須)
+    api/cron/ranking/route.ts VercelランキングCron入口(同認証、収集と独立)
   components/
     ProductCard.tsx         商品カード(スコアバッジ+チェック+根拠2行)
     ScoreRing.tsx           スコアバッジ: 全面塗りつぶし円。赤=90%以上/オレンジ=50-89/黄=~49。
@@ -154,10 +155,10 @@ supabase/
 ## 7. 収集パイプラインの動き
 
 ```
-毎日03:00 JST (Vercel Cron → /api/cron/ingest、ローカルは npm run ingest)
-1. 有効カテゴリの検索語を1日2件ずつ日替わりで巡回し、楽天(+資格回復後Amazon)を検索(30件/キーワード)
+毎日03:00 JST台 (Vercel Cron → /api/cron/ingest、ローカルは npm run ingest)
+1. Vercelでは有効カテゴリを1日4件ずつ日替わりで巡回し、各1検索語で楽天(+資格回復後Amazon)を検索(30件/キーワード)
 2. 新商品はINSERT、既存商品は価格・画像・リンクを更新(price_updated_at更新)
-3. 未判定商品(is_published=false)を古い順にINGEST_MAX_NEW件(既定30)AI判定
+3. 未判定商品(is_published=false)を古い順にINGEST_MAX_NEW件(Vercel既定5、ローカル既定30)AI判定
 4. 判定を保存し全tier公開(is_published=true)
 ```
 
@@ -179,8 +180,9 @@ supabase/
 | ANTHROPIC_API_KEY | AI判定用 |
 | CRON_SECRET | Cronエンドポイント認証(VercelがAuthorizationヘッダーに付ける) |
 | ANALYTICS_ADMIN_USERNAME / ANALYTICS_ADMIN_PASSWORD | `/admin/ranking` のBasic認証。未設定時は503で閉じる |
-| INGEST_MAX_NEW | 1回の収集でAI判定する上限(既定30) |
-| INGEST_KEYWORDS_PER_CATEGORY | 1カテゴリあたり1日に検索する語数(既定2、日替わり巡回) |
+| INGEST_MAX_NEW | 1回の収集でAI判定する上限(Vercel既定5、ローカル既定30) |
+| INGEST_CATEGORIES_PER_RUN | Vercelの1回の実行で処理するカテゴリ数(既定4) |
+| INGEST_KEYWORDS_PER_CATEGORY | 1カテゴリあたりの検索語数(Vercel既定1、ローカル既定2) |
 | INGEST_CATEGORY_SLUGS | ローカルで特定カテゴリだけ収集する場合のslug(カンマ区切り) |
 | SHOW_LOW_TIER | falseで低スコア商品を非表示(既定true) |
 
@@ -231,7 +233,7 @@ supabase/
 1. **Vercelデプロイ + hinomarche.com接続**(最後の公開ステップ)
    - GitHub push → Vercelインポート → 環境変数登録 → ドメイン接続
    - CRON_SECRETをVercelに設定するとCronが認証付きで動く
-   - Vercel Hobbyは関数最大300秒。収集が収まらなければINGEST_MAX_NEWを下げる
+   - Vercel Hobbyは関数最大60秒。収集はカテゴリ分割、ランキングは独立Cronで実行
 2. Supabase SQL Editorで `supabase/migrations/006_contact_messages.sql` を適用
 3. Amazon売上3件 → Creators API資格獲得(自動でAmazon商品収集開始)
 4. AI判定プロンプトのブラッシュアップ(ユーザー意向。特に根拠文の品質)
