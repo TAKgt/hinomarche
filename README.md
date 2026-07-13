@@ -62,7 +62,9 @@ TOP/カテゴリの「注目順」を有効にするには、続けて
 お問い合わせ保存先と匿名の販売サイト移動数を記録する場合は、続けて
 `supabase/migrations/006_contact_messages.sql` と
 `supabase/migrations/008_outbound_clicks.sql` を実行してください。
-`outbound_clicks` にIPアドレス、Cookie、User-Agent等は保存しません。
+匿名の商品閲覧数とshadowランキングを使う場合は、続けて
+`supabase/migrations/009_shadow_ranking.sql` を実行します。
+計測テーブルにIPアドレス、Cookie、User-Agent等は保存しません。
 
 ### 3. 商品を収集する
 
@@ -82,6 +84,9 @@ npm run ingest
 3. `vercel.json` のCron設定により、毎日 03:00 JST に `/api/cron/ingest` が自動実行される
    (VercelがCRON_SECRETを`Authorization`ヘッダーに付けて叩く)
 4. Settings > Domains で `hinomarche.com` を追加し、ドメイン側のネームサーバー/DNSを案内どおり設定
+
+日次Cronは商品収集の後に `commercial-v1` の候補順位を計算し、
+`ranking_snapshots` に `shadow` として保存します。shadow期間中はサイトの表示順を変更しません。
 
 ※ Vercel無料(Hobby)プランはCronが1日1回・関数実行時間に制限があります。
 収集が時間内に終わらない場合は `INGEST_MAX_NEW` を小さくするか、ローカルで `npm run ingest` を回してください。

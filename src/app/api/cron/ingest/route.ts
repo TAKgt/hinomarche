@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { runIngest } from "@/lib/ingest";
+import { runShadowRanking } from "@/lib/ranking";
 
 /**
  * Vercel Cron用エンドポイント(vercel.json で日次実行)。
@@ -31,7 +32,14 @@ export async function GET(request: Request) {
 
   try {
     const summary = await runIngest();
-    return NextResponse.json(summary);
+    try {
+      const ranking = await runShadowRanking();
+      return NextResponse.json({ ...summary, ranking });
+    } catch (e) {
+      console.error("shadow ranking failed", e);
+      summary.errors.push(`shadowランキング失敗: ${String(e)}`);
+      return NextResponse.json({ ...summary, ranking: null });
+    }
   } catch (e) {
     console.error("ingest cron failed", e);
     return NextResponse.json({ error: "ingest failed" }, { status: 500 });

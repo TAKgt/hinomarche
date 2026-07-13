@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getProduct, recordOutboundClick } from "@/lib/db";
 import { amazonSearchUrl, rakutenSearchUrl } from "@/lib/crosslinks";
+import { isSameOriginBrowserRequest } from "@/lib/request-security";
 
 type Destination = "primary" | "cross";
 type Merchant = "rakuten" | "amazon";
@@ -37,25 +38,6 @@ function redirectWithoutCaching(url: string): NextResponse {
   response.headers.set("Cache-Control", "private, no-store, max-age=0");
   response.headers.set("X-Robots-Tag", "noindex, nofollow");
   return response;
-}
-
-function shouldRecordClick(request: NextRequest): boolean {
-  const referer = request.headers.get("referer");
-  const requestHost = request.headers.get("host");
-  if (!referer || !requestHost) return false;
-
-  try {
-    const refererUrl = new URL(referer);
-    if (refererUrl.host.toLowerCase() !== requestHost.toLowerCase()) return false;
-
-    const forwardedProto = request.headers.get("x-forwarded-proto");
-    if (forwardedProto && refererUrl.protocol !== `${forwardedProto}:`) return false;
-  } catch {
-    return false;
-  }
-
-  const userAgent = request.headers.get("user-agent") ?? "";
-  return !/(bot|crawler|spider|slurp|preview|facebookexternalhit)/i.test(userAgent);
 }
 
 export async function GET(
@@ -97,7 +79,7 @@ export async function GET(
     return Response.json({ error: "Invalid merchant link" }, { status: 502 });
   }
 
-  if (shouldRecordClick(request)) {
+  if (isSameOriginBrowserRequest(request)) {
     try {
       await recordOutboundClick({ productId: id, destination, merchant });
     } catch (error) {

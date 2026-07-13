@@ -414,3 +414,89 @@ export async function recordOutboundClick(input: OutboundClickInput): Promise<vo
   });
   if (error) throw error;
 }
+
+export async function recordProductPageView(productId: string): Promise<void> {
+  if (isDemoMode()) return;
+
+  const { error } = await adminSupabase().from("product_page_views").insert({
+    product_id: productId,
+  });
+  if (error) throw error;
+}
+
+export type ShadowRankingInput = {
+  productId: string;
+  aiScore: number;
+  demandScore: number;
+  currentFeaturedScore: number;
+  pageViews28d: number;
+  outboundClicks28d: number;
+  priceUpdatedAt: string | null;
+};
+
+export async function getShadowRankingInputs(): Promise<ShadowRankingInput[]> {
+  if (isDemoMode()) return [];
+
+  const pageSize = 1000;
+  const rows: Record<string, unknown>[] = [];
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await adminSupabase()
+      .from("product_ranking_inputs")
+      .select("*")
+      .order("product_id", { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    rows.push(...data);
+    if (data.length < pageSize) break;
+  }
+
+  return rows.map((row) => ({
+    productId: String(row.product_id),
+    aiScore: Number(row.ai_score ?? 0),
+    demandScore: Number(row.demand_score ?? 0),
+    currentFeaturedScore: Number(row.current_featured_score ?? 0),
+    pageViews28d: Number(row.page_views_28d ?? 0),
+    outboundClicks28d: Number(row.outbound_clicks_28d ?? 0),
+    priceUpdatedAt: row.price_updated_at ? String(row.price_updated_at) : null,
+  }));
+}
+
+export type ShadowRankingSnapshot = {
+  productId: string;
+  calculatedOn: string;
+  currentScore: number;
+  proposedScore: number;
+  pageViews28d: number;
+  outboundClicks28d: number;
+  smoothedCtr: number;
+  reason: string;
+};
+
+export async function saveShadowRankingSnapshots(
+  snapshots: ShadowRankingSnapshot[]
+): Promise<void> {
+  if (isDemoMode() || snapshots.length === 0) return;
+
+  const db = adminSupabase();
+  const chunkSize = 500;
+  for (let i = 0; i < snapshots.length; i += chunkSize) {
+    const rows = snapshots.slice(i, i + chunkSize).map((snapshot) => ({
+      product_id: snapshot.productId,
+      calculated_on: snapshot.calculatedOn,
+      mode: "shadow",
+      score_version: "commercial-v1",
+      current_score: snapshot.currentScore,
+      proposed_score: snapshot.proposedScore,
+      page_views_28d: snapshot.pageViews28d,
+      outbound_clicks_28d: snapshot.outboundClicks28d,
+      smoothed_ctr: snapshot.smoothedCtr,
+      reason: snapshot.reason,
+    }));
+
+    const { error } = await db
+      .from("ranking_snapshots")
+      .upsert(rows, { onConflict: "product_id,calculated_on,mode" });
+    if (error) throw error;
+  }
+}

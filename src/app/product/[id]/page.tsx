@@ -5,6 +5,7 @@ import { getProduct } from "@/lib/db";
 import { formatDate, formatPrice, SOURCE_LABEL } from "@/lib/format";
 import { ScoreRing } from "@/components/ScoreRing";
 import { CheckMarks } from "@/components/CheckMarks";
+import { ProductViewTracker } from "@/components/ProductViewTracker";
 import { TIER_LABEL } from "@/lib/types";
 
 type Props = { params: Promise<{ id: string }> };
@@ -32,6 +33,7 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-12">
+      <ProductViewTracker productId={product.id} />
       <nav className="text-xs text-sumi-soft mb-8">
         <Link href="/" className="hover:text-hinomaru">ホーム</Link>
         <span className="mx-2">/</span>

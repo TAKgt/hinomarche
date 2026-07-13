@@ -1,6 +1,6 @@
 # ヒノマルシェ 引き継ぎ書(完全版)
 
-最終更新: 2026-07-12 / 前任: Claude Code
+最終更新: 2026-07-13 / 前任: Claude Code / 更新: Codex
 このドキュメントは、プロジェクトの仕様・現状・制約・残作業のすべてを引き継ぐためのもの。
 **コードを書く前に必ず「絶対に守るルール」と「ハマりどころ」を読むこと。**
 
@@ -52,6 +52,7 @@ src/
     privacy/page.tsx        プライバシーポリシー(Amazonアソシエイト必須文言入り)
     contact/page.tsx        お問い合わせフォーム(メールアドレスは公開しない)
     api/contact/route.ts    フォーム送信先。service_roleで非公開テーブルに保存
+    api/metrics/product-view/route.ts 個人を識別しない商品閲覧計測
     go/[id]/route.ts        販売サイトへの安全なリダイレクト+匿名クリック集計
     not-found.tsx           404
     sitemap.ts / robots.ts / icon.svg / opengraph-image.tsx  SEO・メタ系
@@ -61,6 +62,7 @@ src/
     ScoreRing.tsx           スコアバッジ: 全面塗りつぶし円。赤=90%以上/オレンジ=50-89/黄=~49。
                             黄のみ文字は墨色(コントラスト確保)。100%で日の丸になる意匠
     CheckMarks.tsx          3要素チェック表示(詳細用/カード用コンパクトの2種)
+    ProductViewTracker.tsx  商品詳細の匿名閲覧イベント送信
   lib/
     types.ts                型定義(Product, Judgment, JudgmentChecks, Tier, tierOf)
     db.ts                   データ層。env未設定時はデモモード(src/data/demo-products.json)
@@ -69,6 +71,8 @@ src/
     amazon.ts               Amazon Creators API(2026年新仕様、OAuth2)
     judge.ts                AI判定(スコア+根拠+3要素チェックをJSONスキーマ強制で取得)
     ingest.ts               収集パイプライン本体(cron/ローカル共用)
+    ranking.ts              28日間の閲覧/クリックでshadow候補順位を日次計算
+    request-security.ts     同一サイト操作/一般的なボットの判定(計測ノイズ抑制)
     crosslinks.ts           相互送客リンク(楽天商品→Amazon検索 / Amazon商品→楽天検索)
     format.ts               価格・日付フォーマッタ
 scripts/
@@ -78,25 +82,32 @@ supabase/
   schema.sql                初期スキーマ(新規プロジェクト用。マイグレーション適用済みの完全版)
   migrations/002_add_checks.sql       3要素チェック列追加(適用済み)
   migrations/003_more_categories.sql  カテゴリ追加(適用済み)
+  migrations/004_security_hardening.sql RLS/ビュー強化(適用済み)
+  migrations/005_market_ranking.sql   市場需要スコア(適用済み)
+  migrations/006_contact_messages.sql お問い合わせ保存(適用済み)
+  migrations/007_commercial_category_keywords.sql 商用キーワード/カテゴリ(適用済み)
+  migrations/008_outbound_clicks.sql  販売サイト移動計測(適用済み)
+  migrations/009_shadow_ranking.sql   閲覧計測/shadow順位(適用済み)
 ```
 
 ## 5. データモデル(Supabase)
 
 - `categories`: slug / name / search_keywords(jsonb配列) / is_active
   - **カテゴリ追加・キーワード変更はSQLだけで完結**(コード変更不要。ヘッダーのナビも自動反映)
-  - 現在有効: kitchen, towel, stationery, food, zakka
+  - 現在有効: kitchen, towel, stationery, food, zakka, gift, emergency
 - `products`: source('rakuten'|'amazon') + source_item_id でユニーク。affiliate_url, price,
   price_updated_at, is_published など
 - `judgments`: 判定履歴(追記型。表示は最新を使う)。score, tier('high'|'mid'|'low'),
   evidence_type, evidence_text, origin_check/company_check/material_check('yes'|'unknown'|'no')
 - `products_with_judgment`: 最新判定をJOINしたビュー。**サイト表示は必ずこのビューを読む**
 - `outbound_clicks`: 商品から販売サイトへの移動数。IP/Cookie/User-Agent/セッションIDは保存しない。anon/authenticatedに権限なし
+- `product_page_views`: 商品閲覧数。商品IDと時刻のみ。anon/authenticatedに権限なし
+- `ranking_snapshots`: `commercial-v1` の日次計算結果。現在は `shadow` のみで表示順には未反映
 - AI判定待ちの商品は、古い順ではなく `featured_score` / `demand_score` / `search_rank`
   を優先して処理する。売れ筋候補を先に公開するため。
 - RLS有効。匿名キーは公開商品の読みのみ。書き込みはservice_roleキー経由のみ
 
-現状データ(2026-07-12時点): **総商品730件・全件公開・全件3要素チェック付与済み**。
-日本度分布: 高644 / 中77 / 低9。
+現状データ(2026-07-13時点): **公開商品750件**。未判定バックログは日次Cronで需要順に消化する。
 
 ## 6. 外部API仕様(2026年の重要変更を含む)
 

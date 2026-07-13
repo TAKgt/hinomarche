@@ -71,12 +71,37 @@ create table outbound_clicks (
   clicked_at timestamptz not null default now()
 );
 
+create table product_page_views (
+  id bigserial primary key,
+  product_id uuid not null references products(id) on delete cascade,
+  viewed_at timestamptz not null default now()
+);
+
+create table ranking_snapshots (
+  id bigserial primary key,
+  product_id uuid not null references products(id) on delete cascade,
+  calculated_on date not null,
+  mode text not null check (mode in ('shadow', 'live')),
+  score_version text not null,
+  current_score integer not null check (current_score between 0 and 100),
+  proposed_score integer not null check (proposed_score between 0 and 100),
+  page_views_28d integer not null default 0 check (page_views_28d >= 0),
+  outbound_clicks_28d integer not null default 0 check (outbound_clicks_28d >= 0),
+  smoothed_ctr numeric(9,6) not null default 0 check (smoothed_ctr >= 0),
+  reason text not null,
+  created_at timestamptz not null default now(),
+  unique (product_id, calculated_on, mode)
+);
+
 create index idx_products_category on products (category_slug) where is_published;
 create index idx_products_featured on products (is_published, featured_score desc, demand_score desc, updated_at desc);
 create index idx_judgments_product on judgments (product_id, judged_at desc);
 create index idx_contact_messages_created_at on contact_messages (created_at desc);
 create index idx_outbound_clicks_clicked_at on outbound_clicks (clicked_at desc);
 create index idx_outbound_clicks_product_clicked_at on outbound_clicks (product_id, clicked_at desc);
+create index idx_product_page_views_product_viewed_at on product_page_views (product_id, viewed_at desc);
+create index idx_product_page_views_viewed_at on product_page_views (viewed_at desc);
+create index idx_ranking_snapshots_date_score on ranking_snapshots (calculated_on desc, mode, proposed_score desc);
 
 -- 最新の判定を結合したビュー(サイト表示はこれを読む)
 -- security_invoker=true により、anon/authenticated から見た場合も下位テーブルのRLSを適用する。
@@ -102,12 +127,46 @@ join lateral (
   limit 1
 ) j on true;
 
+create view product_ranking_inputs
+with (security_invoker = true) as
+select
+  p.id as product_id,
+  j.score as ai_score,
+  p.demand_score,
+  p.featured_score as current_featured_score,
+  p.price_updated_at,
+  coalesce(pv.page_views_28d, 0)::integer as page_views_28d,
+  coalesce(oc.outbound_clicks_28d, 0)::integer as outbound_clicks_28d
+from products p
+join lateral (
+  select score
+  from judgments
+  where product_id = p.id
+  order by judged_at desc
+  limit 1
+) j on true
+left join (
+  select product_id, count(*) as page_views_28d
+  from product_page_views
+  where viewed_at >= now() - interval '28 days'
+  group by product_id
+) pv on pv.product_id = p.id
+left join (
+  select product_id, count(*) as outbound_clicks_28d
+  from outbound_clicks
+  where clicked_at >= now() - interval '28 days'
+  group by product_id
+) oc on oc.product_id = p.id
+where p.is_published;
+
 -- RLS: 匿名キーからは公開商品の読み取りのみ許可(書き込みはservice roleキー経由)
 alter table categories enable row level security;
 alter table products enable row level security;
 alter table judgments enable row level security;
 alter table contact_messages enable row level security;
 alter table outbound_clicks enable row level security;
+alter table product_page_views enable row level security;
+alter table ranking_snapshots enable row level security;
 
 grant usage on schema public to anon, authenticated;
 grant select on categories, products, judgments, products_with_judgment to anon, authenticated;
@@ -115,6 +174,10 @@ revoke all on contact_messages from anon, authenticated;
 revoke all on sequence contact_messages_id_seq from anon, authenticated;
 revoke all on outbound_clicks from anon, authenticated;
 revoke all on sequence outbound_clicks_id_seq from anon, authenticated;
+revoke all on product_page_views, ranking_snapshots from anon, authenticated;
+revoke all on sequence product_page_views_id_seq from anon, authenticated;
+revoke all on sequence ranking_snapshots_id_seq from anon, authenticated;
+revoke all on product_ranking_inputs from anon, authenticated;
 
 create policy "public read categories" on categories for select using (is_active);
 create policy "public read published products" on products for select using (is_published);
