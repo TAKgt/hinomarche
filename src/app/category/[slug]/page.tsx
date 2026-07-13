@@ -4,6 +4,10 @@ import type { Metadata } from "next";
 import { getCategories, getPublishedProducts, type SortKey } from "@/lib/db";
 import type { Tier } from "@/lib/types";
 import { ProductCard } from "@/components/ProductCard";
+import { JsonLd } from "@/components/JsonLd";
+import { getCategoryContent } from "@/lib/category-content";
+import { displayProductTitle } from "@/lib/product-title";
+import { siteOrigin } from "@/lib/site-url";
 
 const SORTS: { key: SortKey; label: string }[] = [
   { key: "featured", label: "注目順" },
@@ -22,8 +26,12 @@ const TIERS: { key: Tier | undefined; label: string }[] = [
 
 type Props = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ sort?: string; tier?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+function firstValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
 
 function buildQuery(sort: SortKey, tier: Tier | undefined): string {
   const params = new URLSearchParams();
@@ -33,19 +41,33 @@ function buildQuery(sort: SortKey, tier: Tier | undefined): string {
   return qs ? `?${qs}` : "";
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { slug } = await params;
+  const query = await searchParams;
   const category = (await getCategories()).find((c) => c.slug === slug);
   if (!category) return {};
+  const content = getCategoryContent(slug, category.name);
+  const canonical = `/category/${slug}`;
+  const isListingVariant = Object.values(query).some((value) => value !== undefined);
   return {
-    title: `${category.name}の日本製・日本産地アイテム`,
-    description: `${category.name}カテゴリの商品一覧。AI日本度判定のスコアと根拠つきで紹介します。`,
+    title: content.title,
+    description: content.description,
+    alternates: { canonical },
+    robots: isListingVariant ? { index: false, follow: true } : undefined,
+    openGraph: {
+      title: content.title,
+      description: content.description,
+      url: canonical,
+      type: "website",
+    },
   };
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
   const { slug } = await params;
-  const { sort: sortParam, tier: tierParam } = await searchParams;
+  const query = await searchParams;
+  const sortParam = firstValue(query.sort);
+  const tierParam = firstValue(query.tier);
   const sort: SortKey = SORTS.some((s) => s.key === sortParam)
     ? (sortParam as SortKey)
     : "featured";
@@ -57,9 +79,40 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   if (!category) notFound();
 
   const products = await getPublishedProducts({ categorySlug: slug, sort, tier });
+  const content = getCategoryContent(slug, category.name);
+  const origin = siteOrigin();
+  const pageUrl = `${origin}/category/${slug}`;
+  const structuredData = [
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "ホーム", item: origin },
+        { "@type": "ListItem", position: 2, name: category.name, item: pageUrl },
+      ],
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      name: content.title,
+      numberOfItems: products.length,
+      itemListElement: products.map((product, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        url: `${origin}/product/${product.id}`,
+        name: displayProductTitle(product.title),
+      })),
+    },
+  ];
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-12">
+      <JsonLd data={structuredData} />
+      <nav className="mb-8 text-xs text-sumi-soft" aria-label="パンくず">
+        <Link href="/" className="hover:text-hinomaru">ホーム</Link>
+        <span className="mx-2">/</span>
+        <span>{category.name}</span>
+      </nav>
       <div className="flex items-start gap-6">
         <span
           aria-hidden
@@ -75,7 +128,10 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             {category.name}
           </h1>
           <p className="mt-3 text-sm text-sumi-soft max-w-2xl leading-relaxed">
-            すべての商品にAI日本度判定(スコアと根拠)を表示しています。
+            {content.intro}
+          </p>
+          <p className="mt-3 text-xs text-sumi-soft max-w-2xl leading-relaxed">
+            ※ AI日本度は商品情報をもとにした推定です。正確な生産国・原産地は販売ページでご確認ください。
           </p>
         </div>
       </div>
@@ -128,11 +184,19 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           このカテゴリの商品はまだ掲載されていません。
         </p>
       ) : (
-        <div className="mt-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
-          {products.map((p, i) => (
-            <ProductCard key={p.id} product={p} index={i} />
-          ))}
-        </div>
+        <section className="mt-8" aria-labelledby="category-products-heading">
+          <div className="flex items-end justify-between gap-4 border-b border-line pb-4">
+            <h2 id="category-products-heading" className="font-mincho text-xl font-semibold">
+              掲載商品
+            </h2>
+            <p className="text-sm text-sumi-soft">表示中 {products.length}件</p>
+          </div>
+          <div className="mt-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+            {products.map((p, i) => (
+              <ProductCard key={p.id} product={p} index={i} />
+            ))}
+          </div>
+        </section>
       )}
     </div>
   );

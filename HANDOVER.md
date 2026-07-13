@@ -45,7 +45,8 @@ src/
   app/
     layout.tsx              ヘッダー(DBからカテゴリ動的表示)+フッター(免責・Amazon必須文言)
     page.tsx                トップ: ヒーロー+高スコア商品12件+カテゴリ一覧
-    category/[slug]/page.tsx 一覧: 並び順(日本度/新着/価格)+日本度帯フィルタ(high/mid/low)
+    category/[slug]/page.tsx 一覧: 並び順(日本度/新着/価格)+日本度帯フィルタ(high/mid/low)。
+                              固有SEO文、canonical、構造化データ、絞り込みnoindex対応
     product/[id]/page.tsx   詳細: スコア・3要素チェック・根拠・購入ボタン2つ(後述)
     feature/[slug]/page.tsx 購入目的別のSEO特集(現在3種、商品はDBから自動抽出)
     region/[slug]/page.tsx  産地・工芸名別のSEO特集(現在7種、商品名表記から自動抽出)
@@ -78,6 +79,7 @@ src/
     ranking.ts              28日間の閲覧/クリックでshadow候補順位を日次計算
     request-security.ts     同一サイト操作/一般的なボットの判定(計測ノイズ抑制)
     crosslinks.ts           相互送客リンク(楽天商品→Amazon検索 / Amazon商品→楽天検索)
+    category-content.ts     23カテゴリ固有の検索説明文・画面導入文
     format.ts               価格・日付フォーマッタ
 scripts/
   ingest.ts                 ローカル収集: npm run ingest
@@ -108,6 +110,8 @@ supabase/
   evidence_type, evidence_text, origin_check/company_check/material_check('yes'|'unknown'|'no')
 - `products_with_judgment`: 最新判定をJOINしたビュー。**サイト表示は必ずこのビューを読む**
 - 商品詳細はGoogleのProduct snippet向け構造化データとBreadcrumbListを出力。AI日本度をレビュ評価として送信しない
+- カテゴリ一覧は23カテゴリ固有のtitle/description/導入文を持ち、BreadcrumbListとItemListを出力。
+  並び替え・日本度絞り込みURLはcanonicalをカテゴリ基本URLへ向け、`noindex, follow`で重複登録を避ける
 - 表示用商品名は先頭の期限付き販促文を除き、64文字以内に整形。DBの原文と販売先リンクは変更しない
 - `outbound_clicks`: 商品から販売サイトへの移動数。IP/Cookie/User-Agent/セッションIDは保存しない。anon/authenticatedに権限なし
 - `product_page_views`: 商品閲覧数。商品IDと時刻のみ。anon/authenticatedに権限なし
@@ -119,6 +123,7 @@ supabase/
 現状データ(2026-07-14時点): **公開商品839件**。同日のshadowランキング839件を生成済み。
 収集とランキングはVercel Hobbyの60秒上限に合わせて独立Cron化済み。
 未判定バックログは日次Cronでカテゴリを一巡しつつ需要順に消化する。
+23カテゴリの検索向け固有説明・canonical・構造化データ対応は実装・ローカル検証済み。
 
 ## 6. 外部API仕様(2026年の重要変更を含む)
 
