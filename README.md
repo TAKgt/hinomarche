@@ -45,6 +45,7 @@ cp .env.example .env.local
 | `AMAZON_CREDENTIAL_ID` / `AMAZON_CREDENTIAL_SECRET` / `AMAZON_PARTNER_TAG` | アソシエイト管理画面 → ツール → Creators API(旧PA-APIは2026年5月廃止) |
 | `ANTHROPIC_API_KEY` | platform.claude.com → API Keys |
 | `CRON_SECRET` | ランダムな長い文字列を自分で生成(例: `openssl rand -hex 32`) |
+| `ANALYTICS_ADMIN_PASSWORD` | `/admin/ranking`専用。32バイト以上のランダム値をVercelだけに設定 |
 | `NEXT_PUBLIC_SITE_URL` | 本番URL。通常は `https://www.hinomarche.com` |
 
 ### 2. Supabaseにテーブルを作る
@@ -98,6 +99,14 @@ npm run judge:backlog
 
 日次Cronは商品収集の後に `commercial-v1` の候補順位を計算し、
 `ranking_snapshots` に `shadow` として保存します。shadow期間中はサイトの表示順を変更しません。
+
+### 5. 非公開の運営ランキング
+
+`/admin/ranking` では、直近28日の商品閲覧・販売サイト移動・CTRとshadow候補順位を確認できます。
+公開サイトからのリンクはなく、`ANALYTICS_ADMIN_PASSWORD` が未設定なら503で閉じます。
+Basic認証のユーザー名は既定で `hinomarche` です
+(`ANALYTICS_ADMIN_USERNAME` で変更可)。検索エンジン登録とブラウザキャッシュは禁止しています。
+この画面は読み取り専用で、表示順位や商品データを変更しません。
 
 ※ Vercel無料(Hobby)プランはCronが1日1回・関数実行時間に制限があります。
 収集が時間内に終わらない場合は `INGEST_MAX_NEW` を小さくするか、ローカルで `npm run ingest` を回してください。

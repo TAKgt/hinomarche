@@ -53,6 +53,7 @@ src/
     contact/page.tsx        お問い合わせフォーム(メールアドレスは公開しない)
     api/contact/route.ts    フォーム送信先。service_roleで非公開テーブルに保存
     api/metrics/product-view/route.ts 個人を識別しない商品閲覧計測
+    admin/ranking/page.tsx  Basic認証必須の非公開ランキング画面(読み取り専用)
     go/[id]/route.ts        販売サイトへの安全なリダイレクト+匿名クリック集計
     not-found.tsx           404
     sitemap.ts / robots.ts / icon.svg / opengraph-image.tsx  SEO・メタ系
@@ -173,12 +174,17 @@ supabase/
 | AMAZON_PARTNER_TAG | トラッキングID = **hinomarche-22**(旧yamatoll-22は使わない) |
 | ANTHROPIC_API_KEY | AI判定用 |
 | CRON_SECRET | Cronエンドポイント認証(VercelがAuthorizationヘッダーに付ける) |
+| ANALYTICS_ADMIN_USERNAME / ANALYTICS_ADMIN_PASSWORD | `/admin/ranking` のBasic認証。未設定時は503で閉じる |
 | INGEST_MAX_NEW | 1回の収集でAI判定する上限(既定30) |
 | INGEST_KEYWORDS_PER_CATEGORY | 1カテゴリあたり1日に検索する語数(既定2、日替わり巡回) |
 | INGEST_CATEGORY_SLUGS | ローカルで特定カテゴリだけ収集する場合のslug(カンマ区切り) |
 | SHOW_LOW_TIER | falseで低スコア商品を非表示(既定true) |
 
 **全部未設定でも動く**: デモモード(サンプル12商品)になる。UI開発はキーなしで可能。
+
+運営ランキングは例外で、`ANALYTICS_ADMIN_PASSWORD` 未設定時は安全側に倒して利用不可。
+`src/proxy.ts` が `/admin/:path*` だけを保護し、認証失敗時はDB問い合わせ前に401を返す。
+検索登録・キャッシュを禁止し、画面は読み取り専用。公開ナビからリンクしない。
 
 ## 9. 絶対に守るルール(法令・規約対応。ユーザーの強い意向)
 

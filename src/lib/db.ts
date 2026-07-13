@@ -526,6 +526,94 @@ export type ShadowRankingSnapshot = {
   reason: string;
 };
 
+export type AdminRankingRow = ShadowRankingSnapshot & {
+  title: string;
+  categorySlug: string;
+  categoryName: string;
+  source: "rakuten" | "amazon";
+  aiScore: number;
+};
+
+export type AdminRankingReport = {
+  calculatedOn: string | null;
+  rows: AdminRankingRow[];
+};
+
+export async function getAdminRankingReport(): Promise<AdminRankingReport> {
+  if (isDemoMode()) return { calculatedOn: null, rows: [] };
+
+  const db = adminSupabase();
+  const { data: latest, error: latestError } = await db
+    .from("ranking_snapshots")
+    .select("calculated_on")
+    .eq("mode", "shadow")
+    .order("calculated_on", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (latestError) throw latestError;
+  if (!latest) return { calculatedOn: null, rows: [] };
+
+  const calculatedOn = String(latest.calculated_on);
+  const snapshots: Record<string, unknown>[] = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await db
+      .from("ranking_snapshots")
+      .select("*")
+      .eq("mode", "shadow")
+      .eq("calculated_on", calculatedOn)
+      .order("proposed_score", { ascending: false })
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    snapshots.push(...data);
+    if (data.length < pageSize) break;
+  }
+
+  const productIds = snapshots.map((row) => String(row.product_id));
+  const productRows: Record<string, unknown>[] = [];
+  for (let index = 0; index < productIds.length; index += 200) {
+    const { data, error } = await db
+      .from("products_with_judgment")
+      .select("id,title,category_slug,source,score")
+      .in("id", productIds.slice(index, index + 200));
+    if (error) throw error;
+    productRows.push(...data);
+  }
+
+  const { data: categories, error: categoryError } = await db
+    .from("categories")
+    .select("slug,name");
+  if (categoryError) throw categoryError;
+
+  const productsById = new Map(productRows.map((row) => [String(row.id), row]));
+  const categoryNames = new Map(
+    categories.map((row) => [String(row.slug), String(row.name)])
+  );
+
+  const rows = snapshots.flatMap((snapshot): AdminRankingRow[] => {
+    const product = productsById.get(String(snapshot.product_id));
+    if (!product) return [];
+    const categorySlug = String(product.category_slug);
+    return [{
+      productId: String(snapshot.product_id),
+      calculatedOn,
+      currentScore: Number(snapshot.current_score),
+      proposedScore: Number(snapshot.proposed_score),
+      pageViews28d: Number(snapshot.page_views_28d),
+      outboundClicks28d: Number(snapshot.outbound_clicks_28d),
+      smoothedCtr: Number(snapshot.smoothed_ctr),
+      reason: String(snapshot.reason),
+      title: String(product.title),
+      categorySlug,
+      categoryName: categoryNames.get(categorySlug) ?? categorySlug,
+      source: product.source === "amazon" ? "amazon" : "rakuten",
+      aiScore: Number(product.score),
+    }];
+  });
+
+  return { calculatedOn, rows };
+}
+
 export async function saveShadowRankingSnapshots(
   snapshots: ShadowRankingSnapshot[]
 ): Promise<void> {
