@@ -1,5 +1,7 @@
 const PROMOTION_MARKERS =
-  /(楽天|ranking|ランキング|送料無料|送料込|ポイント|クーポン|off|セール|sale|マラソン|特典|ラッピング|キャンペーン|最大\s*\d+\s*%|注目商品)/i;
+  /(楽天|ranking|ランキング|送料無料|送料込|ポイント|クーポン|off|セール|sale|特価|お値打ち|マラソン|特典|ラッピング|キャンペーン|最大\s*\d+\s*%|注目商品)/i;
+
+const PROMOTIONAL_BLOCK = /【([^】]+)】|≪([^≫]+)≫|＼([^／]+)／|\[([^\]]+)\]/g;
 
 const LEADING_BLOCK = /^(?:【([^】]+)】|≪([^≫]+)≫|＼([^／]+)／|\[([^\]]+)\])\s*/;
 
@@ -22,6 +24,16 @@ export function displayProductTitle(title: string, maxLength = 64): string {
     if (!PROMOTION_MARKERS.test(blockText)) break;
     cleaned = cleaned.slice(match[0].length).trim();
   }
+
+  cleaned = cleaned
+    .replace(PROMOTIONAL_BLOCK, (block, ...groups: Array<string | undefined>) => {
+      const blockText = groups.slice(0, 4).find(Boolean) ?? "";
+      return PROMOTION_MARKERS.test(blockText) ? " " : block;
+    })
+    .replace(/\s*(?:楽天(?:市場)?(?:ランキング)?\s*1位(?:獲得)?|ポイント\s*\d+倍|送料無料(?:\s*\([^)]*\))?)\s*/gi, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\s*[/|｜]\s*$/, "")
+    .trim();
 
   cleaned = cleaned.replace(/^[◎○●★☆♪♫※・ー\s]+/, "").trim();
 
