@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { getCategories, getSitemapProducts } from "@/lib/db";
 import { siteOrigin } from "@/lib/site-url";
 import { FEATURES } from "@/lib/features";
+import { REGIONS } from "@/lib/regions";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteOrigin();
@@ -18,6 +19,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/contact`, changeFrequency: "yearly", priority: 0.2 },
     ...FEATURES.map((feature) => ({
       url: `${baseUrl}/feature/${feature.slug}`,
+      changeFrequency: "daily" as const,
+      priority: 0.9,
+    })),
+    ...REGIONS.map((region) => ({
+      url: `${baseUrl}/region/${region.slug}`,
       changeFrequency: "daily" as const,
       priority: 0.9,
     })),

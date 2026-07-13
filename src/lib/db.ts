@@ -254,6 +254,39 @@ export async function getFeatureProducts(opts: {
   return data.map(rowToProduct).filter(matches).slice(0, limit);
 }
 
+export async function getRegionProducts(opts: {
+  titleTerms: string[];
+  minScore: number;
+  limit?: number;
+}): Promise<Product[]> {
+  const { titleTerms, minScore, limit = 24 } = opts;
+  const matches = (product: Product) =>
+    product.score >= minScore &&
+    titleTerms.some((term) => product.title.includes(term));
+
+  if (isDemoMode()) {
+    return (demoProducts as unknown as Product[])
+      .filter(matches)
+      .sort((a, b) => productFeaturedScore(b) - productFeaturedScore(a))
+      .slice(0, limit);
+  }
+
+  const titleFilter = titleTerms
+    .map((term) => `title.ilike.%${term.replace(/[,%()]/g, "")}%`)
+    .join(",");
+  const { data, error } = await publicSupabase()
+    .from("products_with_judgment")
+    .select("*")
+    .eq("is_published", true)
+    .gte("score", minScore)
+    .or(titleFilter)
+    .order("featured_score", { ascending: false })
+    .order("demand_score", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data.map(rowToProduct).filter(matches);
+}
+
 export async function getProduct(id: string): Promise<Product | null> {
   if (isDemoMode()) {
     const items = demoProducts as unknown as Product[];

@@ -48,6 +48,7 @@ src/
     category/[slug]/page.tsx 一覧: 並び順(日本度/新着/価格)+日本度帯フィルタ(high/mid/low)
     product/[id]/page.tsx   詳細: スコア・3要素チェック・根拠・購入ボタン2つ(後述)
     feature/[slug]/page.tsx 購入目的別のSEO特集(現在3種、商品はDBから自動抽出)
+    region/[slug]/page.tsx  産地・工芸名別のSEO特集(現在7種、商品名表記から自動抽出)
     about/page.tsx          サイト趣旨+判定基準の説明
     disclaimer/page.tsx     免責事項(訴訟リスク対策の核。安易に変更しない)
     privacy/page.tsx        プライバシーポリシー(Amazonアソシエイト必須文言入り)

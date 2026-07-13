@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCategories, getTopProducts } from "@/lib/db";
 import { ProductCard } from "@/components/ProductCard";
 import { FEATURES } from "@/lib/features";
+import { REGIONS } from "@/lib/regions";
 
 export const revalidate = 3600;
 
@@ -89,6 +90,34 @@ export default async function Home() {
                 </span>
                 <span className="mt-3 block text-sm leading-relaxed text-sumi-soft">
                   {feature.description}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-line bg-washi-deep/35">
+        <div className="mx-auto max-w-6xl px-5 py-14 md:py-16">
+          <p className="text-xs font-medium tracking-[0.35em] text-hinomaru">
+            CRAFT &amp; ORIGIN
+          </p>
+          <div className="mt-2 flex items-end justify-between gap-4">
+            <h2 className="font-mincho text-2xl font-semibold md:text-3xl">
+              産地・工芸から探す
+            </h2>
+            <span className="text-sm text-sumi-soft">{REGIONS.length}つの産地</span>
+          </div>
+          <div className="mt-7 grid grid-cols-2 border-l border-t border-line md:grid-cols-4 lg:grid-cols-7">
+            {REGIONS.map((region) => (
+              <Link
+                key={region.slug}
+                href={`/region/${region.slug}`}
+                className="group border-b border-r border-line px-4 py-5 transition-colors hover:bg-white/60"
+              >
+                <span className="block text-xs text-sumi-soft">{region.eyebrow}</span>
+                <span className="mt-1 block font-mincho text-lg font-semibold group-hover:text-hinomaru">
+                  {region.name}
                 </span>
               </Link>
             ))}
