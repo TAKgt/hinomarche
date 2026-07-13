@@ -43,29 +43,63 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <header className="border-b border-line bg-washi/90 backdrop-blur sticky top-0 z-20">
-          <div className="mx-auto max-w-6xl px-5 py-3 md:py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-6">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3 md:py-4">
             <Link href="/" className="flex items-center gap-3 group shrink-0">
               <span
                 aria-hidden
                 className="block size-8 md:size-9 shrink-0 rounded-full bg-hinomaru shadow-[0_2px_10px_rgba(188,0,45,0.35)] transition-transform group-hover:scale-110"
               />
-              <span className="font-mincho text-xl md:text-2xl font-semibold tracking-[0.18em] whitespace-nowrap">
+              <span className="font-mincho text-lg font-semibold tracking-[0.12em] whitespace-nowrap sm:text-xl md:text-2xl md:tracking-[0.18em]">
                 ヒノマルシェ
               </span>
             </Link>
-            <nav className="flex items-center gap-5 md:gap-6 text-sm font-medium text-sumi-soft overflow-x-auto -mx-5 px-5 md:mx-0 md:px-0 pb-1 md:pb-0">
-              {categories.map((c) => (
-                <Link
-                  key={c.slug}
-                  href={`/category/${c.slug}`}
-                  className="hover:text-hinomaru transition-colors whitespace-nowrap"
-                >
-                  {c.name}
-                </Link>
-              ))}
+            <nav className="flex min-w-0 items-center gap-5 text-sm font-medium text-sumi-soft md:gap-7">
+              <Link
+                href="/#featured"
+                className="hidden whitespace-nowrap transition-colors hover:text-hinomaru sm:block"
+              >
+                注目商品
+              </Link>
+              <details className="group relative">
+                <summary className="flex cursor-pointer list-none items-center gap-1.5 whitespace-nowrap py-2 transition-colors hover:text-hinomaru [&::-webkit-details-marker]:hidden">
+                  <span>ジャンル</span>
+                  <span
+                    aria-hidden
+                    className="text-xs transition-transform group-open:rotate-180"
+                  >
+                    ▾
+                  </span>
+                </summary>
+                <div className="absolute right-0 top-[calc(100%+0.75rem)] z-30 w-[min(28rem,calc(100vw-2.5rem))] border border-line bg-washi p-4 shadow-[0_14px_36px_rgba(34,31,26,0.16)] md:p-5">
+                  <p className="mb-3 font-mincho text-base font-semibold text-sumi">
+                    ジャンルから探す
+                  </p>
+                  <div className="grid grid-cols-2 gap-px border border-line bg-line">
+                    {categories.map((c, index) => (
+                      <Link
+                        key={c.slug}
+                        href={`/category/${c.slug}`}
+                        className={`bg-washi px-3 py-3 text-sumi transition-colors hover:bg-white hover:text-hinomaru ${
+                          categories.length % 2 === 1 && index === categories.length - 1
+                            ? "col-span-2"
+                            : ""
+                        }`}
+                      >
+                        {c.name}
+                      </Link>
+                    ))}
+                  </div>
+                  <Link
+                    href="/#categories"
+                    className="mt-4 inline-block text-sm text-hinomaru hover:underline"
+                  >
+                    ジャンル一覧を見る →
+                  </Link>
+                </div>
+              </details>
               <Link
                 href="/about"
-                className="hover:text-hinomaru transition-colors whitespace-nowrap"
+                className="hidden whitespace-nowrap transition-colors hover:text-hinomaru md:block"
               >
                 このサイトについて
               </Link>
