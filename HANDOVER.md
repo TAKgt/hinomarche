@@ -47,6 +47,7 @@ src/
     page.tsx                トップ: ヒーロー+高スコア商品12件+カテゴリ一覧
     category/[slug]/page.tsx 一覧: 並び順(日本度/新着/価格)+日本度帯フィルタ(high/mid/low)
     product/[id]/page.tsx   詳細: スコア・3要素チェック・根拠・購入ボタン2つ(後述)
+    feature/[slug]/page.tsx 購入目的別のSEO特集(現在3種、商品はDBから自動抽出)
     about/page.tsx          サイト趣旨+判定基準の説明
     disclaimer/page.tsx     免責事項(訴訟リスク対策の核。安易に変更しない)
     privacy/page.tsx        プライバシーポリシー(Amazonアソシエイト必須文言入り)
@@ -104,6 +105,7 @@ supabase/
 - `judgments`: 判定履歴(追記型。表示は最新を使う)。score, tier('high'|'mid'|'low'),
   evidence_type, evidence_text, origin_check/company_check/material_check('yes'|'unknown'|'no')
 - `products_with_judgment`: 最新判定をJOINしたビュー。**サイト表示は必ずこのビューを読む**
+- 商品詳細はGoogleのProduct snippet向け構造化データとBreadcrumbListを出力。AI日本度をレビュ評価として送信しない
 - `outbound_clicks`: 商品から販売サイトへの移動数。IP/Cookie/User-Agent/セッションIDは保存しない。anon/authenticatedに権限なし
 - `product_page_views`: 商品閲覧数。商品IDと時刻のみ。anon/authenticatedに権限なし
 - `ranking_snapshots`: `commercial-v1` の日次計算結果。現在は `shadow` のみで表示順には未反映

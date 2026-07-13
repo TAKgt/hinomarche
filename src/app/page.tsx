@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCategories, getTopProducts } from "@/lib/db";
 import { ProductCard } from "@/components/ProductCard";
+import { FEATURES } from "@/lib/features";
 
 export const revalidate = 3600;
 
@@ -59,6 +60,39 @@ export default async function Home() {
           {products.map((p, i) => (
             <ProductCard key={p.id} product={p} index={i} />
           ))}
+        </div>
+      </section>
+
+      <section className="border-y border-line bg-white/30">
+        <div className="mx-auto max-w-6xl px-5 py-14 md:py-16">
+          <p className="text-xs font-medium tracking-[0.35em] text-hinomaru">
+            FEATURE STORIES
+          </p>
+          <div className="mt-2 flex items-end justify-between gap-4">
+            <h2 className="font-mincho text-2xl font-semibold md:text-3xl">
+              目的から探す
+            </h2>
+            <span className="text-sm text-sumi-soft">3つの特集</span>
+          </div>
+          <div className="mt-7 grid border-t border-line md:grid-cols-3">
+            {FEATURES.map((feature, index) => (
+              <Link
+                key={feature.slug}
+                href={`/feature/${feature.slug}`}
+                className={`group border-b border-line py-6 transition-colors hover:bg-white/50 md:px-6 ${
+                  index < FEATURES.length - 1 ? "md:border-r" : ""
+                }`}
+              >
+                <span className="text-xs text-hinomaru">0{index + 1}</span>
+                <span className="mt-2 block font-mincho text-xl font-semibold group-hover:text-hinomaru">
+                  {feature.shortTitle}
+                </span>
+                <span className="mt-3 block text-sm leading-relaxed text-sumi-soft">
+                  {feature.description}
+                </span>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 

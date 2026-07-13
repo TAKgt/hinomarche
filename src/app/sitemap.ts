@@ -1,12 +1,13 @@
 import type { MetadataRoute } from "next";
-import { getCategories, getPublishedProducts } from "@/lib/db";
+import { getCategories, getSitemapProducts } from "@/lib/db";
 import { siteOrigin } from "@/lib/site-url";
+import { FEATURES } from "@/lib/features";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteOrigin();
   const [categories, products] = await Promise.all([
     getCategories(),
-    getPublishedProducts({ limit: 1000 }),
+    getSitemapProducts(),
   ]);
 
   return [
@@ -15,6 +16,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/disclaimer`, changeFrequency: "yearly", priority: 0.2 },
     { url: `${baseUrl}/privacy`, changeFrequency: "yearly", priority: 0.2 },
     { url: `${baseUrl}/contact`, changeFrequency: "yearly", priority: 0.2 },
+    ...FEATURES.map((feature) => ({
+      url: `${baseUrl}/feature/${feature.slug}`,
+      changeFrequency: "daily" as const,
+      priority: 0.9,
+    })),
     ...categories.map((c) => ({
       url: `${baseUrl}/category/${c.slug}`,
       changeFrequency: "daily" as const,
@@ -22,6 +28,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
     ...products.map((p) => ({
       url: `${baseUrl}/product/${p.id}`,
+      lastModified: p.updatedAt ? new Date(p.updatedAt) : undefined,
       changeFrequency: "weekly" as const,
       priority: 0.6,
     })),

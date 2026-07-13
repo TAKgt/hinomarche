@@ -189,6 +189,71 @@ export async function getTopProducts(limit = 12): Promise<Product[]> {
   return [...high, ...mid];
 }
 
+export async function getSitemapProducts(): Promise<
+  { id: string; updatedAt: string | null }[]
+> {
+  if (isDemoMode()) {
+    return (demoProducts as unknown as Product[])
+      .filter((product) => showLowTier() || product.tier !== "low")
+      .map((product) => ({ id: product.id, updatedAt: product.priceUpdatedAt }));
+  }
+
+  const rows: { id: string; price_updated_at: string | null }[] = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    let query = publicSupabase()
+      .from("products_with_judgment")
+      .select("id,price_updated_at")
+      .eq("is_published", true)
+      .order("id", { ascending: true });
+    if (!showLowTier()) query = query.neq("tier", "low");
+    const { data, error } = await query.range(from, from + pageSize - 1);
+    if (error) throw error;
+    rows.push(...data);
+    if (data.length < pageSize) break;
+  }
+  return rows.map((row) => ({ id: row.id, updatedAt: row.price_updated_at }));
+}
+
+export async function getFeatureProducts(opts: {
+  categorySlugs: string[];
+  minScore: number;
+  maxPrice?: number;
+  titleTermGroups?: string[][];
+  limit?: number;
+}): Promise<Product[]> {
+  const { categorySlugs, minScore, maxPrice, titleTermGroups, limit = 24 } = opts;
+  const matches = (product: Product) => {
+    if (!categorySlugs.includes(product.categorySlug) || product.score < minScore) return false;
+    if (maxPrice != null && (product.price == null || product.price > maxPrice)) return false;
+    const normalizedTitle = product.title.toLocaleLowerCase("ja");
+    return (titleTermGroups ?? []).every((group) =>
+      group.some((term) => normalizedTitle.includes(term.toLocaleLowerCase("ja")))
+    );
+  };
+
+  if (isDemoMode()) {
+    return (demoProducts as unknown as Product[])
+      .filter(matches)
+      .sort((a, b) => productFeaturedScore(b) - productFeaturedScore(a))
+      .slice(0, limit);
+  }
+
+  let query = publicSupabase()
+    .from("products_with_judgment")
+    .select("*")
+    .eq("is_published", true)
+    .in("category_slug", categorySlugs)
+    .gte("score", minScore)
+    .order("featured_score", { ascending: false })
+    .order("demand_score", { ascending: false })
+    .limit(250);
+  if (maxPrice != null) query = query.lte("price", maxPrice);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data.map(rowToProduct).filter(matches).slice(0, limit);
+}
+
 export async function getProduct(id: string): Promise<Product | null> {
   if (isDemoMode()) {
     const items = demoProducts as unknown as Product[];

@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getProduct, getRelatedProducts } from "@/lib/db";
+import { getCategories, getProduct, getRelatedProducts } from "@/lib/db";
 import { formatDate, formatPrice, SOURCE_LABEL } from "@/lib/format";
 import { ScoreRing } from "@/components/ScoreRing";
 import { CheckMarks } from "@/components/CheckMarks";
 import { ProductViewTracker } from "@/components/ProductViewTracker";
 import { ProductCard } from "@/components/ProductCard";
+import { JsonLd } from "@/components/JsonLd";
+import { productStructuredData } from "@/lib/structured-data";
 import { TIER_LABEL } from "@/lib/types";
 
 type Props = { params: Promise<{ id: string }> };
@@ -18,6 +20,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: product.title,
     description: `${product.title} — AI日本度判定 ${product.score}%。${product.evidenceText}`,
+    alternates: { canonical: `/product/${product.id}` },
+    openGraph: {
+      title: product.title,
+      description: `${product.title} — AI日本度判定 ${product.score}%。${product.evidenceText}`,
+      url: `/product/${product.id}`,
+      type: "website",
+      images: product.imageUrl ? [{ url: product.imageUrl, alt: product.title }] : undefined,
+    },
   };
 }
 
@@ -25,7 +35,13 @@ export default async function ProductPage({ params }: Props) {
   const { id } = await params;
   const product = await getProduct(id);
   if (!product) notFound();
-  const relatedProducts = await getRelatedProducts(product);
+  const [relatedProducts, categories] = await Promise.all([
+    getRelatedProducts(product),
+    getCategories(),
+  ]);
+  const categoryName =
+    categories.find((category) => category.slug === product.categorySlug)?.name ??
+    "商品カテゴリ";
 
   const isRakuten = product.source === "rakuten";
   const buttonLabel = isRakuten ? "楽天市場で見る" : "Amazonで見る";
@@ -35,12 +51,13 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-12">
+      <JsonLd data={productStructuredData(product, categoryName)} />
       <ProductViewTracker productId={product.id} />
       <nav className="text-xs text-sumi-soft mb-8">
         <Link href="/" className="hover:text-hinomaru">ホーム</Link>
         <span className="mx-2">/</span>
         <Link href={`/category/${product.categorySlug}`} className="hover:text-hinomaru">
-          カテゴリ
+          {categoryName}
         </Link>
         <span className="mx-2">/</span>
         <span className="text-sumi">{product.title.slice(0, 24)}…</span>
