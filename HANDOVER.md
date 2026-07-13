@@ -77,6 +77,7 @@ src/
     format.ts               価格・日付フォーマッタ
 scripts/
   ingest.ts                 ローカル収集: npm run ingest
+  judge-backlog.ts          商品再検索なしで判定待ちを追加消化
   rejudge.ts                チェック未付与の商品だけ再判定(判定スキーマ変更時に使う)
 supabase/
   schema.sql                初期スキーマ(新規プロジェクト用。マイグレーション適用済みの完全版)
@@ -88,13 +89,14 @@ supabase/
   migrations/007_commercial_category_keywords.sql 商用キーワード/カテゴリ(適用済み)
   migrations/008_outbound_clicks.sql  販売サイト移動計測(適用済み)
   migrations/009_shadow_ranking.sql   閲覧計測/shadow順位(適用済み)
+  migrations/010_expand_commercial_categories.sql カテゴリ18種へ拡張(適用済み)
 ```
 
 ## 5. データモデル(Supabase)
 
 - `categories`: slug / name / search_keywords(jsonb配列) / is_active
   - **カテゴリ追加・キーワード変更はSQLだけで完結**(コード変更不要。ヘッダーのナビも自動反映)
-  - 現在有効: kitchen, towel, stationery, food, zakka, gift, emergency
+  - 010適用後は18カテゴリ。Amazon・楽天の主要売場をヒノマルシェ向けに再構成
 - `products`: source('rakuten'|'amazon') + source_item_id でユニーク。affiliate_url, price,
   price_updated_at, is_published など
 - `judgments`: 判定履歴(追記型。表示は最新を使う)。score, tier('high'|'mid'|'low'),
@@ -103,11 +105,11 @@ supabase/
 - `outbound_clicks`: 商品から販売サイトへの移動数。IP/Cookie/User-Agent/セッションIDは保存しない。anon/authenticatedに権限なし
 - `product_page_views`: 商品閲覧数。商品IDと時刻のみ。anon/authenticatedに権限なし
 - `ranking_snapshots`: `commercial-v1` の日次計算結果。現在は `shadow` のみで表示順には未反映
-- AI判定待ちの商品は、古い順ではなく `featured_score` / `demand_score` / `search_rank`
-  を優先して処理する。売れ筋候補を先に公開するため。
+- AI判定待ちの商品は、各カテゴリ内で `featured_score` / `demand_score` / `search_rank`
+  を優先し、カテゴリを一巡ずつ処理する。売れ筋優先とジャンル偏り防止を両立するため。
 - RLS有効。匿名キーは公開商品の読みのみ。書き込みはservice_roleキー経由のみ
 
-現状データ(2026-07-13時点): **公開商品750件**。未判定バックログは日次Cronで需要順に消化する。
+現状データ(2026-07-13時点): **公開商品809件**。未判定バックログは日次Cronでカテゴリを一巡しつつ需要順に消化する。
 
 ## 6. 外部API仕様(2026年の重要変更を含む)
 
@@ -147,7 +149,7 @@ supabase/
 
 ```
 毎日03:00 JST (Vercel Cron → /api/cron/ingest、ローカルは npm run ingest)
-1. 有効カテゴリの全キーワードで楽天(+資格回復後Amazon)を検索(30件/キーワード)
+1. 有効カテゴリの検索語を1日2件ずつ日替わりで巡回し、楽天(+資格回復後Amazon)を検索(30件/キーワード)
 2. 新商品はINSERT、既存商品は価格・画像・リンクを更新(price_updated_at更新)
 3. 未判定商品(is_published=false)を古い順にINGEST_MAX_NEW件(既定30)AI判定
 4. 判定を保存し全tier公開(is_published=true)
@@ -171,6 +173,7 @@ supabase/
 | ANTHROPIC_API_KEY | AI判定用 |
 | CRON_SECRET | Cronエンドポイント認証(VercelがAuthorizationヘッダーに付ける) |
 | INGEST_MAX_NEW | 1回の収集でAI判定する上限(既定30) |
+| INGEST_KEYWORDS_PER_CATEGORY | 1カテゴリあたり1日に検索する語数(既定2、日替わり巡回) |
 | SHOW_LOW_TIER | falseで低スコア商品を非表示(既定true) |
 
 **全部未設定でも動く**: デモモード(サンプル12商品)になる。UI開発はキーなしで可能。

@@ -300,6 +300,7 @@ export async function upsertProduct(raw: RawProduct): Promise<string | null> {
 export async function getUnjudgedProducts(
   limit: number
 ): Promise<{ id: string; raw: RawProduct }[]> {
+  const candidateLimit = Math.max(limit * 20, limit);
   const { data, error } = await adminSupabase()
     .from("products")
     .select("*")
@@ -308,9 +309,31 @@ export async function getUnjudgedProducts(
     .order("demand_score", { ascending: false })
     .order("search_rank", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true })
-    .limit(limit);
+    .limit(candidateLimit);
   if (error) throw error;
-  return data.map((row) => ({
+
+  // 各カテゴリ内の需要順を保ちつつ一巡ずつ選び、判定枠のジャンル偏りを防ぐ。
+  const queues = new Map<string, typeof data>();
+  for (const row of data) {
+    const queue = queues.get(row.category_slug) ?? [];
+    queue.push(row);
+    queues.set(row.category_slug, queue);
+  }
+
+  const selected: typeof data = [];
+  while (selected.length < limit) {
+    let added = false;
+    for (const queue of queues.values()) {
+      const row = queue.shift();
+      if (!row) continue;
+      selected.push(row);
+      added = true;
+      if (selected.length >= limit) break;
+    }
+    if (!added) break;
+  }
+
+  return selected.map((row) => ({
     id: row.id,
     raw: {
       source: row.source,

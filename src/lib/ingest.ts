@@ -26,6 +26,18 @@ export interface IngestSummary {
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function dailyKeywords(keywords: string[], requestedLimit: number): string[] {
+  if (keywords.length <= requestedLimit) return keywords;
+
+  const day = Math.floor(Date.now() / DAY_MS);
+  const start = (day * requestedLimit) % keywords.length;
+  return Array.from(
+    { length: requestedLimit },
+    (_, offset) => keywords[(start + offset) % keywords.length]
+  );
+}
 
 export async function runIngest(): Promise<IngestSummary> {
   if (isDemoMode()) {
@@ -45,6 +57,11 @@ export async function runIngest(): Promise<IngestSummary> {
 
   // 1回のCron実行で判定する新商品数の上限(実行時間とAPIコストの暴走防止)
   const maxNew = Number(process.env.INGEST_MAX_NEW ?? 30);
+  const configuredKeywordLimit = Number(process.env.INGEST_KEYWORDS_PER_CATEGORY ?? 2);
+  const keywordLimit =
+    Number.isFinite(configuredKeywordLimit) && configuredKeywordLimit > 0
+      ? Math.floor(configuredKeywordLimit)
+      : 2;
   let amazonEnabled = Boolean(
     process.env.AMAZON_CREDENTIAL_ID &&
       process.env.AMAZON_CREDENTIAL_SECRET &&
@@ -54,7 +71,8 @@ export async function runIngest(): Promise<IngestSummary> {
   const categories = await getCategories();
 
   for (const category of categories) {
-    for (const keyword of category.searchKeywords) {
+    // ジャンル増加後もCron時間とAPI費用を一定に保ち、全検索語を日替わりで巡回する。
+    for (const keyword of dailyKeywords(category.searchKeywords, keywordLimit)) {
       const batches: RawProduct[][] = [];
 
       try {

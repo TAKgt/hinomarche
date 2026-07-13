@@ -50,7 +50,7 @@ cp .env.example .env.local
 ### 2. Supabaseにテーブルを作る
 
 Supabaseダッシュボード → SQL Editor に `supabase/schema.sql` の中身を貼り付けて実行。
-categories(kitchen有効、towel/stationery無効)まで自動で入ります。
+18カテゴリまで自動で入ります。
 
 既存DBに公開前セキュリティ強化だけを適用する場合は、SQL Editorで
 `supabase/migrations/004_security_hardening.sql` を実行してください。
@@ -72,8 +72,17 @@ TOP/カテゴリの「注目順」を有効にするには、続けて
 npm run ingest
 ```
 
+収集済みの判定待ち商品だけを追加で30件公開する場合:
+
+```bash
+npm run judge:backlog
+```
+
 カテゴリの検索キーワードで楽天・Amazonを検索 → 新商品をAI判定 → 判定済み商品を自動公開(低スコアも公開)。
 1回の実行で判定するのは新規30件まで(`INGEST_MAX_NEW`で変更可)。
+各カテゴリの検索語は1日2件ずつ日替わりで巡回します
+(`INGEST_KEYWORDS_PER_CATEGORY`で変更可)。カテゴリ増加後もAPI費用とCron時間が
+急増しないための上限です。
 `npm run dev` で実データが表示されるようになります。
 
 ### 4. Vercelにデプロイ
