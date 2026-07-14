@@ -4,6 +4,8 @@ import { siteOrigin } from "@/lib/site-url";
 import { FEATURES } from "@/lib/features";
 import { REGIONS } from "@/lib/regions";
 
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteOrigin();
   const [categories, products] = await Promise.all([

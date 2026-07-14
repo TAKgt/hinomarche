@@ -62,7 +62,7 @@ src/
     admin/collections/page.tsx 特集・産地の28日成果とshadow候補を比較する非公開画面
     go/[id]/route.ts        販売サイトへの安全なリダイレクト+匿名クリック集計
     not-found.tsx           404
-    sitemap.ts / robots.ts / icon.svg / opengraph-image.tsx  SEO・メタ系
+    sitemap.ts / robots.ts / icon.svg / opengraph-image.tsx  SEO・メタ系(sitemapは1時間再生成)
     api/cron/ingest/route.ts Vercel商品収集Cron入口(Authorization: Bearer CRON_SECRET必須)
     api/cron/ranking/route.ts VercelランキングCron入口(同認証、収集と独立)
   components/

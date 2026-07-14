@@ -59,6 +59,7 @@ Supabaseダッシュボード → SQL Editor に `supabase/schema.sql` の中身
 既存DBに公開前セキュリティ強化だけを適用する場合は、SQL Editorで
 `supabase/migrations/004_security_hardening.sql` を実行してください。
 `products_with_judgment` ビューにRLSを効かせ、未公開商品の判定履歴が匿名キーから見えないようにします。
+サイトマップは1時間ごとに再生成され、Cronで追加公開した商品も次の更新で反映されます。
 
 TOP/カテゴリの「注目順」を有効にするには、続けて
 `supabase/migrations/005_market_ranking.sql` も実行してください。
