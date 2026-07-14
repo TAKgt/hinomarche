@@ -82,6 +82,9 @@ npm run ingest
 npm run judge:backlog
 ```
 
+直近に収集した候補だけをカテゴリ指定で判定する場合は、`INGEST_CATEGORY_SLUGS` と
+`INGEST_CREATED_AFTER`(ISO 8601)を一時指定します。既存の判定待ち商品は変更しません。
+
 カテゴリの検索キーワードで楽天・Amazonを検索 → 新商品をAI判定 → 判定済み商品を自動公開(低スコアも公開)。
 1回の実行で判定するのは、ローカルは新規30件、Vercelは新規5件まで
 (`INGEST_MAX_NEW`で変更可)。公開数が `INGEST_MIN_CATEGORY_PRODUCTS`(既定12件)未満の

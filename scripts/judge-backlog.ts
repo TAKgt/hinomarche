@@ -27,6 +27,13 @@ async function main() {
     .split(",")
     .map((slug) => slug.trim())
     .filter(Boolean);
+  const createdAfterInput = process.env.INGEST_CREATED_AFTER?.trim();
+  if (createdAfterInput && Number.isNaN(Date.parse(createdAfterInput))) {
+    throw new Error("INGEST_CREATED_AFTERはISO 8601形式で指定してください");
+  }
+  const createdAfter = createdAfterInput
+    ? new Date(createdAfterInput).toISOString()
+    : undefined;
   const configuredTarget = Number(process.env.INGEST_MIN_CATEGORY_PRODUCTS ?? 12);
   const target =
     Number.isFinite(configuredTarget) && configuredTarget > 0
@@ -58,12 +65,13 @@ async function main() {
     limit,
     categorySlugs,
     plan?.judgmentLimits,
+    createdAfter,
   );
   const errors: string[] = [];
   let published = 0;
 
   console.log(
-    `判定待ちから最大${limit}件を処理します… 対象: ${categorySlugs.join(", ")}`,
+    `判定待ちから最大${limit}件を処理します… 対象: ${categorySlugs.join(", ")}${createdAfter ? ` / ${createdAfter}以降` : ""}`,
   );
   for (const { id, raw } of products) {
     try {

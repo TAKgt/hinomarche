@@ -477,6 +477,7 @@ export async function getUnjudgedProducts(
   limit: number,
   categorySlugs?: string[],
   categoryLimits?: Record<string, number>,
+  createdAfter?: string,
 ): Promise<{ id: string; raw: RawProduct }[]> {
   const candidateLimit = Math.max(limit * 20, limit);
   let query = adminSupabase()
@@ -488,6 +489,7 @@ export async function getUnjudgedProducts(
     .order("search_rank", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true });
   if (categorySlugs?.length) query = query.in("category_slug", categorySlugs);
+  if (createdAfter) query = query.gte("created_at", createdAfter);
   const { data, error } = await query.limit(candidateLimit);
   if (error) throw error;
 
