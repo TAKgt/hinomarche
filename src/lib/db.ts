@@ -2,8 +2,8 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import type { Category, Judgment, Product, RawProduct, Tier } from "./types";
 import { calculateDemandScore, calculateFeaturedScore } from "./market";
 import type { CategoryInventory } from "./ingest-plan";
-import { matchesFeatureProduct } from "./features";
-import { matchesRegionProduct } from "./regions";
+import { FEATURES, matchesFeatureProduct } from "./features";
+import { matchesRegionProduct, REGIONS } from "./regions";
 import demoProducts from "../data/demo-products.json";
 
 /**
@@ -691,6 +691,90 @@ export type AdminRankingReport = {
   calculatedOn: string | null;
   rows: AdminRankingRow[];
 };
+
+export type AdminCollectionRow = {
+  kind: "feature" | "region";
+  slug: string;
+  name: string;
+  productCount: number;
+  pageViews28d: number;
+  outboundClicks28d: number;
+};
+
+export type AdminCollectionReport = {
+  generatedAt: string;
+  rows: AdminCollectionRow[];
+};
+
+export async function getAdminCollectionReport(): Promise<AdminCollectionReport> {
+  const generatedAt = new Date().toISOString();
+  const [products, inputs] = await Promise.all([
+    isDemoMode()
+      ? Promise.resolve(demoProducts as unknown as Product[])
+      : (async () => {
+          const rows: Product[] = [];
+          const pageSize = 1000;
+          for (let from = 0; ; from += pageSize) {
+            const { data, error } = await adminSupabase()
+              .from("products_with_judgment")
+              .select("*")
+              .eq("is_published", true)
+              .order("id", { ascending: true })
+              .range(from, from + pageSize - 1);
+            if (error) throw error;
+            rows.push(...data.map(rowToProduct));
+            if (data.length < pageSize) break;
+          }
+          return rows;
+        })(),
+    getShadowRankingInputs(),
+  ]);
+  const metricsByProduct = new Map(inputs.map((input) => [input.productId, input]));
+
+  const summarize = (
+    kind: AdminCollectionRow["kind"],
+    slug: string,
+    name: string,
+    matches: (product: Product) => boolean,
+  ): AdminCollectionRow => {
+    const displayedProducts = products
+      .filter(matches)
+      .sort((a, b) => productFeaturedScore(b) - productFeaturedScore(a))
+      .slice(0, 24);
+    return displayedProducts.reduce<AdminCollectionRow>(
+      (summary, product) => {
+        const metrics = metricsByProduct.get(product.id);
+        summary.pageViews28d += metrics?.pageViews28d ?? 0;
+        summary.outboundClicks28d += metrics?.outboundClicks28d ?? 0;
+        return summary;
+      },
+      {
+        kind,
+        slug,
+        name,
+        productCount: displayedProducts.length,
+        pageViews28d: 0,
+        outboundClicks28d: 0,
+      },
+    );
+  };
+
+  return {
+    generatedAt,
+    rows: [
+      ...FEATURES.map((feature) =>
+        summarize("feature", feature.slug, feature.shortTitle, (product) =>
+          matchesFeatureProduct(feature, product),
+        ),
+      ),
+      ...REGIONS.map((region) =>
+        summarize("region", region.slug, region.name, (product) =>
+          matchesRegionProduct(region, product),
+        ),
+      ),
+    ],
+  };
+}
 
 export async function getAdminRankingReport(): Promise<AdminRankingReport> {
   if (isDemoMode()) return { calculatedOn: null, rows: [] };

@@ -59,6 +59,7 @@ src/
     api/contact/route.ts    フォーム送信先。service_roleで非公開テーブルに保存
     api/metrics/product-view/route.ts 個人を識別しない商品閲覧計測
     admin/ranking/page.tsx  Basic認証必須の非公開ランキング画面(読み取り専用)
+    admin/collections/page.tsx 特集・産地の28日成果を比較する非公開画面
     go/[id]/route.ts        販売サイトへの安全なリダイレクト+匿名クリック集計
     not-found.tsx           404
     sitemap.ts / robots.ts / icon.svg / opengraph-image.tsx  SEO・メタ系

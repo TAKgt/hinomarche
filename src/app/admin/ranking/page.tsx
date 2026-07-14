@@ -5,7 +5,7 @@ import { getAdminRankingReport, type AdminRankingRow } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "運営ランキング | ヒノマルシェ",
+  title: "運営ランキング",
   robots: { index: false, follow: false, nocache: true },
 };
 
@@ -77,9 +77,12 @@ export default async function RankingAdminPage({ searchParams }: Props) {
           <p className="text-xs font-medium tracking-[0.3em] text-hinomaru">PRIVATE ANALYTICS</p>
           <h1 className="mt-2 font-mincho text-3xl font-semibold">運営ランキング</h1>
         </div>
-        <p className="text-sm text-sumi-soft">
-          集計日: {report.calculatedOn ?? "未集計"} / 直近28日
-        </p>
+        <div className="flex flex-wrap items-center gap-4 text-sm">
+          <Link href="/admin/collections" className="font-medium text-hinomaru hover:underline">
+            特集・産地別の成果
+          </Link>
+          <p className="text-sumi-soft">集計日: {report.calculatedOn ?? "未集計"} / 直近28日</p>
+        </div>
       </div>
 
       <section className="grid grid-cols-2 border-b border-line md:grid-cols-5">
