@@ -11,6 +11,7 @@ import { searchAmazon } from "./amazon";
 import { judgeProduct } from "./judge";
 import type { RawProduct } from "./types";
 import { planUnderfilledCategories } from "./ingest-plan";
+import { categoryKeywordWindow, dailyWindow } from "./ingest-rotation";
 
 /**
  * 収集パイプライン本体。
@@ -32,18 +33,6 @@ export interface IngestSummary {
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-function dailyWindow<T>(items: T[], requestedLimit: number): T[] {
-  if (items.length <= requestedLimit) return items;
-
-  const day = Math.floor(Date.now() / DAY_MS);
-  const start = (day * requestedLimit) % items.length;
-  return Array.from(
-    { length: requestedLimit },
-    (_, offset) => items[(start + offset) % items.length]
-  );
-}
 
 export async function runIngest(): Promise<IngestSummary> {
   if (isDemoMode()) {
@@ -151,8 +140,12 @@ export async function runIngest(): Promise<IngestSummary> {
       summary.skippedSearchSlugs.push(category.slug);
       continue;
     }
-    // ジャンル増加後もCron時間とAPI費用を一定に保ち、全検索語を日替わりで巡回する。
-    for (const keyword of dailyWindow(category.searchKeywords, keywordLimit)) {
+    // ジャンル増加後もCron時間とAPI費用を一定に保ち、検索語をカテゴリ別に巡回する。
+    for (const keyword of categoryKeywordWindow(
+      category.searchKeywords,
+      keywordLimit,
+      category.slug,
+    )) {
       const batches: RawProduct[][] = [];
 
       try {
