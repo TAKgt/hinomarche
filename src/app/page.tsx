@@ -108,7 +108,9 @@ export default async function Home() {
             <h2 className="font-mincho text-2xl font-semibold md:text-3xl">
               産地・工芸から探す
             </h2>
-            <span className="text-sm text-sumi-soft">{REGIONS.length}つの産地</span>
+            <Link href="/region" className="text-sm text-sumi-soft hover:text-hinomaru">
+              全{REGIONS.length}産地を見る →
+            </Link>
           </div>
           <div className="mt-7 grid grid-cols-2 border-l border-t border-line md:grid-cols-4 lg:grid-cols-7">
             {REGIONS.map((region) => (

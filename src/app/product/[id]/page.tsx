@@ -11,6 +11,8 @@ import { JsonLd } from "@/components/JsonLd";
 import { productStructuredData } from "@/lib/structured-data";
 import { TIER_LABEL } from "@/lib/types";
 import { displayProductTitle } from "@/lib/product-title";
+import { getFeaturesForProduct } from "@/lib/features";
+import { getRegionsForProduct } from "@/lib/regions";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -45,6 +47,8 @@ export default async function ProductPage({ params }: Props) {
     categories.find((category) => category.slug === product.categorySlug)?.name ??
     "商品カテゴリ";
   const displayTitle = displayProductTitle(product.title);
+  const matchingFeatures = getFeaturesForProduct(product);
+  const matchingRegions = getRegionsForProduct(product);
 
   const isRakuten = product.source === "rakuten";
   const buttonLabel = isRakuten ? "楽天市場で見る" : "Amazonで見る";
@@ -173,6 +177,35 @@ export default async function ProductPage({ params }: Props) {
           <p className="mt-4 text-sm leading-relaxed text-sumi-soft whitespace-pre-line">
             {product.description}
           </p>
+        </section>
+      )}
+
+      {(matchingFeatures.length > 0 || matchingRegions.length > 0) && (
+        <section className="mt-14 border-y border-line py-8">
+          <p className="text-xs font-medium tracking-[0.3em] text-hinomaru">DISCOVER MORE</p>
+          <h2 className="mt-2 font-mincho text-xl font-semibold">関連する特集・産地</h2>
+          <nav className="mt-5 grid border-l border-t border-line sm:grid-cols-2" aria-label="関連する特集・産地">
+            {matchingFeatures.map((feature) => (
+              <Link
+                key={`feature-${feature.slug}`}
+                href={`/feature/${feature.slug}`}
+                className="border-b border-r border-line px-4 py-4 transition-colors hover:bg-white/50 hover:text-hinomaru"
+              >
+                <span className="block text-xs text-sumi-soft">特集</span>
+                <span className="mt-1 block font-mincho font-semibold">{feature.shortTitle}</span>
+              </Link>
+            ))}
+            {matchingRegions.map((region) => (
+              <Link
+                key={`region-${region.slug}`}
+                href={`/region/${region.slug}`}
+                className="border-b border-r border-line px-4 py-4 transition-colors hover:bg-white/50 hover:text-hinomaru"
+              >
+                <span className="block text-xs text-sumi-soft">産地・工芸</span>
+                <span className="mt-1 block font-mincho font-semibold">{region.name}</span>
+              </Link>
+            ))}
+          </nav>
         </section>
       )}
 

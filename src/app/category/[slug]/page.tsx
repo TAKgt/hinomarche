@@ -8,6 +8,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { getCategoryContent } from "@/lib/category-content";
 import { displayProductTitle } from "@/lib/product-title";
 import { siteOrigin } from "@/lib/site-url";
+import { getFeaturesForCategory } from "@/lib/features";
 
 const SORTS: { key: SortKey; label: string }[] = [
   { key: "featured", label: "注目順" },
@@ -80,6 +81,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
   const products = await getPublishedProducts({ categorySlug: slug, sort, tier });
   const content = getCategoryContent(slug, category.name);
+  const relatedFeatures = getFeaturesForCategory(slug);
   const origin = siteOrigin();
   const pageUrl = `${origin}/category/${slug}`;
   const structuredData = [
@@ -135,6 +137,23 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           </p>
         </div>
       </div>
+
+      {relatedFeatures.length > 0 && (
+        <nav className="mt-8" aria-label={`${category.name}の関連特集`}>
+          <p className="text-xs font-medium tracking-[0.25em] text-hinomaru">RELATED FEATURES</p>
+          <div className="mt-3 grid border-l border-t border-line sm:grid-cols-2">
+            {relatedFeatures.map((feature) => (
+              <Link
+                key={feature.slug}
+                href={`/feature/${feature.slug}`}
+                className="border-b border-r border-line px-4 py-3 text-sm transition-colors hover:bg-white/50 hover:text-hinomaru"
+              >
+                {feature.shortTitle}
+              </Link>
+            ))}
+          </div>
+        </nav>
+      )}
 
       <div className="mt-8 space-y-4 md:space-y-3 border-b border-line pb-4">
         <div className="md:flex md:items-center md:gap-2">

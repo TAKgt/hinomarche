@@ -1,3 +1,5 @@
+import type { Product } from "./types";
+
 export type RegionDefinition = {
   slug: string;
   name: string;
@@ -83,4 +85,15 @@ export const REGIONS: RegionDefinition[] = [
 
 export function getRegion(slug: string): RegionDefinition | undefined {
   return REGIONS.find((region) => region.slug === slug);
+}
+
+export function matchesRegionProduct(region: RegionDefinition, product: Product): boolean {
+  return (
+    product.score >= region.minScore &&
+    region.titleTerms.some((term) => product.title.includes(term))
+  );
+}
+
+export function getRegionsForProduct(product: Product, limit = 3): RegionDefinition[] {
+  return REGIONS.filter((region) => matchesRegionProduct(region, product)).slice(0, limit);
 }

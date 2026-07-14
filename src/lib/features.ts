@@ -1,3 +1,5 @@
+import type { Product } from "./types";
+
 export type FeatureDefinition = {
   slug: string;
   eyebrow: string;
@@ -135,4 +137,28 @@ export const FEATURES: FeatureDefinition[] = [
 
 export function getFeature(slug: string): FeatureDefinition | undefined {
   return FEATURES.find((feature) => feature.slug === slug);
+}
+
+export function matchesFeatureProduct(
+  feature: FeatureDefinition,
+  product: Product,
+): boolean {
+  if (!feature.categorySlugs.includes(product.categorySlug)) return false;
+  if (product.score < feature.minScore) return false;
+  if (feature.maxPrice != null && (product.price == null || product.price > feature.maxPrice)) {
+    return false;
+  }
+
+  const normalizedTitle = product.title.toLocaleLowerCase("ja");
+  return (feature.titleTermGroups ?? []).every((group) =>
+    group.some((term) => normalizedTitle.includes(term.toLocaleLowerCase("ja"))),
+  );
+}
+
+export function getFeaturesForCategory(categorySlug: string): FeatureDefinition[] {
+  return FEATURES.filter((feature) => feature.categorySlugs.includes(categorySlug));
+}
+
+export function getFeaturesForProduct(product: Product, limit = 4): FeatureDefinition[] {
+  return FEATURES.filter((feature) => matchesFeatureProduct(feature, product)).slice(0, limit);
 }

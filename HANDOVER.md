@@ -50,6 +50,7 @@ src/
     product/[id]/page.tsx   詳細: スコア・3要素チェック・根拠・購入ボタン2つ(後述)
     feature/page.tsx        購入目的別SEO特集の一覧
     feature/[slug]/page.tsx 購入目的別のSEO特集(現在11種、商品はDBから自動抽出)
+    region/page.tsx         産地・工芸名別SEO特集の一覧
     region/[slug]/page.tsx  産地・工芸名別のSEO特集(現在7種、商品名表記から自動抽出)
     about/page.tsx          サイト趣旨+判定基準の説明
     disclaimer/page.tsx     免責事項(訴訟リスク対策の核。安易に変更しない)

@@ -73,7 +73,7 @@ export default async function RegionPage({ params }: Props) {
           <nav className="mb-8 text-xs text-sumi-soft" aria-label="パンくず">
             <Link href="/" className="hover:text-hinomaru">ホーム</Link>
             <span className="mx-2">/</span>
-            <span>産地・工芸</span>
+            <Link href="/region" className="hover:text-hinomaru">産地・工芸</Link>
           </nav>
           <p className="text-xs font-medium tracking-[0.3em] text-hinomaru">
             {region.eyebrow} / CRAFT &amp; ORIGIN

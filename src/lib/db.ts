@@ -2,6 +2,8 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import type { Category, Judgment, Product, RawProduct, Tier } from "./types";
 import { calculateDemandScore, calculateFeaturedScore } from "./market";
 import type { CategoryInventory } from "./ingest-plan";
+import { matchesFeatureProduct } from "./features";
+import { matchesRegionProduct } from "./regions";
 import demoProducts from "../data/demo-products.json";
 
 /**
@@ -224,14 +226,18 @@ export async function getFeatureProducts(opts: {
   limit?: number;
 }): Promise<Product[]> {
   const { categorySlugs, minScore, maxPrice, titleTermGroups, limit = 24 } = opts;
-  const matches = (product: Product) => {
-    if (!categorySlugs.includes(product.categorySlug) || product.score < minScore) return false;
-    if (maxPrice != null && (product.price == null || product.price > maxPrice)) return false;
-    const normalizedTitle = product.title.toLocaleLowerCase("ja");
-    return (titleTermGroups ?? []).every((group) =>
-      group.some((term) => normalizedTitle.includes(term.toLocaleLowerCase("ja")))
-    );
+  const definition = {
+    slug: "query",
+    eyebrow: "",
+    title: "",
+    shortTitle: "",
+    description: "",
+    categorySlugs,
+    minScore,
+    maxPrice,
+    titleTermGroups,
   };
+  const matches = (product: Product) => matchesFeatureProduct(definition, product);
 
   if (isDemoMode()) {
     return (demoProducts as unknown as Product[])
@@ -261,9 +267,16 @@ export async function getRegionProducts(opts: {
   limit?: number;
 }): Promise<Product[]> {
   const { titleTerms, minScore, limit = 24 } = opts;
-  const matches = (product: Product) =>
-    product.score >= minScore &&
-    titleTerms.some((term) => product.title.includes(term));
+  const definition = {
+    slug: "query",
+    name: "",
+    eyebrow: "",
+    title: "",
+    description: "",
+    titleTerms,
+    minScore,
+  };
+  const matches = (product: Product) => matchesRegionProduct(definition, product);
 
   if (isDemoMode()) {
     return (demoProducts as unknown as Product[])
