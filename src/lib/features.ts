@@ -43,6 +43,94 @@ export const FEATURES: FeatureDefinition[] = [
     categorySlugs: ["emergency"],
     minScore: 50,
   },
+  {
+    slug: "tochigi-leather-cases",
+    eyebrow: "TOCHIGI LEATHER",
+    title: "AI日本度で選ぶ栃木レザーのスマホケース",
+    shortTitle: "栃木レザーのスマホケース",
+    description:
+      "商品名に栃木レザーの表記があるスマホケースを、AI日本度の根拠と注目度を見ながら比較できます。",
+    categorySlugs: ["smartphone", "fashion"],
+    minScore: 50,
+    titleTermGroups: [["栃木レザー"], ["ケース", "カバー"]],
+  },
+  {
+    slug: "japanese-kitchen-knives",
+    eyebrow: "KITCHEN KNIVES",
+    title: "日本とのかかわりで選ぶ包丁・キッチンナイフ",
+    shortTitle: "包丁・キッチンナイフ",
+    description:
+      "三徳包丁や小型包丁などから、AI日本度80%以上の商品を判定根拠とともに紹介します。",
+    categorySlugs: ["kitchen"],
+    minScore: 80,
+    titleTermGroups: [["包丁", "ナイフ"]],
+  },
+  {
+    slug: "iron-frying-pans",
+    eyebrow: "FRYING PANS",
+    title: "日本とのかかわりで選ぶ鉄フライパン",
+    shortTitle: "鉄フライパン",
+    description:
+      "鉄製を中心としたフライパンを、メーカーや生産地に関するAI日本度の根拠とともに比較できます。",
+    categorySlugs: ["kitchen"],
+    minScore: 50,
+    titleTermGroups: [["フライパン"]],
+  },
+  {
+    slug: "imabari-towel-gifts",
+    eyebrow: "IMABARI GIFTS",
+    title: "今治タオルのギフト・セット",
+    shortTitle: "今治タオルのギフト",
+    description:
+      "商品名に今治の表記があるタオルから、ギフトやセット商品をAI日本度の根拠とともに紹介します。",
+    categorySlugs: ["towel", "gift"],
+    minScore: 80,
+    titleTermGroups: [["今治"], ["ギフト", "贈り", "セット"]],
+  },
+  {
+    slug: "japanese-green-tea",
+    eyebrow: "JAPANESE TEA",
+    title: "産地表示から探す日本茶・緑茶",
+    shortTitle: "日本茶・緑茶",
+    description:
+      "緑茶、日本茶、ほうじ茶、玄米茶などを、産地や原材料に関するAI日本度の根拠とともに紹介します。",
+    categorySlugs: ["drinks", "food"],
+    minScore: 80,
+    titleTermGroups: [["緑茶", "日本茶", "ほうじ茶", "玄米茶"]],
+  },
+  {
+    slug: "regional-japanese-rice",
+    eyebrow: "JAPANESE RICE",
+    title: "産地表示から探すお米・無洗米",
+    shortTitle: "お米・無洗米",
+    description:
+      "各地のお米や無洗米を、商品情報にある産地とAI日本度の判定根拠を見ながら比較できます。",
+    categorySlugs: ["food", "emergency"],
+    minScore: 80,
+    titleTermGroups: [["お米", "無洗米", "コシヒカリ", "ひとめぼれ", "はえぬき", "さがびより", "つや姫"]],
+  },
+  {
+    slug: "domestic-pet-treats",
+    eyebrow: "PET TREATS",
+    title: "「国産」表示から探すペットのおやつ",
+    shortTitle: "ペットのおやつ",
+    description:
+      "犬や猫向けのおやつ・フードから、商品名に国産などの情報がある品をAI日本度の根拠とともに紹介します。",
+    categorySlugs: ["pet"],
+    minScore: 50,
+    titleTermGroups: [["おやつ", "ジャーキー", "フード"]],
+  },
+  {
+    slug: "japanese-tools",
+    eyebrow: "TOOLS & DIY",
+    title: "日本とのかかわりで選ぶ工具・園芸用品",
+    shortTitle: "工具・園芸用品",
+    description:
+      "工具、ペンチ、ニッパー、はさみなどを、メーカーや産地に関するAI日本度の根拠とともに紹介します。",
+    categorySlugs: ["diy"],
+    minScore: 50,
+    titleTermGroups: [["工具", "ニッパー", "ペンチ", "はさみ"]],
+  },
 ];
 
 export function getFeature(slug: string): FeatureDefinition | undefined {

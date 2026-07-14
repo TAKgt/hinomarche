@@ -48,7 +48,8 @@ src/
     category/[slug]/page.tsx 一覧: 並び順(日本度/新着/価格)+日本度帯フィルタ(high/mid/low)。
                               固有SEO文、canonical、構造化データ、絞り込みnoindex対応
     product/[id]/page.tsx   詳細: スコア・3要素チェック・根拠・購入ボタン2つ(後述)
-    feature/[slug]/page.tsx 購入目的別のSEO特集(現在3種、商品はDBから自動抽出)
+    feature/page.tsx        購入目的別SEO特集の一覧
+    feature/[slug]/page.tsx 購入目的別のSEO特集(現在11種、商品はDBから自動抽出)
     region/[slug]/page.tsx  産地・工芸名別のSEO特集(現在7種、商品名表記から自動抽出)
     about/page.tsx          サイト趣旨+判定基準の説明
     disclaimer/page.tsx     免責事項(訴訟リスク対策の核。安易に変更しない)
@@ -126,6 +127,7 @@ supabase/
 未判定バックログは日次Cronでカテゴリを一巡しつつ需要順に消化する。
 23カテゴリの検索向け固有説明・canonical・構造化データ対応は実装・ローカル検証済み。
 カテゴリ充足度による自動優先を実装し、全23カテゴリを最低12件まで重点補充済み。
+購入目的・商品別の特集は11件。`/feature` の一覧、TOP導線、sitemap、構造化データに反映済み。
 
 ## 6. 外部API仕様(2026年の重要変更を含む)
 

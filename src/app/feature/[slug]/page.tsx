@@ -75,7 +75,7 @@ export default async function FeaturePage({ params }: Props) {
           <nav className="mb-8 text-xs text-sumi-soft" aria-label="パンくず">
             <Link href="/" className="hover:text-hinomaru">ホーム</Link>
             <span className="mx-2">/</span>
-            <span>特集</span>
+            <Link href="/feature" className="hover:text-hinomaru">特集</Link>
           </nav>
           <p className="text-xs font-medium tracking-[0.3em] text-hinomaru">
             {feature.eyebrow}
@@ -109,12 +109,12 @@ export default async function FeaturePage({ params }: Props) {
       </section>
 
       <nav className="border-y border-line bg-washi-deep/40" aria-label="他の特集">
-        <div className="mx-auto grid max-w-6xl md:grid-cols-2">
+        <div className="mx-auto grid max-w-6xl md:grid-cols-2 lg:grid-cols-4">
           {FEATURES.filter((item) => item.slug !== feature.slug).map((item) => (
             <Link
               key={item.slug}
               href={`/feature/${item.slug}`}
-              className="border-b border-line px-5 py-6 transition-colors hover:bg-white/50 md:border-b-0 md:border-r"
+              className="border-b border-r border-line px-5 py-6 transition-colors hover:bg-white/50"
             >
               <span className="text-xs text-hinomaru">他の特集</span>
               <span className="mt-1 block font-mincho text-lg font-semibold">{item.shortTitle}</span>

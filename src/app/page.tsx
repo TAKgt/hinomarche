@@ -73,18 +73,20 @@ export default async function Home() {
             <h2 className="font-mincho text-2xl font-semibold md:text-3xl">
               目的から探す
             </h2>
-            <span className="text-sm text-sumi-soft">3つの特集</span>
+            <Link href="/feature" className="text-sm text-sumi-soft hover:text-hinomaru">
+              全{FEATURES.length}特集を見る →
+            </Link>
           </div>
           <div className="mt-7 grid border-t border-line md:grid-cols-3">
-            {FEATURES.map((feature, index) => (
+            {FEATURES.slice(0, 6).map((feature, index) => (
               <Link
                 key={feature.slug}
                 href={`/feature/${feature.slug}`}
                 className={`group border-b border-line py-6 transition-colors hover:bg-white/50 md:px-6 ${
-                  index < FEATURES.length - 1 ? "md:border-r" : ""
+                  index % 3 < 2 ? "md:border-r" : ""
                 }`}
               >
-                <span className="text-xs text-hinomaru">0{index + 1}</span>
+                <span className="text-xs text-hinomaru">{String(index + 1).padStart(2, "0")}</span>
                 <span className="mt-2 block font-mincho text-xl font-semibold group-hover:text-hinomaru">
                   {feature.shortTitle}
                 </span>
