@@ -49,7 +49,7 @@ src/
                               固有SEO文、canonical、構造化データ、絞り込みnoindex対応
     product/[id]/page.tsx   詳細: スコア・3要素チェック・根拠・購入ボタン2つ(後述)
     feature/page.tsx        購入目的別SEO特集の一覧
-    feature/[slug]/page.tsx 購入目的別のSEO特集(現在11種、商品はDBから自動抽出)
+    feature/[slug]/page.tsx 購入目的別のSEO特集(現在15種、商品はDBから自動抽出)
     region/page.tsx         産地・工芸名別SEO特集の一覧
     region/[slug]/page.tsx  産地・工芸名別のSEO特集(現在7種、商品名表記から自動抽出)
     about/page.tsx          サイト趣旨+判定基準の説明
@@ -133,7 +133,7 @@ supabase/
 収集した候補だけを対象にできる。新しい売場テーマを優先公開するときに使う。
 23カテゴリの検索向け固有説明・canonical・構造化データ対応は実装・ローカル検証済み。
 カテゴリ充足度による自動優先を実装し、全23カテゴリを最低12件まで重点補充済み。
-購入目的・商品別の特集は11件。`/feature` の一覧、TOP導線、sitemap、構造化データに反映済み。
+購入目的・商品別の特集は15件。`/feature` の一覧、TOP導線、sitemap、構造化データに反映済み。
 
 ## 6. 外部API仕様(2026年の重要変更を含む)
 

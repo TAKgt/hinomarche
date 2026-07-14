@@ -224,9 +224,17 @@ export async function getFeatureProducts(opts: {
   minScore: number;
   maxPrice?: number;
   titleTermGroups?: string[][];
+  excludeTitleTerms?: string[];
   limit?: number;
 }): Promise<Product[]> {
-  const { categorySlugs, minScore, maxPrice, titleTermGroups, limit = 24 } = opts;
+  const {
+    categorySlugs,
+    minScore,
+    maxPrice,
+    titleTermGroups,
+    excludeTitleTerms,
+    limit = 24,
+  } = opts;
   const definition = {
     slug: "query",
     eyebrow: "",
@@ -237,6 +245,7 @@ export async function getFeatureProducts(opts: {
     minScore,
     maxPrice,
     titleTermGroups,
+    excludeTitleTerms,
   };
   const matches = (product: Product) => matchesFeatureProduct(definition, product);
 

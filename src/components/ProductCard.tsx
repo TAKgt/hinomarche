@@ -8,6 +8,12 @@ import { displayProductTitle } from "@/lib/product-title";
 export function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
   const displayTitle = displayProductTitle(product.title);
   const sourceLabel = SOURCE_LABEL[product.source];
+  const hasReview =
+    product.reviewAverage != null &&
+    product.reviewAverage > 0 &&
+    product.reviewAverage <= 5 &&
+    product.reviewCount != null &&
+    product.reviewCount > 0;
   return (
     <article
       className={`group flex h-full flex-col border border-line bg-white/60 hover:border-hinomaru hover:shadow-[0_8px_24px_rgba(34,31,26,0.08)] transition-all duration-300 rise rise-${Math.min(index % 4 + 1, 4)}`}
@@ -48,6 +54,16 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
             <p className="mt-1.5 font-mincho text-lg font-semibold">
               {formatPrice(product.price)}
             </p>
+            {hasReview && (
+              <p
+                className="mt-1 text-[11px] leading-tight text-sumi-soft"
+                aria-label={`販売先レビュー ${product.reviewAverage?.toFixed(1)}、${product.reviewCount?.toLocaleString("ja-JP")}件`}
+              >
+                <span className="text-hinomaru" aria-hidden>★</span>{" "}
+                {product.reviewAverage?.toFixed(1)}
+                <span className="ml-1">({product.reviewCount?.toLocaleString("ja-JP")}件)</span>
+              </p>
+            )}
             {product.checks && (
               <p className="mt-1">
                 <CheckMarksCompact checks={product.checks} />

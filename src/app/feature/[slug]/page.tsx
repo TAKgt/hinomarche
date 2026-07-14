@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { ProductCard } from "@/components/ProductCard";
 import { getFeatureProducts } from "@/lib/db";
-import { FEATURES, getFeature } from "@/lib/features";
+import { FEATURES, getFeature, getRelatedFeatures } from "@/lib/features";
 import { siteOrigin } from "@/lib/site-url";
 import { displayProductTitle } from "@/lib/product-title";
 
@@ -41,7 +41,9 @@ export default async function FeaturePage({ params }: Props) {
     minScore: feature.minScore,
     maxPrice: feature.maxPrice,
     titleTermGroups: feature.titleTermGroups,
+    excludeTitleTerms: feature.excludeTitleTerms,
   });
+  const relatedFeatures = getRelatedFeatures(feature);
   const origin = siteOrigin();
   const pageUrl = `${origin}/feature/${feature.slug}`;
   const structuredData = [
@@ -110,7 +112,7 @@ export default async function FeaturePage({ params }: Props) {
 
       <nav className="border-y border-line bg-washi-deep/40" aria-label="他の特集">
         <div className="mx-auto grid max-w-6xl md:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.filter((item) => item.slug !== feature.slug).map((item) => (
+          {relatedFeatures.map((item) => (
             <Link
               key={item.slug}
               href={`/feature/${item.slug}`}

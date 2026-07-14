@@ -10,6 +10,7 @@ export type FeatureDefinition = {
   minScore: number;
   maxPrice?: number;
   titleTermGroups?: string[][];
+  excludeTitleTerms?: string[];
 };
 
 export const FEATURES: FeatureDefinition[] = [
@@ -23,6 +24,66 @@ export const FEATURES: FeatureDefinition[] = [
     categorySlugs: ["smartphone"],
     minScore: 50,
     titleTermGroups: [["iphone", "アイフォン"], ["ケース", "カバー"]],
+  },
+  {
+    slug: "charging-accessories",
+    eyebrow: "CHARGING ACCESSORIES",
+    title: "日本とのかかわりで選ぶ充電ケーブル・充電器",
+    shortTitle: "充電ケーブル・充電器",
+    description:
+      "スマホやタブレットに使う充電ケーブル・充電器を、日本企業や製品情報とのかかわりを示すAI日本度の根拠とともに比較できます。",
+    categorySlugs: ["smartphone", "electronics"],
+    minScore: 40,
+    titleTermGroups: [[
+      "充電器",
+      "充電ケーブル",
+      "ライトニングケーブル",
+      "usb-c",
+      "タイプc",
+    ]],
+    excludeTitleTerms: ["ラジオ"],
+  },
+  {
+    slug: "earphones-headphones",
+    eyebrow: "PERSONAL AUDIO",
+    title: "日本とのかかわりで選ぶイヤホン・ヘッドホン",
+    shortTitle: "イヤホン・ヘッドホン",
+    description:
+      "有線・ワイヤレスのイヤホンやヘッドホンを、日本企業・ブランドや商品情報をもとにしたAI日本度の根拠とともに紹介します。",
+    categorySlugs: ["audio-camera"],
+    minScore: 40,
+    titleTermGroups: [["イヤホン", "ヘッドホン"]],
+  },
+  {
+    slug: "rice-cookers",
+    eyebrow: "RICE COOKERS",
+    title: "日本とのかかわりで選ぶ炊飯器・炊飯ジャー",
+    shortTitle: "炊飯器・炊飯ジャー",
+    description:
+      "炊飯器や炊飯ジャーを、日本メーカーや生産地に関する商品情報から推定したAI日本度と、価格・販売先レビューから比較できます。",
+    categorySlugs: ["electronics"],
+    minScore: 70,
+    titleTermGroups: [["炊飯器", "炊飯ジャー"]],
+  },
+  {
+    slug: "pc-accessories",
+    eyebrow: "DESK & PC ACCESSORIES",
+    title: "仕事環境を整えるPC・デスク周辺用品",
+    shortTitle: "PC・デスク周辺用品",
+    description:
+      "PCスタンド、モニター台、入力機器などから、日本とのかかわりを商品情報で確認できる周辺用品をAI日本度の根拠とともに紹介します。",
+    categorySlugs: ["computer"],
+    minScore: 35,
+    titleTermGroups: [[
+      "pcスタンド",
+      "パソコンスタンド",
+      "モニター台",
+      "ウェブカメラ",
+      "wifi",
+      "無線lan",
+      "キーボード",
+      "マウス",
+    ]],
   },
   {
     slug: "gifts-under-5000-yen",
@@ -150,6 +211,13 @@ export function matchesFeatureProduct(
   }
 
   const normalizedTitle = product.title.toLocaleLowerCase("ja");
+  if (
+    (feature.excludeTitleTerms ?? []).some((term) =>
+      normalizedTitle.includes(term.toLocaleLowerCase("ja")),
+    )
+  ) {
+    return false;
+  }
   return (feature.titleTermGroups ?? []).every((group) =>
     group.some((term) => normalizedTitle.includes(term.toLocaleLowerCase("ja"))),
   );
@@ -157,6 +225,24 @@ export function matchesFeatureProduct(
 
 export function getFeaturesForCategory(categorySlug: string): FeatureDefinition[] {
   return FEATURES.filter((feature) => feature.categorySlugs.includes(categorySlug));
+}
+
+export function getRelatedFeatures(
+  current: FeatureDefinition,
+  limit = 4,
+): FeatureDefinition[] {
+  return FEATURES
+    .filter((feature) => feature.slug !== current.slug)
+    .map((feature, index) => ({
+      feature,
+      index,
+      overlap: feature.categorySlugs.filter((slug) =>
+        current.categorySlugs.includes(slug),
+      ).length,
+    }))
+    .sort((a, b) => b.overlap - a.overlap || a.index - b.index)
+    .slice(0, limit)
+    .map(({ feature }) => feature);
 }
 
 export function getFeaturesForProduct(product: Product, limit = 4): FeatureDefinition[] {
