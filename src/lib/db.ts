@@ -1,6 +1,7 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import type { Category, Judgment, Product, RawProduct, Tier } from "./types";
 import { calculateDemandScore, calculateFeaturedScore } from "./market";
+import type { CategoryInventory } from "./ingest-plan";
 import demoProducts from "../data/demo-products.json";
 
 /**
@@ -419,13 +420,49 @@ export async function upsertProduct(raw: RawProduct): Promise<string | null> {
   return data.id;
 }
 
+/** 収集計画用: カテゴリごとの公開数と判定待ち数をまとめて取得する。 */
+export async function getCategoryInventory(): Promise<Record<string, CategoryInventory>> {
+  if (isDemoMode()) {
+    const inventory: Record<string, CategoryInventory> = {};
+    for (const product of demoProducts as unknown as Product[]) {
+      const counts = inventory[product.categorySlug] ?? { published: 0, pending: 0 };
+      counts.published++;
+      inventory[product.categorySlug] = counts;
+    }
+    return inventory;
+  }
+
+  const rows: { id: string; category_slug: string; is_published: boolean }[] = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await adminSupabase()
+      .from("products")
+      .select("id,category_slug,is_published")
+      .order("id", { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    rows.push(...data);
+    if (data.length < pageSize) break;
+  }
+
+  const inventory: Record<string, CategoryInventory> = {};
+  for (const row of rows) {
+    const counts = inventory[row.category_slug] ?? { published: 0, pending: 0 };
+    if (row.is_published) counts.published++;
+    else counts.pending++;
+    inventory[row.category_slug] = counts;
+  }
+  return inventory;
+}
+
 /**
  * 未判定(is_published=false=まだ判定が保存されていない)商品を古い順に取得。
  * 収集時に判定しきれなかったバックログを次回以降のCronで消化するために使う。
  */
 export async function getUnjudgedProducts(
   limit: number,
-  categorySlugs?: string[]
+  categorySlugs?: string[],
+  categoryLimits?: Record<string, number>,
 ): Promise<{ id: string; raw: RawProduct }[]> {
   const candidateLimit = Math.max(limit * 20, limit);
   let query = adminSupabase()
@@ -449,12 +486,17 @@ export async function getUnjudgedProducts(
   }
 
   const selected: typeof data = [];
+  const selectedCounts = new Map<string, number>();
   while (selected.length < limit) {
     let added = false;
-    for (const queue of queues.values()) {
+    for (const [categorySlug, queue] of queues) {
+      const categoryLimit = categoryLimits?.[categorySlug];
+      const selectedCount = selectedCounts.get(categorySlug) ?? 0;
+      if (categoryLimit != null && selectedCount >= categoryLimit) continue;
       const row = queue.shift();
       if (!row) continue;
       selected.push(row);
+      selectedCounts.set(categorySlug, selectedCount + 1);
       added = true;
       if (selected.length >= limit) break;
     }

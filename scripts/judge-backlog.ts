@@ -8,9 +8,14 @@ config({ path: ".env.local" });
 config();
 
 async function main() {
-  const [{ getUnjudgedProducts, saveJudgment }, { judgeProduct }] = await Promise.all([
+  const [
+    { getCategories, getCategoryInventory, getUnjudgedProducts, saveJudgment },
+    { judgeProduct },
+    { planUnderfilledCategories },
+  ] = await Promise.all([
     import("../src/lib/db"),
     import("../src/lib/judge"),
+    import("../src/lib/ingest-plan"),
   ]);
 
   const configuredLimit = Number(process.env.INGEST_MAX_NEW ?? 30);
@@ -18,11 +23,48 @@ async function main() {
     Number.isFinite(configuredLimit) && configuredLimit > 0
       ? Math.floor(configuredLimit)
       : 30;
-  const products = await getUnjudgedProducts(limit);
+  const requestedSlugs = (process.env.INGEST_CATEGORY_SLUGS ?? "")
+    .split(",")
+    .map((slug) => slug.trim())
+    .filter(Boolean);
+  const configuredTarget = Number(process.env.INGEST_MIN_CATEGORY_PRODUCTS ?? 12);
+  const target =
+    Number.isFinite(configuredTarget) && configuredTarget > 0
+      ? Math.floor(configuredTarget)
+      : 12;
+  const [categories, inventory] = await Promise.all([
+    getCategories(),
+    getCategoryInventory(),
+  ]);
+  const matchedCategories = requestedSlugs.length > 0
+    ? categories.filter((category) => requestedSlugs.includes(category.slug))
+    : categories;
+  if (requestedSlugs.length > 0 && matchedCategories.length === 0) {
+    throw new Error("INGEST_CATEGORY_SLUGSに一致する有効カテゴリがありません");
+  }
+
+  const plan = requestedSlugs.length > 0
+    ? null
+    : planUnderfilledCategories(
+        matchedCategories,
+        inventory,
+        matchedCategories.length,
+        target,
+      );
+  const categorySlugs = plan
+    ? plan.categories.map((category) => category.slug)
+    : matchedCategories.map((category) => category.slug);
+  const products = await getUnjudgedProducts(
+    limit,
+    categorySlugs,
+    plan?.judgmentLimits,
+  );
   const errors: string[] = [];
   let published = 0;
 
-  console.log(`判定待ちから最大${limit}件を処理します…`);
+  console.log(
+    `判定待ちから最大${limit}件を処理します… 対象: ${categorySlugs.join(", ")}`,
+  );
   for (const { id, raw } of products) {
     try {
       const judgment = await judgeProduct(raw);

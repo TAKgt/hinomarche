@@ -120,10 +120,12 @@ supabase/
   を優先し、カテゴリを一巡ずつ処理する。売れ筋優先とジャンル偏り防止を両立するため。
 - RLS有効。匿名キーは公開商品の読みのみ。書き込みはservice_roleキー経由のみ
 
-現状データ(2026-07-14時点): **公開商品839件**。同日のshadowランキング839件を生成済み。
+現状データ(2026-07-14時点): **公開商品925件**。同日のshadowランキング839件を生成済み
+(ランキングは重点補充前のスナップショット。次回Cronで925件へ更新予定)。
 収集とランキングはVercel Hobbyの60秒上限に合わせて独立Cron化済み。
 未判定バックログは日次Cronでカテゴリを一巡しつつ需要順に消化する。
 23カテゴリの検索向け固有説明・canonical・構造化データ対応は実装・ローカル検証済み。
+カテゴリ充足度による自動優先を実装し、全23カテゴリを最低12件まで重点補充済み。
 
 ## 6. 外部API仕様(2026年の重要変更を含む)
 
@@ -163,7 +165,8 @@ supabase/
 
 ```
 毎日03:00 JST台 (Vercel Cron → /api/cron/ingest、ローカルは npm run ingest)
-1. Vercelでは有効カテゴリを1日4件ずつ日替わりで巡回し、各1検索語で楽天(+資格回復後Amazon)を検索(30件/キーワード)
+1. 公開数が既定12件未満のカテゴリを少ない順に優先。判定待ちが目標分あれば商品API検索を省略し、
+   既存候補を消化する。全カテゴリが目標到達後は1日4件ずつ日替わり巡回し、各1検索語で楽天(+資格回復後Amazon)を検索(30件/キーワード)
 2. 新商品はINSERT、既存商品は価格・画像・リンクを更新(price_updated_at更新)
 3. 未判定商品(is_published=false)を古い順にINGEST_MAX_NEW件(Vercel既定5、ローカル既定30)AI判定
 4. 判定を保存し全tier公開(is_published=true)
@@ -189,6 +192,7 @@ supabase/
 | ANALYTICS_ADMIN_USERNAME / ANALYTICS_ADMIN_PASSWORD | `/admin/ranking` のBasic認証。未設定時は503で閉じる |
 | INGEST_MAX_NEW | 1回の収集でAI判定する上限(Vercel既定5、ローカル既定30) |
 | INGEST_CATEGORIES_PER_RUN | Vercelの1回の実行で処理するカテゴリ数(既定4) |
+| INGEST_MIN_CATEGORY_PRODUCTS | 最低公開商品数(既定12)。不足カテゴリを自動優先 |
 | INGEST_KEYWORDS_PER_CATEGORY | 1カテゴリあたりの検索語数(Vercel既定1、ローカル既定2) |
 | INGEST_CATEGORY_SLUGS | ローカルで特定カテゴリだけ収集する場合のslug(カンマ区切り) |
 | SHOW_LOW_TIER | falseで低スコア商品を非表示(既定true) |

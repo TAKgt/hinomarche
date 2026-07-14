@@ -1,5 +1,6 @@
 import {
   getCategories,
+  getCategoryInventory,
   getUnjudgedProducts,
   isDemoMode,
   saveJudgment,
@@ -9,6 +10,7 @@ import { searchRakuten } from "./rakuten";
 import { searchAmazon } from "./amazon";
 import { judgeProduct } from "./judge";
 import type { RawProduct } from "./types";
+import { planUnderfilledCategories } from "./ingest-plan";
 
 /**
  * 収集パイプライン本体。
@@ -18,6 +20,9 @@ import type { RawProduct } from "./types";
 
 export interface IngestSummary {
   categorySlugs: string[];
+  selectionMode: "requested" | "underfilled" | "rotation";
+  categoryTarget: number;
+  skippedSearchSlugs: string[];
   fetched: number;
   created: number;
   updated: number;
@@ -49,6 +54,9 @@ export async function runIngest(): Promise<IngestSummary> {
 
   const summary: IngestSummary = {
     categorySlugs: [],
+    selectionMode: "rotation",
+    categoryTarget: 12,
+    skippedSearchSlugs: [],
     fetched: 0,
     created: 0,
     updated: 0,
@@ -100,13 +108,49 @@ export async function runIngest(): Promise<IngestSummary> {
       : isVercel
         ? 4
         : matchedCategories.length;
-  const categories =
-    requestedSlugs.length > 0
-      ? matchedCategories
-      : dailyWindow(matchedCategories, categoryLimit);
+  const configuredCategoryTarget = Number(process.env.INGEST_MIN_CATEGORY_PRODUCTS ?? 12);
+  const categoryTarget =
+    Number.isFinite(configuredCategoryTarget) && configuredCategoryTarget > 0
+      ? Math.floor(configuredCategoryTarget)
+      : 12;
+  summary.categoryTarget = categoryTarget;
+
+  let categories = matchedCategories;
+  let judgmentLimits: Record<string, number> | undefined;
+  let searchSlugs: Set<string> | undefined;
+  if (requestedSlugs.length > 0) {
+    summary.selectionMode = "requested";
+  } else {
+    try {
+      const inventory = await getCategoryInventory();
+      const underfilledPlan = planUnderfilledCategories(
+        matchedCategories,
+        inventory,
+        categoryLimit,
+        categoryTarget,
+      );
+      if (underfilledPlan) {
+        categories = underfilledPlan.categories;
+        judgmentLimits = underfilledPlan.judgmentLimits;
+        searchSlugs = underfilledPlan.searchSlugs;
+        summary.selectionMode = "underfilled";
+      } else {
+        categories = dailyWindow(matchedCategories, categoryLimit);
+        summary.selectionMode = "rotation";
+      }
+    } catch (error) {
+      summary.errors.push(`カテゴリ充足度の取得失敗: ${String(error)}`);
+      categories = dailyWindow(matchedCategories, categoryLimit);
+      summary.selectionMode = "rotation";
+    }
+  }
   summary.categorySlugs = categories.map((category) => category.slug);
 
   for (const category of categories) {
+    if (searchSlugs && !searchSlugs.has(category.slug)) {
+      summary.skippedSearchSlugs.push(category.slug);
+      continue;
+    }
     // ジャンル増加後もCron時間とAPI費用を一定に保ち、全検索語を日替わりで巡回する。
     for (const keyword of dailyWindow(category.searchKeywords, keywordLimit)) {
       const batches: RawProduct[][] = [];
@@ -150,7 +194,8 @@ export async function runIngest(): Promise<IngestSummary> {
   // 未判定バックログを古い順にmaxNew件まで判定(今回の新規もここに含まれる)
   const toJudge = await getUnjudgedProducts(
     maxNew,
-    categories.map((category) => category.slug)
+    categories.map((category) => category.slug),
+    judgmentLimits,
   );
   for (const { id, raw } of toJudge) {
     try {
