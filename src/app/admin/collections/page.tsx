@@ -30,6 +30,7 @@ export default async function CollectionAdminPage() {
   const featureCount = rows.filter((row) => row.kind === "feature").length;
   const regionCount = rows.filter((row) => row.kind === "region").length;
   const rowsWithClicks = rows.filter((row) => row.outboundClicks28d > 0).length;
+  const rankingReadyCount = rows.filter((row) => row.isRankingReady).length;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-5 py-10 md:py-14">
@@ -46,11 +47,12 @@ export default async function CollectionAdminPage() {
         </div>
       </div>
 
-      <section className="grid grid-cols-3 border-b border-line">
+      <section className="grid grid-cols-2 border-b border-line md:grid-cols-4">
         {[
           ["特集", `${featureCount}件`],
           ["産地・工芸", `${regionCount}件`],
           ["移動あり", `${rowsWithClicks}件`],
+          ["shadow判定可能", `${rankingReadyCount}件`],
         ].map(([label, value]) => (
           <div key={label} className="border-r border-line px-3 py-5 last:border-r-0 md:px-5">
             <p className="text-xs text-sumi-soft">{label}</p>
@@ -66,6 +68,9 @@ export default async function CollectionAdminPage() {
         <p className="mt-1">
           同じ商品が複数の特集・産地に該当する場合はそれぞれに集計されます。一覧の直接ボタンからの移動も含むため、「移動/閲覧」が100%を超える場合があります。
         </p>
+        <p className="mt-1">
+          shadowスコアは市場性と匿名反応を組み合わせた候補値です。30反応・3移動未満は判定せず、現在のTOP表示順には反映しません。
+        </p>
       </div>
 
       <div className="overflow-x-auto border-t border-line">
@@ -78,6 +83,8 @@ export default async function CollectionAdminPage() {
               <th className="px-3 py-3 text-right font-medium">商品閲覧</th>
               <th className="px-3 py-3 text-right font-medium">販売サイト移動</th>
               <th className="px-3 py-3 text-right font-medium">移動/閲覧</th>
+              <th className="px-3 py-3 text-right font-medium">shadow</th>
+              <th className="px-3 py-3 font-medium">判定状態</th>
             </tr>
           </thead>
           <tbody>
@@ -101,6 +108,15 @@ export default async function CollectionAdminPage() {
                 </td>
                 <td className="px-3 py-4 text-right tabular-nums">
                   {ratio(row.outboundClicks28d, row.pageViews28d)}
+                </td>
+                <td className="px-3 py-4 text-right font-semibold tabular-nums">
+                  {row.shadowScore}
+                </td>
+                <td className="max-w-xs px-3 py-4 text-xs text-sumi-soft">
+                  <span className={row.isRankingReady ? "font-medium text-hinomaru" : ""}>
+                    {row.isRankingReady ? "判定可能" : "蓄積中"}
+                  </span>
+                  <span className="mt-1 block">{row.rankingReason}</span>
                 </td>
               </tr>
             ))}

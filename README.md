@@ -113,6 +113,7 @@ npm run judge:backlog
 `/admin/ranking` では、直近28日の商品閲覧・販売サイト移動・CTRとshadow候補順位を確認できます。
 `/admin/collections` では、各特集・産地に表示される商品群の同実績を比較できます。
 新しい個人情報やCookieは収集せず、既存の匿名集計のみを使います。
+30反応・3移動以上のコレクションだけにshadow候補を出し、公開順は自動変更しません。
 公開サイトからのリンクはなく、`ANALYTICS_ADMIN_PASSWORD` が未設定なら503で閉じます。
 Basic認証のユーザー名は既定で `hinomarche` です
 (`ANALYTICS_ADMIN_USERNAME` で変更可)。検索エンジン登録とブラウザキャッシュは禁止しています。

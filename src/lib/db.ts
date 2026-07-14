@@ -4,6 +4,7 @@ import { calculateDemandScore, calculateFeaturedScore } from "./market";
 import type { CategoryInventory } from "./ingest-plan";
 import { FEATURES, matchesFeatureProduct } from "./features";
 import { matchesRegionProduct, REGIONS } from "./regions";
+import { calculateCollectionRanking } from "./collection-ranking";
 import demoProducts from "../data/demo-products.json";
 
 /**
@@ -699,6 +700,10 @@ export type AdminCollectionRow = {
   productCount: number;
   pageViews28d: number;
   outboundClicks28d: number;
+  averageFeaturedScore: number;
+  shadowScore: number;
+  isRankingReady: boolean;
+  rankingReason: string;
 };
 
 export type AdminCollectionReport = {
@@ -741,11 +746,12 @@ export async function getAdminCollectionReport(): Promise<AdminCollectionReport>
       .filter(matches)
       .sort((a, b) => productFeaturedScore(b) - productFeaturedScore(a))
       .slice(0, 24);
-    return displayedProducts.reduce<AdminCollectionRow>(
+    const summary = displayedProducts.reduce<AdminCollectionRow>(
       (summary, product) => {
         const metrics = metricsByProduct.get(product.id);
         summary.pageViews28d += metrics?.pageViews28d ?? 0;
         summary.outboundClicks28d += metrics?.outboundClicks28d ?? 0;
+        summary.averageFeaturedScore += productFeaturedScore(product);
         return summary;
       },
       {
@@ -755,8 +761,20 @@ export async function getAdminCollectionReport(): Promise<AdminCollectionReport>
         productCount: displayedProducts.length,
         pageViews28d: 0,
         outboundClicks28d: 0,
+        averageFeaturedScore: 0,
+        shadowScore: 0,
+        isRankingReady: false,
+        rankingReason: "",
       },
     );
+    summary.averageFeaturedScore = summary.productCount > 0
+      ? summary.averageFeaturedScore / summary.productCount
+      : 0;
+    const ranking = calculateCollectionRanking(summary);
+    summary.shadowScore = ranking.shadowScore;
+    summary.isRankingReady = ranking.isReady;
+    summary.rankingReason = ranking.reason;
+    return summary;
   };
 
   return {
