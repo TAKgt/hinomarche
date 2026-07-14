@@ -25,3 +25,7 @@ export function isSameOriginBrowserRequest(request: Request): boolean {
 
   return !BOT_PATTERN.test(request.headers.get("user-agent") ?? "");
 }
+
+export function shouldRecordPublicMetric(request: Request): boolean {
+  return process.env.NODE_ENV === "production" && isSameOriginBrowserRequest(request);
+}

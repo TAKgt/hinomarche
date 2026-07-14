@@ -55,6 +55,12 @@ export default async function ProductPage({ params }: Props) {
   const crossLabel = isRakuten ? "Amazonで探す" : "楽天市場で探す";
   const primaryUrl = `/go/${product.id}?target=primary`;
   const crossUrl = `/go/${product.id}?target=cross`;
+  const hasReview =
+    product.reviewAverage != null &&
+    product.reviewAverage > 0 &&
+    product.reviewAverage <= 5 &&
+    product.reviewCount != null &&
+    product.reviewCount > 0;
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-12">
@@ -110,6 +116,17 @@ export default async function ProductPage({ params }: Props) {
               {formatDate(product.priceUpdatedAt)}
             </span>
           </div>
+          {hasReview && (
+            <p
+              className="mt-2 text-sm text-sumi-soft"
+              aria-label={`販売先レビュー ${product.reviewAverage?.toFixed(1)}、${product.reviewCount?.toLocaleString("ja-JP")}件`}
+            >
+              販売先レビュー
+              <span className="ml-2 text-hinomaru" aria-hidden>★</span>{" "}
+              <span className="font-medium text-sumi">{product.reviewAverage?.toFixed(1)}</span>
+              <span className="ml-1">({product.reviewCount?.toLocaleString("ja-JP")}件)</span>
+            </p>
+          )}
 
           {/* AI判定カード */}
           <div className="mt-7 border border-line bg-white/60 p-5">

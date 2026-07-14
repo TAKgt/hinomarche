@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { saveContactMessage } from "@/lib/db";
+import { isSameOriginBrowserRequest } from "@/lib/request-security";
+import { JsonRequestError, readJsonObject } from "@/lib/request-json";
 
 export const runtime = "nodejs";
 
@@ -14,31 +16,57 @@ function isEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 254;
 }
 
-export async function POST(request: Request) {
-  let body: unknown;
+function json(body: unknown, status = 200) {
+  return NextResponse.json(body, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
+function sameOriginPageUrl(value: unknown, request: Request): string {
+  const cleaned = cleanString(value, 500);
+  if (!cleaned) return "";
   try {
-    body = await request.json();
+    const pageUrl = new URL(cleaned);
+    if (pageUrl.origin !== new URL(request.url).origin) return "";
+    pageUrl.hash = "";
+    return pageUrl.href;
   } catch {
-    return NextResponse.json({ error: "invalid_request" }, { status: 400 });
+    return "";
+  }
+}
+
+export async function POST(request: Request) {
+  if (!isSameOriginBrowserRequest(request)) {
+    return json({ error: "forbidden" }, 403);
   }
 
-  const record = body && typeof body === "object" ? body as Record<string, unknown> : {};
+  let record: Record<string, unknown>;
+  try {
+    record = await readJsonObject(request);
+  } catch (error) {
+    if (error instanceof JsonRequestError) {
+      return json({ error: error.code }, error.status);
+    }
+    return json({ error: "invalid_request" }, 400);
+  }
+
   const trap = cleanString(record.company, 120);
   if (trap) {
-    return NextResponse.json({ ok: true });
+    return json({ ok: true });
   }
 
   const name = cleanString(record.name, 80);
   const email = cleanString(record.email, 254);
   const topic = cleanString(record.topic, 40);
   const message = cleanString(record.message, 3000);
-  const pageUrl = cleanString(record.pageUrl, 500);
+  const pageUrl = sameOriginPageUrl(record.pageUrl, request);
 
   if (!TOPICS.has(topic) || message.length < 10) {
-    return NextResponse.json({ error: "invalid_request" }, { status: 400 });
+    return json({ error: "invalid_request" }, 400);
   }
   if (email && !isEmail(email)) {
-    return NextResponse.json({ error: "invalid_email" }, { status: 400 });
+    return json({ error: "invalid_email" }, 400);
   }
 
   try {
@@ -49,9 +77,11 @@ export async function POST(request: Request) {
       message,
       pageUrl: pageUrl || null,
     });
-    return NextResponse.json({ ok: true });
+    return json({ ok: true });
   } catch (error) {
-    console.error("contact form failed", error);
-    return NextResponse.json({ error: "form_unavailable" }, { status: 503 });
+    console.error("contact form failed", {
+      error: error instanceof Error ? error.message : "unknown error",
+    });
+    return json({ error: "form_unavailable" }, 503);
   }
 }

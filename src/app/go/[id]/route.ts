@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getProduct, recordOutboundClick } from "@/lib/db";
 import { amazonSearchUrl, rakutenSearchUrl } from "@/lib/crosslinks";
-import { isSameOriginBrowserRequest } from "@/lib/request-security";
+import { shouldRecordPublicMetric } from "@/lib/request-security";
 
 type Destination = "primary" | "cross";
 type Merchant = "rakuten" | "amazon";
@@ -79,7 +79,7 @@ export async function GET(
     return Response.json({ error: "Invalid merchant link" }, { status: 502 });
   }
 
-  if (isSameOriginBrowserRequest(request)) {
+  if (shouldRecordPublicMetric(request)) {
     try {
       await recordOutboundClick({ productId: id, destination, merchant });
     } catch (error) {
