@@ -63,7 +63,7 @@ src/
     api/cron/ingest/route.ts Vercel商品収集Cron入口(Authorization: Bearer CRON_SECRET必須)
     api/cron/ranking/route.ts VercelランキングCron入口(同認証、収集と独立)
   components/
-    ProductCard.tsx         商品カード(スコアバッジ+チェック+根拠2行)
+    ProductCard.tsx         商品カード(スコアバッジ+チェック+根拠2行+販売先への直接ボタン)
     ScoreRing.tsx           スコアバッジ: 全面塗りつぶし円。赤=90%以上/オレンジ=50-89/黄=~49。
                             黄のみ文字は墨色(コントラスト確保)。100%で日の丸になる意匠
     CheckMarks.tsx          3要素チェック表示(詳細用/カード用コンパクトの2種)
@@ -238,6 +238,8 @@ supabase/
   - クエリは商品名から【販促文言】を除去して先頭5語
   - 「同一商品とは限りません」の注記必須(誤認防止)
   - Amazon検索リンクの成約は売上実績になり、API資格(売上3件)の獲得導線を兼ねる
+- TOP・カテゴリ・特集・産地・関連商品の各カードにも掲載元モールへの直接ボタンを表示。
+  `/go/[id]?target=primary` を通すため、URL検証と匿名クリック集計は商品詳細と共通
 
 ## 12. 残作業(優先順)
 
