@@ -29,6 +29,9 @@ export const metadata: Metadata = {
   },
   description:
     "日本とのかかわりが深い商品を中心に集めたセレクトサイト。AIが商品ごとの「日本度」を判定根拠つきで表示します。",
+  verification: {
+    google: "VMqessd_1h9nlHgMhQSBvdfi6JneC5YtPETQ1cyxUGs",
+  },
 };
 
 export default async function RootLayout({
