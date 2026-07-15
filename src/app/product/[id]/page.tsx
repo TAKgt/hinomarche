@@ -54,13 +54,24 @@ export default async function ProductPage({ params }: Props) {
   const isRakuten = product.source === "rakuten";
   const buttonLabel = isRakuten ? "楽天市場で見る" : "Amazonで見る";
   const crossLabel = isRakuten ? "Amazonで探す" : "楽天市場で探す";
-  const productPlacement = productPlacementQuery({
+  const primaryPlacement = productPlacementQuery({
     surface: "product",
     surfaceKey: null,
     position: 1,
   });
-  const primaryUrl = `/go/${product.id}?target=primary&${productPlacement}`;
-  const crossUrl = `/go/${product.id}?target=cross&${productPlacement}`;
+  const stickyPlacement = productPlacementQuery({
+    surface: "product",
+    surfaceKey: null,
+    position: 2,
+  });
+  const crossPlacement = productPlacementQuery({
+    surface: "product",
+    surfaceKey: null,
+    position: 3,
+  });
+  const primaryUrl = `/go/${product.id}?target=primary&${primaryPlacement}`;
+  const stickyPrimaryUrl = `/go/${product.id}?target=primary&${stickyPlacement}`;
+  const crossUrl = `/go/${product.id}?target=cross&${crossPlacement}`;
   const hasReview =
     product.reviewAverage != null &&
     product.reviewAverage > 0 &&
@@ -69,7 +80,7 @@ export default async function ProductPage({ params }: Props) {
     product.reviewCount > 0;
 
   return (
-    <div className="mx-auto max-w-5xl px-5 py-12">
+    <div className="mx-auto max-w-5xl px-5 py-12 pb-28 md:pb-12">
       <JsonLd data={productStructuredData(product, categoryName)} />
       <ProductViewTracker productId={product.id} />
       <nav className="text-xs text-sumi-soft mb-8">
@@ -134,6 +145,22 @@ export default async function ProductPage({ params }: Props) {
             </p>
           )}
 
+          <a
+            href={primaryUrl}
+            target="_blank"
+            rel="nofollow sponsored noopener"
+            className={`mt-6 block px-8 py-4 text-center text-sm font-medium tracking-[0.12em] text-white transition-colors ${
+              isRakuten
+                ? "bg-hinomaru hover:bg-hinomaru-deep shadow-[0_4px_16px_rgba(188,0,45,0.3)]"
+                : "bg-sumi hover:bg-black shadow-[0_4px_16px_rgba(34,31,26,0.3)]"
+            }`}
+          >
+            {buttonLabel.replace("で見る", "で価格・在庫を見る")}
+          </a>
+          <p className="mt-2 text-center text-[11px] text-sumi-soft">
+            外部の販売ページに移動します(アフィリエイトリンク)
+          </p>
+
           {/* AI判定カード */}
           <div className="mt-7 border border-line bg-white/60 p-5">
             <div className="flex items-center gap-5">
@@ -165,18 +192,6 @@ export default async function ProductPage({ params }: Props) {
           </div>
 
           <a
-            href={primaryUrl}
-            target="_blank"
-            rel="nofollow sponsored noopener"
-            className={`mt-7 block text-center text-white px-8 py-4 text-sm tracking-[0.2em] font-medium transition-colors ${
-              isRakuten
-                ? "bg-hinomaru hover:bg-hinomaru-deep shadow-[0_4px_16px_rgba(188,0,45,0.3)]"
-                : "bg-sumi hover:bg-black shadow-[0_4px_16px_rgba(34,31,26,0.3)]"
-            }`}
-          >
-            {buttonLabel}
-          </a>
-          <a
             href={crossUrl}
             target="_blank"
             rel="nofollow sponsored noopener"
@@ -185,7 +200,6 @@ export default async function ProductPage({ params }: Props) {
             {crossLabel}
           </a>
           <p className="mt-2 text-center text-[11px] text-sumi-soft">
-            外部の販売ページに移動します(アフィリエイトリンク)。
             「{crossLabel}」は商品名での検索結果ページに移動します(同一商品とは限りません)
           </p>
         </div>
@@ -253,6 +267,27 @@ export default async function ProductPage({ params }: Props) {
           </div>
         </section>
       )}
+
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-washi/95 px-4 pt-3 shadow-[0_-6px_18px_rgba(34,31,26,0.12)] backdrop-blur md:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="mx-auto flex max-w-md items-center gap-3">
+          <p className="min-w-0 shrink-0 font-mincho text-lg font-semibold">
+            {formatPrice(product.price)}
+          </p>
+          <a
+            href={stickyPrimaryUrl}
+            target="_blank"
+            rel="nofollow sponsored noopener"
+            aria-label={`${displayTitle}を${SOURCE_LABEL[product.source]}で見る`}
+            className={`min-w-0 flex-1 px-3 py-3 text-center text-xs font-medium text-white transition-colors ${
+              isRakuten
+                ? "bg-hinomaru hover:bg-hinomaru-deep"
+                : "bg-sumi hover:bg-black"
+            }`}
+          >
+            {buttonLabel}
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
