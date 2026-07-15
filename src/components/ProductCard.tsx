@@ -24,6 +24,7 @@ export function ProductCard({
 }) {
   const displayTitle = displayProductTitle(product.title);
   const sourceLabel = SOURCE_LABEL[product.source];
+  const outboundLabel = `${sourceLabel}で価格を見る`;
   const placement: ProductPlacement = {
     surface,
     surfaceKey,
@@ -108,10 +109,10 @@ export function ProductCard({
           href={outboundUrl}
           target="_blank"
           rel="nofollow sponsored noopener"
-          aria-label={`${displayTitle}を${sourceLabel}で見る`}
+          aria-label={`${displayTitle}を${outboundLabel}`}
           className="block w-full border border-sumi/25 bg-white/50 px-2 py-3 text-center text-xs font-medium text-sumi transition-colors hover:border-hinomaru hover:bg-hinomaru hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hinomaru md:py-2.5"
         >
-          {sourceLabel}で見る
+          {outboundLabel}
         </a>
       </div>
     </article>

@@ -8,11 +8,15 @@ import { selectCategoryDiverseProducts } from "@/lib/product-selection";
 export const revalidate = 3600;
 
 export default async function Home() {
-  const [products, categories, popularCandidates] = await Promise.all([
-    getTopProducts(12),
+  const [topCandidates, categories, popularCandidates] = await Promise.all([
+    getTopProducts(80),
     getCategories(),
     getPopularReviewedProducts(24),
   ]);
+  const products = selectCategoryDiverseProducts(topCandidates, {
+    limit: 12,
+    maxPerCategory: 2,
+  });
   const featuredIds = new Set(products.map((product) => product.id));
   const popularProducts = selectCategoryDiverseProducts(popularCandidates, {
     limit: 8,
@@ -31,7 +35,7 @@ export default async function Home() {
           aria-hidden
           className="absolute -right-10 -top-24 size-[280px] rounded-full bg-hinomaru/[0.09]"
         />
-        <div className="relative mx-auto max-w-6xl px-5 py-20 md:py-28">
+        <div className="relative mx-auto max-w-6xl px-5 py-12 md:py-24">
           <h1 className="rise rise-1 font-mincho text-4xl font-semibold leading-tight tracking-wide md:text-6xl">
             日本製品
             <br />
@@ -43,6 +47,23 @@ export default async function Home() {
             <strong className="font-medium text-sumi">その根拠まで</strong>
             表示します。
           </p>
+          <nav
+            className="rise rise-4 mt-7 flex flex-wrap gap-3"
+            aria-label="商品を探す"
+          >
+            <Link
+              href="/popular"
+              className="bg-hinomaru px-5 py-3 text-sm font-medium text-white shadow-[0_4px_14px_rgba(188,0,45,0.2)] transition-colors hover:bg-hinomaru-deep"
+            >
+              販売先の高評価から探す
+            </Link>
+            <Link
+              href="/feature"
+              className="border border-sumi/30 bg-white/35 px-5 py-3 text-sm font-medium transition-colors hover:border-hinomaru hover:text-hinomaru"
+            >
+              目的から探す
+            </Link>
+          </nav>
         </div>
       </section>
 

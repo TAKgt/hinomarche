@@ -7,10 +7,7 @@ import { ScoreRing } from "@/components/ScoreRing";
 import { CheckMarks } from "@/components/CheckMarks";
 import { ProductViewTracker } from "@/components/ProductViewTracker";
 import {
-  isImpressionPlacement,
-  parseProductPlacement,
   productPlacementQuery,
-  type ProductPlacement,
 } from "@/lib/product-metrics";
 import { ProductCard } from "@/components/ProductCard";
 import { JsonLd } from "@/components/JsonLd";
@@ -20,24 +17,16 @@ import { displayProductTitle } from "@/lib/product-title";
 import { getFeaturesForProduct } from "@/lib/features";
 import { getRegionsForProduct } from "@/lib/regions";
 
-type ProductSearchParams = Record<string, string | string[] | undefined>;
 type Props = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<ProductSearchParams>;
 };
 
-function firstValue(value: string | string[] | undefined): string {
-  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
-}
+export const revalidate = 3600;
 
-function listingPlacement(values: ProductSearchParams): ProductPlacement | null {
-  const params = new URLSearchParams({
-    surface: firstValue(values.surface),
-    context: firstValue(values.context),
-    position: firstValue(values.position),
-  });
-  const placement = parseProductPlacement(params);
-  return placement && isImpressionPlacement(placement) ? placement : null;
+// 公開商品は初回アクセス時に生成し、以後はISRで再利用する。
+// 900件以上をデプロイごとに全件生成する負荷は避ける。
+export function generateStaticParams(): { id: string }[] {
+  return [];
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -59,9 +48,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function ProductPage({ params, searchParams }: Props) {
-  const [{ id }, query] = await Promise.all([params, searchParams]);
-  const sourcePlacement = listingPlacement(query);
+export default async function ProductPage({ params }: Props) {
+  const { id } = await params;
   const product = await getProduct(id);
   if (!product) notFound();
   const [relatedProducts, categories] = await Promise.all([
@@ -106,7 +94,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
   return (
     <div className="mx-auto max-w-5xl px-5 py-12 pb-28 md:pb-12">
       <JsonLd data={productStructuredData(product, categoryName)} />
-      <ProductViewTracker productId={product.id} placement={sourcePlacement} />
+      <ProductViewTracker productId={product.id} />
       <nav className="text-xs text-sumi-soft mb-8">
         <Link href="/" className="hover:text-hinomaru">ホーム</Link>
         <span className="mx-2">/</span>
