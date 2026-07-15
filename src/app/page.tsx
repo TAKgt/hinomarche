@@ -3,6 +3,7 @@ import { getCategories, getPopularReviewedProducts, getTopProducts } from "@/lib
 import { ProductCard } from "@/components/ProductCard";
 import { FEATURES } from "@/lib/features";
 import { REGIONS } from "@/lib/regions";
+import { selectCategoryDiverseProducts } from "@/lib/product-selection";
 
 export const revalidate = 3600;
 
@@ -13,16 +14,11 @@ export default async function Home() {
     getPopularReviewedProducts(24),
   ]);
   const featuredIds = new Set(products.map((product) => product.id));
-  const categoryCounts = new Map<string, number>();
-  const popularProducts = popularCandidates
-    .filter((product) => {
-      if (featuredIds.has(product.id)) return false;
-      const count = categoryCounts.get(product.categorySlug) ?? 0;
-      if (count >= 2) return false;
-      categoryCounts.set(product.categorySlug, count + 1);
-      return true;
-    })
-    .slice(0, 8);
+  const popularProducts = selectCategoryDiverseProducts(popularCandidates, {
+    limit: 8,
+    maxPerCategory: 2,
+    excludeIds: featuredIds,
+  });
 
   return (
     <div>
@@ -86,9 +82,14 @@ export default async function Home() {
               <h2 className="font-mincho text-2xl font-semibold md:text-3xl">
                 レビューで高評価の商品
               </h2>
-              <p className="mt-2 text-xs leading-relaxed text-sumi-soft sm:mt-0 sm:text-right">
-                販売先評価4.0以上<br />レビュー100件以上
-              </p>
+              <div className="mt-3 flex flex-wrap items-end justify-between gap-x-5 gap-y-2 sm:mt-0 sm:block sm:text-right">
+                <p className="text-xs leading-relaxed text-sumi-soft">
+                  販売先評価4.0以上<br />レビュー100件以上
+                </p>
+                <Link href="/popular" className="text-sm text-hinomaru hover:underline sm:mt-2 sm:block">
+                  高評価商品をすべて見る →
+                </Link>
+              </div>
             </div>
             <div className="mt-7 grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
               {popularProducts.map((product, index) => (

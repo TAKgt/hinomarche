@@ -14,13 +14,23 @@ export const metadata: Metadata = {
 
 const SURFACE_LABELS: Record<AdminSurfacePositionRow["surface"], string> = {
   home: "TOP",
+  popular: "高評価一覧",
   category: "ジャンル",
+  search: "商品検索",
   feature: "特集",
   region: "産地・工芸",
   related: "関連商品",
 };
 
-const SURFACE_ORDER = ["home", "category", "feature", "region", "related"] as const;
+const SURFACE_ORDER = [
+  "home",
+  "popular",
+  "category",
+  "search",
+  "feature",
+  "region",
+  "related",
+] as const;
 
 function ratio(clicks: number, impressions: number): string {
   if (impressions === 0) return "-";

@@ -5,6 +5,7 @@ export const PRODUCT_SURFACES = [
   "region",
   "related",
   "search",
+  "popular",
   "product",
 ] as const;
 
@@ -41,7 +42,7 @@ export function isImpressionPlacement(
   placement: ProductPlacement,
 ): boolean {
   if (placement.surface === "product") return false;
-  if (placement.surface === "home" || placement.surface === "search") {
+  if (["home", "search", "popular"].includes(placement.surface)) {
     return placement.surfaceKey === null;
   }
   return placement.surfaceKey !== null;

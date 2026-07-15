@@ -879,7 +879,7 @@ export type AdminCollectionReport = {
 };
 
 export type AdminSurfacePositionRow = {
-  surface: "home" | "category" | "feature" | "region" | "related";
+  surface: "home" | "popular" | "category" | "search" | "feature" | "region" | "related";
   position: number;
   impressions28d: number;
   listingClicks28d: number;
@@ -902,7 +902,15 @@ export async function getAdminSurfacePositionReport(): Promise<AdminSurfacePosit
     .order("position", { ascending: true });
   if (error) throw error;
 
-  const allowedSurfaces = new Set(["home", "category", "feature", "region", "related"]);
+  const allowedSurfaces = new Set([
+    "home",
+    "popular",
+    "category",
+    "search",
+    "feature",
+    "region",
+    "related",
+  ]);
   const rows = data.flatMap((row): AdminSurfacePositionRow[] => {
     const surface = String(row.surface);
     const position = Number(row.position);
