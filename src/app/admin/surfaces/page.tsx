@@ -68,6 +68,9 @@ export default async function SurfacePositionAdminPage() {
           <h1 className="mt-2 font-mincho text-3xl font-semibold">掲載面・表示位置の成果</h1>
         </div>
         <div className="flex flex-wrap items-center gap-4 text-sm">
+          <Link href="/admin/actions" className="font-medium text-hinomaru hover:underline">
+            商品改善候補
+          </Link>
           <Link href="/admin/ranking" className="font-medium text-hinomaru hover:underline">
             運営ランキング
           </Link>

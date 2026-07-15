@@ -82,6 +82,9 @@ export default async function RankingAdminPage({ searchParams }: Props) {
           <h1 className="mt-2 font-mincho text-3xl font-semibold">運営ランキング</h1>
         </div>
         <div className="flex flex-wrap items-center gap-4 text-sm">
+          <Link href="/admin/actions" className="font-medium text-hinomaru hover:underline">
+            商品改善候補
+          </Link>
           <Link href="/admin/surfaces" className="font-medium text-hinomaru hover:underline">
             掲載面・表示位置
           </Link>
