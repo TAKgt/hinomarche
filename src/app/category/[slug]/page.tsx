@@ -212,7 +212,13 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           </div>
           <div className="mt-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
             {products.map((p, i) => (
-              <ProductCard key={p.id} product={p} index={i} />
+              <ProductCard
+                key={p.id}
+                product={p}
+                index={i}
+                surface="category"
+                surfaceKey={slug}
+              />
             ))}
           </div>
         </section>

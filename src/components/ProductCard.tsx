@@ -4,10 +4,32 @@ import { formatPrice, SOURCE_LABEL } from "@/lib/format";
 import { ScoreRing } from "./ScoreRing";
 import { CheckMarksCompact } from "./CheckMarks";
 import { displayProductTitle } from "@/lib/product-title";
+import { ProductImpression } from "./ProductImpression";
+import {
+  productPlacementQuery,
+  type ProductPlacement,
+  type ProductSurface,
+} from "@/lib/product-metrics";
 
-export function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
+export function ProductCard({
+  product,
+  index = 0,
+  surface,
+  surfaceKey = null,
+}: {
+  product: Product;
+  index?: number;
+  surface: ProductSurface;
+  surfaceKey?: string | null;
+}) {
   const displayTitle = displayProductTitle(product.title);
   const sourceLabel = SOURCE_LABEL[product.source];
+  const placement: ProductPlacement = {
+    surface,
+    surfaceKey,
+    position: index + 1,
+  };
+  const outboundUrl = `/go/${product.id}?target=primary&${productPlacementQuery(placement)}`;
   const hasReview =
     product.reviewAverage != null &&
     product.reviewAverage > 0 &&
@@ -18,6 +40,7 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
     <article
       className={`group flex h-full flex-col border border-line bg-white/60 hover:border-hinomaru hover:shadow-[0_8px_24px_rgba(34,31,26,0.08)] transition-all duration-300 rise rise-${Math.min(index % 4 + 1, 4)}`}
     >
+      <ProductImpression productId={product.id} placement={placement} />
       <Link href={`/product/${product.id}`} className="block flex-1 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-hinomaru">
         <div className="relative aspect-square overflow-hidden bg-washi-deep">
           {product.imageUrl ? (
@@ -78,7 +101,7 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
 
       <div className="mt-auto px-4 pb-4">
         <a
-          href={`/go/${product.id}?target=primary`}
+          href={outboundUrl}
           target="_blank"
           rel="nofollow sponsored noopener"
           aria-label={`${displayTitle}を${sourceLabel}で見る`}

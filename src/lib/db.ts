@@ -5,6 +5,7 @@ import type { CategoryInventory } from "./ingest-plan";
 import { FEATURES, matchesFeatureProduct } from "./features";
 import { matchesRegionProduct, REGIONS } from "./regions";
 import { calculateCollectionRanking } from "./collection-ranking";
+import type { ProductPlacement } from "./product-metrics";
 import demoProducts from "../data/demo-products.json";
 
 /**
@@ -616,6 +617,7 @@ export type OutboundClickInput = {
   productId: string;
   destination: "primary" | "cross";
   merchant: "rakuten" | "amazon";
+  placement: ProductPlacement | null;
 };
 
 /**
@@ -629,7 +631,40 @@ export async function recordOutboundClick(input: OutboundClickInput): Promise<vo
     product_id: input.productId,
     destination: input.destination,
     merchant: input.merchant,
+    surface: input.placement?.surface ?? null,
+    surface_key: input.placement?.surfaceKey ?? null,
+    position: input.placement?.position ?? null,
   });
+  if (error) throw error;
+}
+
+export type ProductImpressionInput = ProductPlacement & { productId: string };
+
+export async function recordProductImpressions(
+  impressions: ProductImpressionInput[],
+): Promise<void> {
+  if (isDemoMode() || impressions.length === 0) return;
+
+  const productIds = [...new Set(impressions.map((item) => item.productId))];
+  const { data: published, error: productError } = await adminSupabase()
+    .from("products")
+    .select("id")
+    .in("id", productIds)
+    .eq("is_published", true);
+  if (productError) throw productError;
+
+  const publishedIds = new Set(published.map((row) => String(row.id)));
+  const rows = impressions
+    .filter((item) => publishedIds.has(item.productId))
+    .map((item) => ({
+      product_id: item.productId,
+      surface: item.surface,
+      surface_key: item.surfaceKey,
+      position: item.position,
+    }));
+  if (rows.length === 0) return;
+
+  const { error } = await adminSupabase().from("product_impressions").insert(rows);
   if (error) throw error;
 }
 
@@ -649,6 +684,8 @@ export type ShadowRankingInput = {
   currentFeaturedScore: number;
   pageViews28d: number;
   outboundClicks28d: number;
+  impressions28d: number;
+  listingClicks28d: number;
   priceUpdatedAt: string | null;
 };
 
@@ -676,6 +713,8 @@ export async function getShadowRankingInputs(): Promise<ShadowRankingInput[]> {
     currentFeaturedScore: Number(row.current_featured_score ?? 0),
     pageViews28d: Number(row.page_views_28d ?? 0),
     outboundClicks28d: Number(row.outbound_clicks_28d ?? 0),
+    impressions28d: Number(row.impressions_28d ?? 0),
+    listingClicks28d: Number(row.listing_clicks_28d ?? 0),
     priceUpdatedAt: row.price_updated_at ? String(row.price_updated_at) : null,
   }));
 }
@@ -687,6 +726,8 @@ export type ShadowRankingSnapshot = {
   proposedScore: number;
   pageViews28d: number;
   outboundClicks28d: number;
+  impressions28d: number;
+  listingClicks28d: number;
   smoothedCtr: number;
   reason: string;
 };
@@ -711,6 +752,8 @@ export type AdminCollectionRow = {
   productCount: number;
   pageViews28d: number;
   outboundClicks28d: number;
+  impressions28d: number;
+  listingClicks28d: number;
   averageFeaturedScore: number;
   shadowScore: number;
   isRankingReady: boolean;
@@ -724,7 +767,7 @@ export type AdminCollectionReport = {
 
 export async function getAdminCollectionReport(): Promise<AdminCollectionReport> {
   const generatedAt = new Date().toISOString();
-  const [products, inputs] = await Promise.all([
+  const [products, inputs, collectionMetrics] = await Promise.all([
     isDemoMode()
       ? Promise.resolve(demoProducts as unknown as Product[])
       : (async () => {
@@ -744,8 +787,26 @@ export async function getAdminCollectionReport(): Promise<AdminCollectionReport>
           return rows;
         })(),
     getShadowRankingInputs(),
+    isDemoMode()
+      ? Promise.resolve([] as Record<string, unknown>[])
+      : (async () => {
+          const { data, error } = await adminSupabase()
+            .from("collection_performance_28d")
+            .select("*");
+          if (error) throw error;
+          return data as Record<string, unknown>[];
+        })(),
   ]);
   const metricsByProduct = new Map(inputs.map((input) => [input.productId, input]));
+  const metricsByCollection = new Map(
+    collectionMetrics.map((row) => [
+      `${String(row.surface)}:${String(row.surface_key)}`,
+      {
+        impressions28d: Number(row.impressions_28d ?? 0),
+        listingClicks28d: Number(row.listing_clicks_28d ?? 0),
+      },
+    ]),
+  );
 
   const summarize = (
     kind: AdminCollectionRow["kind"],
@@ -772,6 +833,8 @@ export async function getAdminCollectionReport(): Promise<AdminCollectionReport>
         productCount: displayedProducts.length,
         pageViews28d: 0,
         outboundClicks28d: 0,
+        impressions28d: 0,
+        listingClicks28d: 0,
         averageFeaturedScore: 0,
         shadowScore: 0,
         isRankingReady: false,
@@ -781,6 +844,9 @@ export async function getAdminCollectionReport(): Promise<AdminCollectionReport>
     summary.averageFeaturedScore = summary.productCount > 0
       ? summary.averageFeaturedScore / summary.productCount
       : 0;
+    const collectionMetric = metricsByCollection.get(`${kind}:${slug}`);
+    summary.impressions28d = collectionMetric?.impressions28d ?? 0;
+    summary.listingClicks28d = collectionMetric?.listingClicks28d ?? 0;
     const ranking = calculateCollectionRanking(summary);
     summary.shadowScore = ranking.shadowScore;
     summary.isRankingReady = ranking.isReady;
@@ -867,6 +933,8 @@ export async function getAdminRankingReport(): Promise<AdminRankingReport> {
       proposedScore: Number(snapshot.proposed_score),
       pageViews28d: Number(snapshot.page_views_28d),
       outboundClicks28d: Number(snapshot.outbound_clicks_28d),
+      impressions28d: Number(snapshot.impressions_28d ?? 0),
+      listingClicks28d: Number(snapshot.listing_clicks_28d ?? 0),
       smoothedCtr: Number(snapshot.smoothed_ctr),
       reason: String(snapshot.reason),
       title: String(product.title),
@@ -892,11 +960,13 @@ export async function saveShadowRankingSnapshots(
       product_id: snapshot.productId,
       calculated_on: snapshot.calculatedOn,
       mode: "shadow",
-      score_version: "commercial-v1",
+      score_version: "commercial-v2",
       current_score: snapshot.currentScore,
       proposed_score: snapshot.proposedScore,
       page_views_28d: snapshot.pageViews28d,
       outbound_clicks_28d: snapshot.outboundClicks28d,
+      impressions_28d: snapshot.impressions28d,
+      listing_clicks_28d: snapshot.listingClicks28d,
       smoothed_ctr: snapshot.smoothedCtr,
       reason: snapshot.reason,
     }));

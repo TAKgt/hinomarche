@@ -6,6 +6,7 @@ import { formatDate, formatPrice, SOURCE_LABEL } from "@/lib/format";
 import { ScoreRing } from "@/components/ScoreRing";
 import { CheckMarks } from "@/components/CheckMarks";
 import { ProductViewTracker } from "@/components/ProductViewTracker";
+import { productPlacementQuery } from "@/lib/product-metrics";
 import { ProductCard } from "@/components/ProductCard";
 import { JsonLd } from "@/components/JsonLd";
 import { productStructuredData } from "@/lib/structured-data";
@@ -53,8 +54,13 @@ export default async function ProductPage({ params }: Props) {
   const isRakuten = product.source === "rakuten";
   const buttonLabel = isRakuten ? "楽天市場で見る" : "Amazonで見る";
   const crossLabel = isRakuten ? "Amazonで探す" : "楽天市場で探す";
-  const primaryUrl = `/go/${product.id}?target=primary`;
-  const crossUrl = `/go/${product.id}?target=cross`;
+  const productPlacement = productPlacementQuery({
+    surface: "product",
+    surfaceKey: null,
+    position: 1,
+  });
+  const primaryUrl = `/go/${product.id}?target=primary&${productPlacement}`;
+  const crossUrl = `/go/${product.id}?target=cross&${productPlacement}`;
   const hasReview =
     product.reviewAverage != null &&
     product.reviewAverage > 0 &&
@@ -236,7 +242,13 @@ export default async function ProductPage({ params }: Props) {
           </h2>
           <div className="mt-7 grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-5">
             {relatedProducts.map((related, index) => (
-              <ProductCard key={related.id} product={related} index={index} />
+              <ProductCard
+                key={related.id}
+                product={related}
+                index={index}
+                surface="related"
+                surfaceKey={product.categorySlug}
+              />
             ))}
           </div>
         </section>

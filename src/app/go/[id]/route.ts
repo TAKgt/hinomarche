@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getProduct, recordOutboundClick } from "@/lib/db";
 import { amazonSearchUrl, rakutenSearchUrl } from "@/lib/crosslinks";
 import { shouldRecordPublicMetric } from "@/lib/request-security";
+import { parseProductPlacement } from "@/lib/product-metrics";
 
 type Destination = "primary" | "cross";
 type Merchant = "rakuten" | "amazon";
@@ -46,6 +47,7 @@ export async function GET(
 ) {
   const { id } = await context.params;
   const destination = request.nextUrl.searchParams.get("target");
+  const placement = parseProductPlacement(request.nextUrl.searchParams);
 
   if (!UUID_PATTERN.test(id) || !isAllowedDestination(destination)) {
     return Response.json({ error: "Invalid link" }, { status: 400 });
@@ -81,7 +83,12 @@ export async function GET(
 
   if (shouldRecordPublicMetric(request)) {
     try {
-      await recordOutboundClick({ productId: id, destination, merchant });
+      await recordOutboundClick({
+        productId: id,
+        destination,
+        merchant,
+        placement,
+      });
     } catch (error) {
       console.error("Failed to record outbound click", {
         productId: id,

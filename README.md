@@ -70,6 +70,8 @@ TOP/カテゴリの「注目順」を有効にするには、続けて
 `supabase/migrations/008_outbound_clicks.sql` を実行してください。
 匿名の商品閲覧数とshadowランキングを使う場合は、続けて
 `supabase/migrations/009_shadow_ranking.sql` を実行します。
+商品カードの表示数、掲載面、表示位置を匿名で比較する場合は
+`supabase/migrations/012_product_surface_metrics.sql` も実行します。
 計測テーブルにIPアドレス、Cookie、User-Agent等は保存しません。
 
 ### 3. 商品を収集する
@@ -112,13 +114,13 @@ npm run judge:backlog
    (VercelがCRON_SECRETを`Authorization`ヘッダーに付けて叩く)
 4. Settings > Domains で `hinomarche.com` を追加し、ドメイン側のネームサーバー/DNSを案内どおり設定
 
-ランキング用Cronは `commercial-v1` の候補順位を収集と独立して計算し、
+ランキング用Cronは `commercial-v2` の候補順位を収集と独立して計算し、
 `ranking_snapshots` に `shadow` として保存します。shadow期間中はサイトの表示順を変更しません。
 
 ### 5. 非公開の運営ランキング
 
-`/admin/ranking` では、直近28日の商品閲覧・販売サイト移動・CTRとshadow候補順位を確認できます。
-`/admin/collections` では、各特集・産地に表示される商品群の同実績を比較できます。
+`/admin/ranking` では、直近28日の商品カード表示・掲載面からの販売サイト移動・CTRとshadow候補順位を確認できます。
+`/admin/collections` では、各特集・産地の掲載面ごとの表示・移動実績を比較できます。
 新しい個人情報やCookieは収集せず、既存の匿名集計のみを使います。
 30反応・3移動以上のコレクションだけにshadow候補を出し、公開順は自動変更しません。
 公開サイトからのリンクはなく、`ANALYTICS_ADMIN_PASSWORD` が未設定なら503で閉じます。

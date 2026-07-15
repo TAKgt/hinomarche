@@ -23,13 +23,13 @@ export default async function CollectionAdminPage() {
   });
   const rows = [...report.rows].sort(
     (a, b) =>
-      b.outboundClicks28d - a.outboundClicks28d ||
-      b.pageViews28d - a.pageViews28d ||
+      b.listingClicks28d - a.listingClicks28d ||
+      b.impressions28d - a.impressions28d ||
       a.name.localeCompare(b.name, "ja"),
   );
   const featureCount = rows.filter((row) => row.kind === "feature").length;
   const regionCount = rows.filter((row) => row.kind === "region").length;
-  const rowsWithClicks = rows.filter((row) => row.outboundClicks28d > 0).length;
+  const rowsWithClicks = rows.filter((row) => row.listingClicks28d > 0).length;
   const rankingReadyCount = rows.filter((row) => row.isRankingReady).length;
 
   return (
@@ -63,10 +63,10 @@ export default async function CollectionAdminPage() {
 
       <div className="border-b border-line py-5 text-xs leading-relaxed text-sumi-soft">
         <p>
-          各ページに表示される上伤24商品の実績を合算した参考値です。流入元を厳密に追跡した数値ではありません。
+          各ページで実際に画面内へ表示された商品カードと、そのカードからの販売サイト移動を匿名集計しています。
         </p>
         <p className="mt-1">
-          同じ商品が複数の特集・産地に該当する場合はそれぞれに集計されます。一覧の直接ボタンからの移動も含むため、「移動/閲覧」が100%を超える場合があります。
+          IP、Cookie、User-Agent、セッションIDは保存しません。商品詳細からの移動は掲載面CTRに含めません。
         </p>
         <p className="mt-1">
           shadowスコアは市場性と匿名反応を組み合わせた候補値です。30反応・3移動未満は判定せず、現在のTOP表示順には反映しません。
@@ -80,9 +80,9 @@ export default async function CollectionAdminPage() {
               <th className="px-3 py-3 font-medium">種類</th>
               <th className="px-3 py-3 font-medium">特集・産地</th>
               <th className="px-3 py-3 text-right font-medium">表示商品</th>
-              <th className="px-3 py-3 text-right font-medium">商品閲覧</th>
-              <th className="px-3 py-3 text-right font-medium">販売サイト移動</th>
-              <th className="px-3 py-3 text-right font-medium">移動/閲覧</th>
+              <th className="px-3 py-3 text-right font-medium">カード表示</th>
+              <th className="px-3 py-3 text-right font-medium">一覧移動</th>
+              <th className="px-3 py-3 text-right font-medium">掲載面CTR</th>
               <th className="px-3 py-3 text-right font-medium">shadow</th>
               <th className="px-3 py-3 font-medium">判定状態</th>
             </tr>
@@ -102,12 +102,12 @@ export default async function CollectionAdminPage() {
                   </Link>
                 </td>
                 <td className="px-3 py-4 text-right tabular-nums">{row.productCount}</td>
-                <td className="px-3 py-4 text-right tabular-nums">{row.pageViews28d}</td>
+                <td className="px-3 py-4 text-right tabular-nums">{row.impressions28d}</td>
                 <td className="px-3 py-4 text-right font-semibold tabular-nums">
-                  {row.outboundClicks28d}
+                  {row.listingClicks28d}
                 </td>
                 <td className="px-3 py-4 text-right tabular-nums">
-                  {ratio(row.outboundClicks28d, row.pageViews28d)}
+                  {ratio(row.listingClicks28d, row.impressions28d)}
                 </td>
                 <td className="px-3 py-4 text-right font-semibold tabular-nums">
                   {row.shadowScore}

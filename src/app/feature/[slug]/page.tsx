@@ -102,7 +102,13 @@ export default async function FeaturePage({ params }: Props) {
         {products.length > 0 ? (
           <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
             {products.map((product, index) => (
-              <ProductCard key={product.id} product={product} index={index} />
+              <ProductCard
+                key={product.id}
+                product={product}
+                index={index}
+                surface="feature"
+                surfaceKey={slug}
+              />
             ))}
           </div>
         ) : (

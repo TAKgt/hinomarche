@@ -68,12 +68,24 @@ create table outbound_clicks (
   product_id uuid not null references products(id) on delete cascade,
   destination text not null check (destination in ('primary', 'cross')),
   merchant text not null check (merchant in ('rakuten', 'amazon')),
+  surface text check (surface is null or surface in ('home', 'category', 'feature', 'region', 'related', 'product')),
+  surface_key text check (surface_key is null or surface_key ~ '^[a-z0-9][a-z0-9-]{0,63}$'),
+  position smallint check (position is null or position between 1 and 100),
   clicked_at timestamptz not null default now()
 );
 
 create table product_page_views (
   id bigserial primary key,
   product_id uuid not null references products(id) on delete cascade,
+  viewed_at timestamptz not null default now()
+);
+
+create table product_impressions (
+  id bigserial primary key,
+  product_id uuid not null references products(id) on delete cascade,
+  surface text not null check (surface in ('home', 'category', 'feature', 'region', 'related')),
+  surface_key text check (surface_key is null or surface_key ~ '^[a-z0-9][a-z0-9-]{0,63}$'),
+  position smallint not null check (position between 1 and 100),
   viewed_at timestamptz not null default now()
 );
 
@@ -87,6 +99,8 @@ create table ranking_snapshots (
   proposed_score integer not null check (proposed_score between 0 and 100),
   page_views_28d integer not null default 0 check (page_views_28d >= 0),
   outbound_clicks_28d integer not null default 0 check (outbound_clicks_28d >= 0),
+  impressions_28d integer not null default 0 check (impressions_28d >= 0),
+  listing_clicks_28d integer not null default 0 check (listing_clicks_28d >= 0),
   smoothed_ctr numeric(9,6) not null default 0 check (smoothed_ctr >= 0),
   reason text not null,
   created_at timestamptz not null default now(),
@@ -99,8 +113,11 @@ create index idx_judgments_product on judgments (product_id, judged_at desc);
 create index idx_contact_messages_created_at on contact_messages (created_at desc);
 create index idx_outbound_clicks_clicked_at on outbound_clicks (clicked_at desc);
 create index idx_outbound_clicks_product_clicked_at on outbound_clicks (product_id, clicked_at desc);
+create index idx_outbound_clicks_surface_clicked_at on outbound_clicks (surface, surface_key, clicked_at desc);
 create index idx_product_page_views_product_viewed_at on product_page_views (product_id, viewed_at desc);
 create index idx_product_page_views_viewed_at on product_page_views (viewed_at desc);
+create index idx_product_impressions_product_viewed_at on product_impressions (product_id, viewed_at desc);
+create index idx_product_impressions_surface_viewed_at on product_impressions (surface, surface_key, viewed_at desc);
 create index idx_ranking_snapshots_date_score on ranking_snapshots (calculated_on desc, mode, proposed_score desc);
 
 -- 最新の判定を結合したビュー(サイト表示はこれを読む)
@@ -136,7 +153,9 @@ select
   p.featured_score as current_featured_score,
   p.price_updated_at,
   coalesce(pv.page_views_28d, 0)::integer as page_views_28d,
-  coalesce(oc.outbound_clicks_28d, 0)::integer as outbound_clicks_28d
+  coalesce(oc.outbound_clicks_28d, 0)::integer as outbound_clicks_28d,
+  coalesce(pi.impressions_28d, 0)::integer as impressions_28d,
+  coalesce(lc.listing_clicks_28d, 0)::integer as listing_clicks_28d
 from products p
 join lateral (
   select score
@@ -157,7 +176,44 @@ left join (
   where clicked_at >= now() - interval '28 days'
   group by product_id
 ) oc on oc.product_id = p.id
+left join (
+  select product_id, count(*) as impressions_28d
+  from product_impressions
+  where viewed_at >= now() - interval '28 days'
+  group by product_id
+) pi on pi.product_id = p.id
+left join (
+  select product_id, count(*) as listing_clicks_28d
+  from outbound_clicks
+  where clicked_at >= now() - interval '28 days'
+    and surface in ('home', 'category', 'feature', 'region', 'related')
+  group by product_id
+) lc on lc.product_id = p.id
 where p.is_published;
+
+create view collection_performance_28d
+with (security_invoker = true) as
+with impression_totals as (
+  select surface, surface_key, count(*)::integer as impressions_28d
+  from product_impressions
+  where viewed_at >= now() - interval '28 days'
+    and surface in ('feature', 'region') and surface_key is not null
+  group by surface, surface_key
+), click_totals as (
+  select surface, surface_key, count(*)::integer as listing_clicks_28d
+  from outbound_clicks
+  where clicked_at >= now() - interval '28 days'
+    and surface in ('feature', 'region') and surface_key is not null
+  group by surface, surface_key
+)
+select
+  coalesce(i.surface, c.surface) as surface,
+  coalesce(i.surface_key, c.surface_key) as surface_key,
+  coalesce(i.impressions_28d, 0)::integer as impressions_28d,
+  coalesce(c.listing_clicks_28d, 0)::integer as listing_clicks_28d
+from impression_totals i
+full outer join click_totals c
+  on c.surface = i.surface and c.surface_key = i.surface_key;
 
 -- RLS: 匿名キーからは公開商品の読み取りのみ許可(書き込みはservice roleキー経由)
 alter table categories enable row level security;
@@ -166,6 +222,7 @@ alter table judgments enable row level security;
 alter table contact_messages enable row level security;
 alter table outbound_clicks enable row level security;
 alter table product_page_views enable row level security;
+alter table product_impressions enable row level security;
 alter table ranking_snapshots enable row level security;
 
 grant usage on schema public to anon, authenticated;
@@ -176,8 +233,10 @@ revoke all on outbound_clicks from anon, authenticated;
 revoke all on sequence outbound_clicks_id_seq from anon, authenticated;
 revoke all on product_page_views, ranking_snapshots from anon, authenticated;
 revoke all on sequence product_page_views_id_seq from anon, authenticated;
+revoke all on product_impressions from anon, authenticated;
+revoke all on sequence product_impressions_id_seq from anon, authenticated;
 revoke all on sequence ranking_snapshots_id_seq from anon, authenticated;
-revoke all on product_ranking_inputs from anon, authenticated;
+revoke all on product_ranking_inputs, collection_performance_28d from anon, authenticated;
 
 create policy "public read categories" on categories for select using (is_active);
 create policy "public read published products" on products for select using (is_published);

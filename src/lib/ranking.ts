@@ -5,10 +5,10 @@ import {
   type ShadowRankingSnapshot,
 } from "./db";
 
-const CTR_PRIOR_CLICKS = 2;
-const CTR_PRIOR_VIEWS = 20;
-const FULL_CONFIDENCE_VIEWS = 200;
-const MAX_CTR_FOR_SCORE = 0.25;
+const CTR_PRIOR_CLICKS = 1;
+const CTR_PRIOR_IMPRESSIONS = 25;
+const FULL_CONFIDENCE_IMPRESSIONS = 500;
+const MAX_CTR_FOR_SCORE = 0.15;
 
 function clamp(value: number, min = 0, max = 100): number {
   return Math.min(max, Math.max(min, value));
@@ -33,19 +33,33 @@ export function calculateShadowRanking(
 ): Omit<ShadowRankingSnapshot, "calculatedOn"> {
   const views = Math.max(0, input.pageViews28d);
   const clicks = Math.max(0, input.outboundClicks28d);
-  const smoothedCtr = (clicks + CTR_PRIOR_CLICKS) / (views + CTR_PRIOR_VIEWS);
+  const impressions = Math.max(0, input.impressions28d);
+  const listingClicks = Math.min(
+    impressions,
+    Math.max(0, input.listingClicks28d),
+  );
+  const hasListingData = impressions > 0;
+  const ctrDenominator = hasListingData ? impressions : views;
+  const ctrNumerator = Math.min(
+    ctrDenominator,
+    hasListingData ? listingClicks : clicks,
+  );
+  const smoothedCtr =
+    (ctrNumerator + CTR_PRIOR_CLICKS) /
+    (ctrDenominator + CTR_PRIOR_IMPRESSIONS);
   const ctrScore = clamp((smoothedCtr / MAX_CTR_FOR_SCORE) * 100);
-  const confidence = clamp(views / FULL_CONFIDENCE_VIEWS, 0, 1);
+  const confidence = clamp(ctrDenominator / FULL_CONFIDENCE_IMPRESSIONS, 0, 1);
 
-  // 実績が少ない間は市場需要を中心にし、200閲覧でCTRの重みが45%に達する。
+  // 実績が少ない間は市場需要を中心にし、500表示で掲載面CTRの重みが45%に達する。
   let proposedScore =
     input.demandScore * (1 - 0.45 * confidence) + ctrScore * 0.45 * confidence;
   const reasons: string[] = [];
 
-  if (views < 50) reasons.push("データ蓄積中");
-  else if (smoothedCtr >= 0.18) reasons.push("クリック率が高い");
-  else if (views >= 100 && smoothedCtr < 0.05) reasons.push("クリック率が低い");
-  else reasons.push("クリック率は標準範囲");
+  if (!hasListingData) reasons.push("掲載表示データ待ち");
+  else if (impressions < 100) reasons.push("掲載表示データ蓄積中");
+  else if (smoothedCtr >= 0.1) reasons.push("掲載面CTRが高い");
+  else if (impressions >= 200 && smoothedCtr < 0.03) reasons.push("掲載面CTRが低い");
+  else reasons.push("掲載面CTRは標準範囲");
 
   if (input.aiScore < 50) {
     proposedScore = Math.min(proposedScore, 35);
@@ -72,6 +86,8 @@ export function calculateShadowRanking(
     proposedScore: Math.round(clamp(proposedScore)),
     pageViews28d: views,
     outboundClicks28d: clicks,
+    impressions28d: impressions,
+    listingClicks28d: listingClicks,
     smoothedCtr: Number(smoothedCtr.toFixed(6)),
     reason: reasons.join(" / "),
   };

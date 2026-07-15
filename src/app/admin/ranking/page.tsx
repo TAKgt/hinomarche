@@ -17,8 +17,8 @@ function percent(value: number): string {
 }
 
 function rawCtr(row: AdminRankingRow): string {
-  if (row.pageViews28d === 0) return "-";
-  return percent(row.outboundClicks28d / row.pageViews28d);
+  if (row.impressions28d === 0) return "-";
+  return percent(row.listingClicks28d / row.impressions28d);
 }
 
 function changeLabel(row: AdminRankingRow): string {
@@ -45,6 +45,10 @@ export default async function RankingAdminPage({ searchParams }: Props) {
   const totalClicks = report.rows.reduce(
     (sum, row) => sum + row.outboundClicks28d,
     0
+  );
+  const totalImpressions = report.rows.reduce(
+    (sum, row) => sum + row.impressions28d,
+    0,
   );
   const promoteCount = report.rows.filter(
     (row) => row.proposedScore - row.currentScore >= 10
@@ -85,10 +89,11 @@ export default async function RankingAdminPage({ searchParams }: Props) {
         </div>
       </div>
 
-      <section className="grid grid-cols-2 border-b border-line md:grid-cols-5">
+      <section className="grid grid-cols-2 border-b border-line md:grid-cols-6">
         {[
           ["対象商品", `${report.rows.length}件`],
           ["商品閲覧", `${totalViews}回`],
+          ["カード表示", `${totalImpressions}回`],
           ["販売サイト移動", `${totalClicks}回`],
           ["昇格候補", `${promoteCount}件`],
           ["降格候補", `${declineCount}件`],
@@ -133,7 +138,7 @@ export default async function RankingAdminPage({ searchParams }: Props) {
         </p>
       ) : (
         <div className="overflow-x-auto border-t border-line">
-          <table className="w-full min-w-[980px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[1080px] border-collapse text-left text-sm">
             <thead className="bg-washi-deep/70 text-xs text-sumi-soft">
               <tr>
                 <th className="px-3 py-3 font-medium">商品</th>
@@ -143,8 +148,9 @@ export default async function RankingAdminPage({ searchParams }: Props) {
                 <th className="px-3 py-3 text-right font-medium">候補</th>
                 <th className="px-3 py-3 text-right font-medium">変化</th>
                 <th className="px-3 py-3 text-right font-medium">閲覧</th>
-                <th className="px-3 py-3 text-right font-medium">移動</th>
-                <th className="px-3 py-3 text-right font-medium">実CTR</th>
+                <th className="px-3 py-3 text-right font-medium">カード表示</th>
+                <th className="px-3 py-3 text-right font-medium">一覧移動</th>
+                <th className="px-3 py-3 text-right font-medium">掲載面CTR</th>
                 <th className="px-3 py-3 font-medium">判定理由</th>
               </tr>
             </thead>
@@ -167,7 +173,8 @@ export default async function RankingAdminPage({ searchParams }: Props) {
                       {changeLabel(row)}
                     </td>
                     <td className="px-3 py-4 text-right tabular-nums">{row.pageViews28d}</td>
-                    <td className="px-3 py-4 text-right tabular-nums">{row.outboundClicks28d}</td>
+                    <td className="px-3 py-4 text-right tabular-nums">{row.impressions28d}</td>
+                    <td className="px-3 py-4 text-right tabular-nums">{row.listingClicks28d}</td>
                     <td className="px-3 py-4 text-right tabular-nums" title={`補正CTR ${percent(row.smoothedCtr)}`}>
                       {rawCtr(row)}
                     </td>

@@ -3,6 +3,8 @@ export type CollectionRankingInput = {
   productCount: number;
   pageViews28d: number;
   outboundClicks28d: number;
+  impressions28d: number;
+  listingClicks28d: number;
 };
 
 export type CollectionRankingResult = {
@@ -24,9 +26,9 @@ export function calculateCollectionRanking(
   input: CollectionRankingInput,
 ): CollectionRankingResult {
   const productCount = Math.max(1, input.productCount);
-  const views = Math.max(0, input.pageViews28d);
-  const clicks = Math.max(0, input.outboundClicks28d);
-  const interactions = views + clicks;
+  const impressions = Math.max(0, input.impressions28d);
+  const clicks = Math.min(impressions, Math.max(0, input.listingClicks28d));
+  const interactions = impressions + clicks;
   const isReady = interactions >= MIN_INTERACTIONS && clicks >= MIN_CLICKS;
 
   if (!isReady) {
@@ -38,7 +40,7 @@ export function calculateCollectionRanking(
   }
 
   // 直接CTAの移動も評価できるよう、CTRではなく商品数あたりの反応強度を使う。
-  const behaviorPerProduct = (views + clicks * 4) / productCount;
+  const behaviorPerProduct = (impressions + clicks * 8) / productCount;
   const behaviorScore = clamp(
     (Math.log1p(behaviorPerProduct) / Math.log1p(20)) * 100,
   );

@@ -58,6 +58,7 @@ src/
     contact/page.tsx        お問い合わせフォーム(メールアドレスは公開しない)
     api/contact/route.ts    フォーム送信先。service_roleで非公開テーブルに保存
     api/metrics/product-view/route.ts 個人を識別しない商品閲覧計測
+    api/metrics/product-impression/route.ts 商品カードの匿名表示計測(最大20件のバッチ)
     admin/ranking/page.tsx  Basic認証必須の非公開ランキング画面(読み取り専用)
     admin/collections/page.tsx 特集・産地の28日成果とshadow候補を比較する非公開画面
     go/[id]/route.ts        販売サイトへの安全なリダイレクト+匿名クリック集計
@@ -71,6 +72,7 @@ src/
                             黄のみ文字は墨色(コントラスト確保)。100%で日の丸になる意匠
     CheckMarks.tsx          3要素チェック表示(詳細用/カード用コンパクトの2種)
     ProductViewTracker.tsx  商品詳細の匿名閲覧イベント送信
+    ProductImpression.tsx   50%以上を600ms表示した商品カードだけを匿名計測
   lib/
     types.ts                型定義(Product, Judgment, JudgmentChecks, Tier, tierOf)
     db.ts                   データ層。env未設定時はデモモード(src/data/demo-products.json)
@@ -80,6 +82,7 @@ src/
     judge.ts                AI判定(スコア+根拠+3要素チェックをJSONスキーマ強制で取得)
     ingest.ts               収集パイプライン本体(cron/ローカル共用)
     ranking.ts              28日間の閲覧/クリックでshadow候補順位を日次計算
+    product-metrics.ts      掲載面・文脈slug・表示位置の検証とURL生成
     request-security.ts     同一サイト操作/一般的なボットの判定(計測ノイズ抑制)
     crosslinks.ts           相互送客リンク(楽天商品→Amazon検索 / Amazon商品→楽天検索)
     category-content.ts     23カテゴリ固有の検索説明文・画面導入文
@@ -100,6 +103,7 @@ supabase/
   migrations/009_shadow_ranking.sql   閲覧計測/shadow順位(適用済み)
   migrations/010_expand_commercial_categories.sql カテゴリ18種へ拡張(適用済み)
   migrations/011_expand_digital_categories.sql デジタル系5カテゴリ追加(適用済み)
+  migrations/012_product_surface_metrics.sql 掲載面別の匿名表示/移動計測(適用済み)
 ```
 
 ## 5. データモデル(Supabase)
@@ -116,17 +120,18 @@ supabase/
 - カテゴリ一覧は23カテゴリ固有のtitle/description/導入文を持ち、BreadcrumbListとItemListを出力。
   並び替え・日本度絞り込みURLはcanonicalをカテゴリ基本URLへ向け、`noindex, follow`で重複登録を避ける
 - 表示用商品名は先頭の期限付き販促文を除き、64文字以内に整形。DBの原文と販売先リンクは変更しない
-- `outbound_clicks`: 商品から販売サイトへの移動数。IP/Cookie/User-Agent/セッションIDは保存しない。anon/authenticatedに権限なし
+- `outbound_clicks`: 商品から販売サイトへの移動数。掲載面・文脈slug・表示位置も記録する。IP/Cookie/User-Agent/セッションIDは保存しない。anon/authenticatedに権限なし
 - `product_page_views`: 商品閲覧数。商品IDと時刻のみ。anon/authenticatedに権限なし
+- `product_impressions`: 商品カードが50%以上、600ms表示された回数。商品ID・掲載面・文脈slug・表示位置・時刻のみ。anon/authenticatedに権限なし
 - 閲覧・外部移動の集計は本番環境の同一オリジン操作だけを記録し、ローカル確認では書き込まない
-- `ranking_snapshots`: `commercial-v1` の日次計算結果。現在は `shadow` のみで表示順には未反映
+- `ranking_snapshots`: `commercial-v2` の日次計算結果。掲載表示があれば一覧CTRを使い、クリック数は表示数以下に制限する。現在は `shadow` のみで表示順には未反映
 - AI判定待ちの商品は、各カテゴリ内で `featured_score` / `demand_score` / `search_rank`
   を優先し、カテゴリを一巡ずつ処理する。売れ筋優先とジャンル偏り防止を両立するため。
 - 収集対象カテゴリは日替わり、カテゴリ内の検索語はカテゴリ別の週次ローテーション。
   同じ日付剰余を使って特定の検索語だけが選ばれ続ける偏りを防ぐ。
 - RLS有効。匿名キーは公開商品の読みのみ。書き込みはservice_roleキー経由のみ
 - 全ページにCSP / COOP等を付与。問い合わせAPIは同一オリジン・JSON形式・16KB以下、
-  商品閲覧計測は同一オリジン・JSON 1KB以下に限定する。
+  商品閲覧計測は同一オリジン・JSON 1KB以下、商品表示計測は同一オリジン・JSON 10KB以下かつ20件以下に限定する。
 
 現状データ(2026-07-14時点): **公開商品925件**。同日のshadowランキング839件を生成済み
 (ランキングは重点補充前のスナップショット。次回Cronで925件へ更新予定)。
