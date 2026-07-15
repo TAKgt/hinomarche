@@ -30,6 +30,7 @@ export function ProductCard({
     position: index + 1,
   };
   const outboundUrl = `/go/${product.id}?target=primary&${productPlacementQuery(placement)}`;
+  const detailUrl = `/product/${product.id}?${productPlacementQuery(placement)}`;
   const hasReview =
     product.reviewAverage != null &&
     product.reviewAverage > 0 &&
@@ -41,7 +42,7 @@ export function ProductCard({
       className={`group flex h-full flex-col border border-line bg-white/60 hover:border-hinomaru hover:shadow-[0_8px_24px_rgba(34,31,26,0.08)] transition-all duration-300 rise rise-${Math.min(index % 4 + 1, 4)}`}
     >
       <ProductImpression productId={product.id} placement={placement} />
-      <Link href={`/product/${product.id}`} className="block flex-1 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-hinomaru">
+      <Link href={detailUrl} className="block flex-1 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-hinomaru">
         <div className="relative aspect-square overflow-hidden bg-washi-deep">
           {product.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- 外部モール画像はドメインが多岐に渡るためimgで表示

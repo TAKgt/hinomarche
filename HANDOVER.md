@@ -62,6 +62,7 @@ src/
     admin/ranking/page.tsx  Basic認証必須の非公開ランキング画面(読み取り専用)
     admin/collections/page.tsx 特集・産地の28日成果とshadow候補を比較する非公開画面
     admin/surfaces/page.tsx 掲載面・表示位置ごとの匿名成果を比較する非公開画面
+    admin/funnel/page.tsx   カード表示・詳細閲覧・販売サイト移動を比較する非公開画面
     admin/actions/page.tsx  100表示以上の商品だけを掲載強化・見直し・維持へ自動分類する非公開画面
     admin/layout.tsx        全管理画面をリクエスト時描画に固定し、認証後HTMLのキャッシュを禁止
     search/page.tsx         商品名・ブランド・メーカー検索(検索語は保存しない)
@@ -114,6 +115,7 @@ supabase/
   migrations/014_product_search_surface.sql 検索結果面の匿名計測(適用済み)
   migrations/015_popular_products_surface.sql 高評価一覧面の匿名計測(適用済み)
   migrations/016_recommended_products_surface.sql 注目商品一覧面の匿名計測(適用済み)
+  migrations/017_product_detail_funnel.sql 商品カードから詳細閲覧までの匿名導線(適用済み)
 ```
 
 ## 5. データモデル(Supabase)
@@ -137,7 +139,7 @@ supabase/
   並び替え・日本度絞り込みURLはcanonicalをカテゴリ基本URLへ向け、`noindex, follow`で重複登録を避ける
 - 表示用商品名は先頭の期限付き販促文を除き、64文字以内に整形。DBの原文と販売先リンクは変更しない
 - `outbound_clicks`: 商品から販売サイトへの移動数。掲載面・文脈slug・表示位置も記録する。IP/Cookie/User-Agent/セッションIDは保存しない。anon/authenticatedに権限なし
-- `product_page_views`: 商品閲覧数。商品IDと時刻のみ。anon/authenticatedに権限なし
+- `product_page_views`: 商品閲覧数。カード経由の場合は商品ID・掲載面・文脈slug・表示位置・時刻、直接アクセスは商品IDと時刻のみ。anon/authenticatedに権限なし
 - `product_impressions`: 商品カードが50%以上、600ms表示された回数。商品ID・掲載面・文脈slug・表示位置・時刻のみ。anon/authenticatedに権限なし
 - 商品検索は48文字・5語までに正規化し、商品名・ブランド・メーカーを対象に注目順で表示する。検索語は計測DBへ保存しない
 - カテゴリと商品検索は、価格帯および販売先レビュー(評価4.0以上／評価4.0以上かつ100件以上)で絞り込める。
@@ -147,6 +149,7 @@ supabase/
 - 閲覧・外部移動の集計は本番環境の同一オリジン操作だけを記録し、ローカル確認では書き込まない
 - `ranking_snapshots`: `commercial-v2` の日次計算結果。掲載表示があれば一覧CTRを使い、クリック数は表示数以下に制限する。現在は `shadow` のみで表示順には未反映
 - `surface_position_performance_28d`: 掲載面・表示位置別の28日集計。匿名権限からは読めず、位置補正前の観測専用
+- `product_funnel_performance_28d`: 商品別のカード表示・掲載面経由の詳細閲覧・販売サイト移動の28日集計。匿名権限からは読めない。同一人物を結び付けないため、人数ベースの購入率とは扱わない
 - AI判定待ちの商品は、各カテゴリ内で `featured_score` / `demand_score` / `search_rank`
   を優先し、カテゴリを一巡ずつ処理する。売れ筋優先とジャンル偏り防止を両立するため。
 - 収集対象カテゴリは日替わり、カテゴリ内の検索語はカテゴリ別の週次ローテーション。

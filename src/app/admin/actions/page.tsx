@@ -89,6 +89,7 @@ export default async function ProductActionsAdminPage({ searchParams }: Props) {
         <div className="flex flex-wrap items-center gap-4 text-sm">
           <Link href="/admin/ranking" className="font-medium text-hinomaru hover:underline">運営ランキング</Link>
           <Link href="/admin/surfaces" className="font-medium text-hinomaru hover:underline">掲載面・表示位置</Link>
+          <Link href="/admin/funnel" className="font-medium text-hinomaru hover:underline">商品導線</Link>
           <Link href="/admin/collections" className="font-medium text-hinomaru hover:underline">特集・産地別</Link>
           <p className="text-sumi-soft">集計日: {report.calculatedOn ?? "未集計"} / 直近28日</p>
         </div>

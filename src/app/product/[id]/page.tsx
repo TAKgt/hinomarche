@@ -6,7 +6,12 @@ import { formatDate, formatPrice, SOURCE_LABEL } from "@/lib/format";
 import { ScoreRing } from "@/components/ScoreRing";
 import { CheckMarks } from "@/components/CheckMarks";
 import { ProductViewTracker } from "@/components/ProductViewTracker";
-import { productPlacementQuery } from "@/lib/product-metrics";
+import {
+  isImpressionPlacement,
+  parseProductPlacement,
+  productPlacementQuery,
+  type ProductPlacement,
+} from "@/lib/product-metrics";
 import { ProductCard } from "@/components/ProductCard";
 import { JsonLd } from "@/components/JsonLd";
 import { productStructuredData } from "@/lib/structured-data";
@@ -15,7 +20,25 @@ import { displayProductTitle } from "@/lib/product-title";
 import { getFeaturesForProduct } from "@/lib/features";
 import { getRegionsForProduct } from "@/lib/regions";
 
-type Props = { params: Promise<{ id: string }> };
+type ProductSearchParams = Record<string, string | string[] | undefined>;
+type Props = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<ProductSearchParams>;
+};
+
+function firstValue(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+}
+
+function listingPlacement(values: ProductSearchParams): ProductPlacement | null {
+  const params = new URLSearchParams({
+    surface: firstValue(values.surface),
+    context: firstValue(values.context),
+    position: firstValue(values.position),
+  });
+  const placement = parseProductPlacement(params);
+  return placement && isImpressionPlacement(placement) ? placement : null;
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
@@ -36,8 +59,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function ProductPage({ params }: Props) {
-  const { id } = await params;
+export default async function ProductPage({ params, searchParams }: Props) {
+  const [{ id }, query] = await Promise.all([params, searchParams]);
+  const sourcePlacement = listingPlacement(query);
   const product = await getProduct(id);
   if (!product) notFound();
   const [relatedProducts, categories] = await Promise.all([
@@ -82,7 +106,7 @@ export default async function ProductPage({ params }: Props) {
   return (
     <div className="mx-auto max-w-5xl px-5 py-12 pb-28 md:pb-12">
       <JsonLd data={productStructuredData(product, categoryName)} />
-      <ProductViewTracker productId={product.id} />
+      <ProductViewTracker productId={product.id} placement={sourcePlacement} />
       <nav className="text-xs text-sumi-soft mb-8">
         <Link href="/" className="hover:text-hinomaru">ホーム</Link>
         <span className="mx-2">/</span>

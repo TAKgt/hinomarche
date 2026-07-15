@@ -789,11 +789,17 @@ export async function recordProductImpressions(
   if (error) throw error;
 }
 
-export async function recordProductPageView(productId: string): Promise<void> {
+export async function recordProductPageView(
+  productId: string,
+  placement: ProductPlacement | null,
+): Promise<void> {
   if (isDemoMode()) return;
 
   const { error } = await adminSupabase().from("product_page_views").insert({
     product_id: productId,
+    surface: placement?.surface ?? null,
+    surface_key: placement?.surfaceKey ?? null,
+    position: placement?.position ?? null,
   });
   if (error) throw error;
 }
@@ -898,6 +904,87 @@ export type AdminSurfacePositionReport = {
   generatedAt: string;
   rows: AdminSurfacePositionRow[];
 };
+
+export type AdminProductFunnelRow = {
+  productId: string;
+  title: string;
+  categorySlug: string;
+  categoryName: string;
+  source: "rakuten" | "amazon";
+  aiScore: number;
+  impressions28d: number;
+  detailViews28d: number;
+  listingDetailViews28d: number;
+  listingOutboundClicks28d: number;
+  detailOutboundClicks28d: number;
+};
+
+export type AdminProductFunnelReport = {
+  generatedAt: string;
+  rows: AdminProductFunnelRow[];
+};
+
+export async function getAdminProductFunnelReport(): Promise<AdminProductFunnelReport> {
+  const generatedAt = new Date().toISOString();
+  if (isDemoMode()) return { generatedAt, rows: [] };
+
+  const db = adminSupabase();
+  const metrics: Record<string, unknown>[] = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await db
+      .from("product_funnel_performance_28d")
+      .select("*")
+      .order("impressions_28d", { ascending: false })
+      .order("product_id", { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    metrics.push(...data);
+    if (data.length < pageSize) break;
+  }
+
+  const productIds = metrics.map((row) => String(row.product_id));
+  const productRows: Record<string, unknown>[] = [];
+  for (let index = 0; index < productIds.length; index += 200) {
+    const { data, error } = await db
+      .from("products_with_judgment")
+      .select("id,title,category_slug,source,score")
+      .in("id", productIds.slice(index, index + 200));
+    if (error) throw error;
+    productRows.push(...data);
+  }
+
+  const { data: categories, error: categoryError } = await db
+    .from("categories")
+    .select("slug,name");
+  if (categoryError) throw categoryError;
+
+  const productsById = new Map(productRows.map((row) => [String(row.id), row]));
+  const categoryNames = new Map(
+    categories.map((row) => [String(row.slug), String(row.name)]),
+  );
+  const rows = metrics.flatMap((metric): AdminProductFunnelRow[] => {
+    const productId = String(metric.product_id);
+    const product = productsById.get(productId);
+    if (!product) return [];
+    const categorySlug = String(product.category_slug);
+    return [{
+      productId,
+      title: String(product.title),
+      categorySlug,
+      categoryName: categoryNames.get(categorySlug) ?? categorySlug,
+      source: product.source === "amazon" ? "amazon" : "rakuten",
+      aiScore: Number(product.score ?? 0),
+      impressions28d: Number(metric.impressions_28d ?? 0),
+      detailViews28d: Number(metric.detail_views_28d ?? 0),
+      listingDetailViews28d: Number(metric.listing_detail_views_28d ?? 0),
+      listingOutboundClicks28d: Number(metric.listing_outbound_clicks_28d ?? 0),
+      detailOutboundClicks28d: Number(metric.detail_outbound_clicks_28d ?? 0),
+    }];
+  });
+
+  return { generatedAt, rows };
+}
 
 export async function getAdminSurfacePositionReport(): Promise<AdminSurfacePositionReport> {
   const generatedAt = new Date().toISOString();

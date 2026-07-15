@@ -76,6 +76,9 @@ export default async function SurfacePositionAdminPage() {
           <Link href="/admin/ranking" className="font-medium text-hinomaru hover:underline">
             運営ランキング
           </Link>
+          <Link href="/admin/funnel" className="font-medium text-hinomaru hover:underline">
+            商品導線
+          </Link>
           <Link href="/admin/collections" className="font-medium text-hinomaru hover:underline">
             特集・産地別
           </Link>

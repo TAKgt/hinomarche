@@ -46,6 +46,9 @@ export default async function CollectionAdminPage() {
           <Link href="/admin/surfaces" className="font-medium text-hinomaru hover:underline">
             掲載面・表示位置
           </Link>
+          <Link href="/admin/funnel" className="font-medium text-hinomaru hover:underline">
+            商品導線
+          </Link>
           <Link href="/admin/ranking" className="font-medium text-hinomaru hover:underline">
             運営ランキング
           </Link>

@@ -77,6 +77,21 @@ create table outbound_clicks (
 create table product_page_views (
   id bigserial primary key,
   product_id uuid not null references products(id) on delete cascade,
+  surface text,
+  surface_key text check (surface_key is null or surface_key ~ '^[a-z0-9][a-z0-9-]{0,63}$'),
+  position smallint,
+  constraint product_page_views_placement_check check (
+    (surface is null and surface_key is null and position is null)
+    or
+    (
+      position between 1 and 100
+      and (
+        (surface in ('home', 'search', 'popular', 'recommended') and surface_key is null)
+        or
+        (surface in ('category', 'feature', 'region', 'related') and surface_key is not null)
+      )
+    )
+  ),
   viewed_at timestamptz not null default now()
 );
 
@@ -116,6 +131,7 @@ create index idx_outbound_clicks_product_clicked_at on outbound_clicks (product_
 create index idx_outbound_clicks_surface_clicked_at on outbound_clicks (surface, surface_key, clicked_at desc);
 create index idx_product_page_views_product_viewed_at on product_page_views (product_id, viewed_at desc);
 create index idx_product_page_views_viewed_at on product_page_views (viewed_at desc);
+create index idx_product_page_views_surface_viewed_at on product_page_views (surface, surface_key, viewed_at desc);
 create index idx_product_impressions_product_viewed_at on product_impressions (product_id, viewed_at desc);
 create index idx_product_impressions_surface_viewed_at on product_impressions (surface, surface_key, viewed_at desc);
 create index idx_ranking_snapshots_date_score on ranking_snapshots (calculated_on desc, mode, proposed_score desc);
@@ -244,6 +260,45 @@ from impression_totals i
 full outer join click_totals c
   on c.surface = i.surface and c.position = i.position;
 
+create view product_funnel_performance_28d
+with (security_invoker = true) as
+with impression_totals as (
+  select product_id, count(*)::integer as impressions_28d
+  from product_impressions
+  where viewed_at >= now() - interval '28 days'
+  group by product_id
+), detail_totals as (
+  select
+    product_id,
+    count(*)::integer as detail_views_28d,
+    count(*) filter (where surface is not null)::integer as listing_detail_views_28d
+  from product_page_views
+  where viewed_at >= now() - interval '28 days'
+  group by product_id
+), outbound_totals as (
+  select
+    product_id,
+    count(*) filter (
+      where surface in ('home', 'category', 'feature', 'region', 'related', 'search', 'popular', 'recommended')
+    )::integer as listing_outbound_clicks_28d,
+    count(*) filter (where surface = 'product')::integer as detail_outbound_clicks_28d
+  from outbound_clicks
+  where clicked_at >= now() - interval '28 days'
+  group by product_id
+)
+select
+  p.id as product_id,
+  coalesce(i.impressions_28d, 0)::integer as impressions_28d,
+  coalesce(d.detail_views_28d, 0)::integer as detail_views_28d,
+  coalesce(d.listing_detail_views_28d, 0)::integer as listing_detail_views_28d,
+  coalesce(o.listing_outbound_clicks_28d, 0)::integer as listing_outbound_clicks_28d,
+  coalesce(o.detail_outbound_clicks_28d, 0)::integer as detail_outbound_clicks_28d
+from products p
+left join impression_totals i on i.product_id = p.id
+left join detail_totals d on d.product_id = p.id
+left join outbound_totals o on o.product_id = p.id
+where p.is_published;
+
 -- RLS: 匿名キーからは公開商品の読み取りのみ許可(書き込みはservice roleキー経由)
 alter table categories enable row level security;
 alter table products enable row level security;
@@ -266,7 +321,8 @@ revoke all on product_impressions from anon, authenticated;
 revoke all on sequence product_impressions_id_seq from anon, authenticated;
 revoke all on sequence ranking_snapshots_id_seq from anon, authenticated;
 revoke all on product_ranking_inputs, collection_performance_28d,
-  surface_position_performance_28d from anon, authenticated;
+  surface_position_performance_28d, product_funnel_performance_28d
+  from anon, authenticated;
 
 create policy "public read categories" on categories for select using (is_active);
 create policy "public read published products" on products for select using (is_published);
