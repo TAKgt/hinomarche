@@ -921,12 +921,16 @@ export type AdminProductFunnelRow = {
 
 export type AdminProductFunnelReport = {
   generatedAt: string;
+  windowStartedAt: string | null;
+  observedDays: number;
   rows: AdminProductFunnelRow[];
 };
 
 export async function getAdminProductFunnelReport(): Promise<AdminProductFunnelReport> {
   const generatedAt = new Date().toISOString();
-  if (isDemoMode()) return { generatedAt, rows: [] };
+  if (isDemoMode()) {
+    return { generatedAt, windowStartedAt: null, observedDays: 0, rows: [] };
+  }
 
   const db = adminSupabase();
   const metrics: Record<string, unknown>[] = [];
@@ -983,7 +987,15 @@ export async function getAdminProductFunnelReport(): Promise<AdminProductFunnelR
     }];
   });
 
-  return { generatedAt, rows };
+  const firstMetric = metrics[0];
+  return {
+    generatedAt,
+    windowStartedAt: firstMetric?.window_started_at
+      ? String(firstMetric.window_started_at)
+      : null,
+    observedDays: Math.max(0, Number(firstMetric?.observed_days ?? 0)),
+    rows,
+  };
 }
 
 export async function getAdminSurfacePositionReport(): Promise<AdminSurfacePositionReport> {

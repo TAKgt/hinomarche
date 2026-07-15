@@ -116,6 +116,7 @@ supabase/
   migrations/015_popular_products_surface.sql 高評価一覧面の匿名計測(適用済み)
   migrations/016_recommended_products_surface.sql 注目商品一覧面の匿名計測(適用済み)
   migrations/017_product_detail_funnel.sql 商品カードから詳細閲覧までの匿名導線(適用済み)
+  migrations/018_align_funnel_window.sql ファネル3段階の共通観測期間(適用済み)
 ```
 
 ## 5. データモデル(Supabase)
@@ -150,6 +151,7 @@ supabase/
 - `ranking_snapshots`: `commercial-v2` の日次計算結果。掲載表示があれば一覧CTRを使い、クリック数は表示数以下に制限する。現在は `shadow` のみで表示順には未反映
 - `surface_position_performance_28d`: 掲載面・表示位置別の28日集計。匿名権限からは読めず、位置補正前の観測専用
 - `product_funnel_performance_28d`: 商品別のカード表示・掲載面経由の詳細閲覧・販売サイト移動の28日集計。匿名権限からは読めない。同一人物を結び付けないため、人数ベースの購入率とは扱わない
+  3段階は詳細導線の初回計測以降の共通期間(最大28日)だけを比較し、開始7日未満は改善判定を出さない
 - AI判定待ちの商品は、各カテゴリ内で `featured_score` / `demand_score` / `search_rank`
   を優先し、カテゴリを一巡ずつ処理する。売れ筋優先とジャンル偏り防止を両立するため。
 - 収集対象カテゴリは日替わり、カテゴリ内の検索語はカテゴリ別の週次ローテーション。

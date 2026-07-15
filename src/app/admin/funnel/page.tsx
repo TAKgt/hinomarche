@@ -20,7 +20,8 @@ function ratio(events: number, base: number): string {
   return `${((Math.min(events, base) / base) * 100).toFixed(1)}%`;
 }
 
-function status(row: AdminProductFunnelRow): string {
+function status(row: AdminProductFunnelRow, observedDays: number): string {
+  if (observedDays < 7) return "観測中";
   if (row.impressions28d < 100) return "蓄積中";
   const detailRate = Math.min(row.listingDetailViews28d, row.impressions28d) / row.impressions28d;
   const directRate = Math.min(row.listingOutboundClicks28d, row.impressions28d) / row.impressions28d;
@@ -41,6 +42,13 @@ export default async function ProductFunnelAdminPage({ searchParams }: Props) {
     dateStyle: "medium",
     timeStyle: "short",
   });
+  const windowStartedAt = report.windowStartedAt
+    ? new Date(report.windowStartedAt).toLocaleString("ja-JP", {
+        timeZone: "Asia/Tokyo",
+        dateStyle: "medium",
+        timeStyle: "short",
+      })
+    : "詳細導線の初回計測待ち";
   const rows = report.rows
     .filter((row) => {
       if (!query) return true;
@@ -74,7 +82,7 @@ export default async function ProductFunnelAdminPage({ searchParams }: Props) {
           <Link href="/admin/surfaces" className="font-medium text-hinomaru hover:underline">掲載面・表示位置</Link>
           <Link href="/admin/ranking" className="font-medium text-hinomaru hover:underline">運営ランキング</Link>
           <Link href="/admin/collections" className="font-medium text-hinomaru hover:underline">特集・産地別</Link>
-          <p className="text-sumi-soft">直近28日 / {generatedAt}時点</p>
+          <p className="text-sumi-soft">共通観測期間 {report.observedDays}日 / {generatedAt}時点</p>
         </div>
       </div>
 
@@ -94,8 +102,9 @@ export default async function ProductFunnelAdminPage({ searchParams }: Props) {
 
       <div className="border-b border-line py-5 text-xs leading-relaxed text-sumi-soft">
         <p>商品カードから詳細ページへ進んだ閲覧と、販売サイトへの移動を商品別に匿名集計します。</p>
+        <p className="mt-1">観測開始: {windowStartedAt}。表示・詳細閲覧・販売先移動を同じ開始時刻以降に揃えます。</p>
         <p className="mt-1">IP、Cookie、User-Agent、セッションID、検索語は保存しません。同一人物の連続行動を示す購入率ではなく、イベント数の比率です。</p>
-        <p className="mt-1">100表示未満は判断せず、公開順位へ自動反映しません。直接URLからの詳細閲覧は詳細閲覧総数だけに含めます。</p>
+        <p className="mt-1">開始から7日未満または100表示未満は判断せず、公開順位へ自動反映しません。直接URLからの詳細閲覧は詳細閲覧総数だけに含めます。</p>
       </div>
 
       <form className="flex max-w-xl gap-2 py-6" action="/admin/funnel">
@@ -131,7 +140,7 @@ export default async function ProductFunnelAdminPage({ searchParams }: Props) {
             </thead>
             <tbody>
               {rows.map((row) => {
-                const result = status(row);
+                const result = status(row, report.observedDays);
                 return (
                   <tr key={row.productId} className="border-b border-line hover:bg-white/50">
                     <td className="max-w-[300px] px-3 py-4">
@@ -147,7 +156,7 @@ export default async function ProductFunnelAdminPage({ searchParams }: Props) {
                     <td className="px-3 py-4 text-right tabular-nums">{row.listingOutboundClicks28d}</td>
                     <td className="px-3 py-4 text-right tabular-nums">{row.detailViews28d}</td>
                     <td className="px-3 py-4 text-right tabular-nums">{row.detailOutboundClicks28d}</td>
-                    <td className={`px-3 py-4 text-xs ${result === "蓄積中" ? "text-sumi-soft" : "font-medium text-hinomaru"}`}>{result}</td>
+                    <td className={`px-3 py-4 text-xs ${result === "蓄積中" || result === "観測中" ? "text-sumi-soft" : "font-medium text-hinomaru"}`}>{result}</td>
                   </tr>
                 );
               })}
