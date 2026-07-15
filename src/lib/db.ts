@@ -765,6 +765,47 @@ export type AdminCollectionReport = {
   rows: AdminCollectionRow[];
 };
 
+export type AdminSurfacePositionRow = {
+  surface: "home" | "category" | "feature" | "region" | "related";
+  position: number;
+  impressions28d: number;
+  listingClicks28d: number;
+  productsSeen28d: number;
+};
+
+export type AdminSurfacePositionReport = {
+  generatedAt: string;
+  rows: AdminSurfacePositionRow[];
+};
+
+export async function getAdminSurfacePositionReport(): Promise<AdminSurfacePositionReport> {
+  const generatedAt = new Date().toISOString();
+  if (isDemoMode()) return { generatedAt, rows: [] };
+
+  const { data, error } = await adminSupabase()
+    .from("surface_position_performance_28d")
+    .select("*")
+    .order("surface", { ascending: true })
+    .order("position", { ascending: true });
+  if (error) throw error;
+
+  const allowedSurfaces = new Set(["home", "category", "feature", "region", "related"]);
+  const rows = data.flatMap((row): AdminSurfacePositionRow[] => {
+    const surface = String(row.surface);
+    const position = Number(row.position);
+    if (!allowedSurfaces.has(surface) || !Number.isInteger(position)) return [];
+    return [{
+      surface: surface as AdminSurfacePositionRow["surface"],
+      position,
+      impressions28d: Number(row.impressions_28d ?? 0),
+      listingClicks28d: Number(row.listing_clicks_28d ?? 0),
+      productsSeen28d: Number(row.products_seen_28d ?? 0),
+    }];
+  });
+
+  return { generatedAt, rows };
+}
+
 export async function getAdminCollectionReport(): Promise<AdminCollectionReport> {
   const generatedAt = new Date().toISOString();
   const [products, inputs, collectionMetrics] = await Promise.all([

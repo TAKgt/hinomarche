@@ -121,6 +121,7 @@ npm run judge:backlog
 
 `/admin/ranking` では、直近28日の商品カード表示・掲載面からの販売サイト移動・CTRとshadow候補順位を確認できます。
 `/admin/collections` では、各特集・産地の掲載面ごとの表示・移動実績を比較できます。
+`/admin/surfaces` では、掲載面・表示位置ごとのCTRを比較し、位置による有利不利を確認できます。
 新しい個人情報やCookieは収集せず、既存の匿名集計のみを使います。
 30反応・3移動以上のコレクションだけにshadow候補を出し、公開順は自動変更しません。
 公開サイトからのリンクはなく、`ANALYTICS_ADMIN_PASSWORD` が未設定なら503で閉じます。

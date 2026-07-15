@@ -61,6 +61,7 @@ src/
     api/metrics/product-impression/route.ts 商品カードの匿名表示計測(最大20件のバッチ)
     admin/ranking/page.tsx  Basic認証必須の非公開ランキング画面(読み取り専用)
     admin/collections/page.tsx 特集・産地の28日成果とshadow候補を比較する非公開画面
+    admin/surfaces/page.tsx 掲載面・表示位置ごとの匿名成果を比較する非公開画面
     go/[id]/route.ts        販売サイトへの安全なリダイレクト+匿名クリック集計
     not-found.tsx           404
     sitemap.ts / robots.ts / icon.svg / opengraph-image.tsx  SEO・メタ系(sitemapは1時間再生成)
@@ -104,6 +105,7 @@ supabase/
   migrations/010_expand_commercial_categories.sql カテゴリ18種へ拡張(適用済み)
   migrations/011_expand_digital_categories.sql デジタル系5カテゴリ追加(適用済み)
   migrations/012_product_surface_metrics.sql 掲載面別の匿名表示/移動計測(適用済み)
+  migrations/013_surface_position_performance.sql 掲載位置別の非公開集計ビュー(適用済み)
 ```
 
 ## 5. データモデル(Supabase)
@@ -125,6 +127,7 @@ supabase/
 - `product_impressions`: 商品カードが50%以上、600ms表示された回数。商品ID・掲載面・文脈slug・表示位置・時刻のみ。anon/authenticatedに権限なし
 - 閲覧・外部移動の集計は本番環境の同一オリジン操作だけを記録し、ローカル確認では書き込まない
 - `ranking_snapshots`: `commercial-v2` の日次計算結果。掲載表示があれば一覧CTRを使い、クリック数は表示数以下に制限する。現在は `shadow` のみで表示順には未反映
+- `surface_position_performance_28d`: 掲載面・表示位置別の28日集計。匿名権限からは読めず、位置補正前の観測専用
 - AI判定待ちの商品は、各カテゴリ内で `featured_score` / `demand_score` / `search_rank`
   を優先し、カテゴリを一巡ずつ処理する。売れ筋優先とジャンル偏り防止を両立するため。
 - 収集対象カテゴリは日替わり、カテゴリ内の検索語はカテゴリ別の週次ローテーション。
