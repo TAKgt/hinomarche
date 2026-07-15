@@ -4,6 +4,8 @@ import { ProductCard } from "@/components/ProductCard";
 import { ProductSearchForm } from "@/components/ProductSearchForm";
 import { getCategories, searchPublishedProducts } from "@/lib/db";
 import { normalizeProductSearch } from "@/lib/product-search";
+import { ProductFilters } from "@/components/ProductFilters";
+import { parsePriceFilter, parseReviewFilter } from "@/lib/product-filters";
 
 type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -26,8 +28,12 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 export default async function SearchPage({ searchParams }: Props) {
   const params = await searchParams;
   const { query, terms } = normalizeProductSearch(firstValue(params.q));
+  const priceFilter = parsePriceFilter(firstValue(params.price));
+  const reviewFilter = parseReviewFilter(firstValue(params.reviews));
   const [products, categories] = await Promise.all([
-    terms.length > 0 ? searchPublishedProducts(terms) : Promise.resolve([]),
+    terms.length > 0
+      ? searchPublishedProducts(terms, { priceFilter, reviewFilter })
+      : Promise.resolve([]),
     getCategories(),
   ]);
 
@@ -46,6 +52,16 @@ export default async function SearchPage({ searchParams }: Props) {
           <ProductSearchForm defaultValue={query} />
         </div>
       </div>
+
+      {terms.length > 0 && (
+        <ProductFilters
+          action="/search"
+          priceFilter={priceFilter}
+          reviewFilter={reviewFilter}
+          hiddenFields={{ q: query }}
+          resetHref={`/search?${new URLSearchParams({ q: query }).toString()}`}
+        />
+      )}
 
       {terms.length === 0 ? (
         <section className="mt-12 border-t border-line pt-8" aria-labelledby="search-categories-heading">
@@ -68,7 +84,9 @@ export default async function SearchPage({ searchParams }: Props) {
         <section className="mt-12 border-t border-line py-14 text-center">
           <h2 className="font-mincho text-xl font-semibold">該当する商品がありませんでした</h2>
           <p className="mt-3 text-sm leading-relaxed text-sumi-soft">
-            表記を短くするか、別のキーワードでお試しください。
+            {priceFilter || reviewFilter
+              ? "価格帯やレビュー条件を広げてお試しください。"
+              : "表記を短くするか、別のキーワードでお試しください。"}
           </p>
           <Link href="/#categories" className="mt-6 inline-block text-sm text-hinomaru hover:underline">
             ジャンル一覧を見る →

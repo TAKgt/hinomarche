@@ -7,6 +7,11 @@ import { matchesRegionProduct, REGIONS } from "./regions";
 import { calculateCollectionRanking } from "./collection-ranking";
 import type { ProductPlacement } from "./product-metrics";
 import { matchesProductSearch } from "./product-search";
+import {
+  matchesShoppingFilters,
+  type PriceFilterKey,
+  type ReviewFilterKey,
+} from "./product-filters";
 import demoProducts from "../data/demo-products.json";
 
 /**
@@ -137,15 +142,25 @@ export async function getPublishedProducts(opts: {
   categorySlug?: string;
   sort?: SortKey;
   tier?: Tier;
+  priceFilter?: PriceFilterKey;
+  reviewFilter?: ReviewFilterKey;
   limit?: number;
 }): Promise<Product[]> {
-  const { categorySlug, sort = "featured", tier, limit = 60 } = opts;
+  const {
+    categorySlug,
+    sort = "featured",
+    tier,
+    priceFilter,
+    reviewFilter,
+    limit = 60,
+  } = opts;
 
   if (isDemoMode()) {
     let items = demoProducts as unknown as Product[];
     if (categorySlug) items = items.filter((p) => p.categorySlug === categorySlug);
     if (tier) items = items.filter((p) => p.tier === tier);
     if (!showLowTier()) items = items.filter((p) => p.tier !== "low");
+    items = items.filter((p) => matchesShoppingFilters(p, priceFilter, reviewFilter));
     items = [...items].sort((a, b) => {
       if (sort === "price_asc") return (a.price ?? 0) - (b.price ?? 0);
       if (sort === "price_desc") return (b.price ?? 0) - (a.price ?? 0);
@@ -168,6 +183,12 @@ export async function getPublishedProducts(opts: {
   if (categorySlug) query = query.eq("category_slug", categorySlug);
   if (tier) query = query.eq("tier", tier);
   if (!showLowTier()) query = query.neq("tier", "low");
+  if (priceFilter === "under-3000") query = query.gt("price", 0).lt("price", 3000);
+  else if (priceFilter === "3000-9999") query = query.gte("price", 3000).lt("price", 10000);
+  else if (priceFilter === "10000-29999") query = query.gte("price", 10000).lt("price", 30000);
+  else if (priceFilter === "30000-plus") query = query.gte("price", 30000);
+  if (reviewFilter) query = query.gte("review_average", 4).gte("review_count", 1);
+  if (reviewFilter === "popular-100") query = query.gte("review_count", 100);
   if (sort === "price_asc") query = query.order("price", { ascending: true });
   else if (sort === "price_desc") query = query.order("price", { ascending: false });
   else if (sort === "new") query = query.order("created_at", { ascending: false });
@@ -197,14 +218,20 @@ export async function getTopProducts(limit = 12): Promise<Product[]> {
 
 export async function searchPublishedProducts(
   terms: string[],
-  limit = 60,
+  opts: {
+    priceFilter?: PriceFilterKey;
+    reviewFilter?: ReviewFilterKey;
+    limit?: number;
+  } = {},
 ): Promise<Product[]> {
   if (terms.length === 0) return [];
+  const { priceFilter, reviewFilter, limit = 60 } = opts;
 
   if (isDemoMode()) {
     return (demoProducts as unknown as Product[])
       .filter((product) => showLowTier() || product.tier !== "low")
       .filter((product) => matchesProductSearch(product, terms))
+      .filter((product) => matchesShoppingFilters(product, priceFilter, reviewFilter))
       .sort((a, b) => productFeaturedScore(b) - productFeaturedScore(a) || b.score - a.score)
       .slice(0, limit);
   }
@@ -221,6 +248,12 @@ export async function searchPublishedProducts(
       .order("score", { ascending: false })
       .limit(candidateLimit);
     if (!showLowTier()) query = query.neq("tier", "low");
+    if (priceFilter === "under-3000") query = query.gt("price", 0).lt("price", 3000);
+    else if (priceFilter === "3000-9999") query = query.gte("price", 3000).lt("price", 10000);
+    else if (priceFilter === "10000-29999") query = query.gte("price", 10000).lt("price", 30000);
+    else if (priceFilter === "30000-plus") query = query.gte("price", 30000);
+    if (reviewFilter) query = query.gte("review_average", 4).gte("review_count", 1);
+    if (reviewFilter === "popular-100") query = query.gte("review_count", 100);
     return query;
   };
 
@@ -241,6 +274,7 @@ export async function searchPublishedProducts(
   }
   return [...candidates.values()]
     .filter((product) => matchesProductSearch(product, terms))
+    .filter((product) => matchesShoppingFilters(product, priceFilter, reviewFilter))
     .sort((a, b) => productFeaturedScore(b) - productFeaturedScore(a) || b.score - a.score)
     .slice(0, limit);
 }

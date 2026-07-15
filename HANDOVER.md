@@ -128,6 +128,8 @@ supabase/
 - `product_page_views`: 商品閲覧数。商品IDと時刻のみ。anon/authenticatedに権限なし
 - `product_impressions`: 商品カードが50%以上、600ms表示された回数。商品ID・掲載面・文脈slug・表示位置・時刻のみ。anon/authenticatedに権限なし
 - 商品検索は48文字・5語までに正規化し、商品名・ブランド・メーカーを対象に注目順で表示する。検索語は計測DBへ保存しない
+- カテゴリと商品検索は、価格帯および販売先レビュー(評価4.0以上／評価4.0以上かつ100件以上)で絞り込める。
+  URL値は許可リストで検証し、絞り込みURLは`noindex, follow`にする
 - 閲覧・外部移動の集計は本番環境の同一オリジン操作だけを記録し、ローカル確認では書き込まない
 - `ranking_snapshots`: `commercial-v2` の日次計算結果。掲載表示があれば一覧CTRを使い、クリック数は表示数以下に制限する。現在は `shadow` のみで表示順には未反映
 - `surface_position_performance_28d`: 掲載面・表示位置別の28日集計。匿名権限からは読めず、位置補正前の観測専用

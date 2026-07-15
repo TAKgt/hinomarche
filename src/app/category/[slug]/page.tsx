@@ -9,6 +9,13 @@ import { getCategoryContent } from "@/lib/category-content";
 import { displayProductTitle } from "@/lib/product-title";
 import { siteOrigin } from "@/lib/site-url";
 import { getFeaturesForCategory } from "@/lib/features";
+import { ProductFilters } from "@/components/ProductFilters";
+import {
+  parsePriceFilter,
+  parseReviewFilter,
+  type PriceFilterKey,
+  type ReviewFilterKey,
+} from "@/lib/product-filters";
 
 const SORTS: { key: SortKey; label: string }[] = [
   { key: "featured", label: "注目順" },
@@ -34,10 +41,17 @@ function firstValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function buildQuery(sort: SortKey, tier: Tier | undefined): string {
+function buildQuery(
+  sort: SortKey,
+  tier: Tier | undefined,
+  priceFilter?: PriceFilterKey,
+  reviewFilter?: ReviewFilterKey,
+): string {
   const params = new URLSearchParams();
   if (sort !== "featured") params.set("sort", sort);
   if (tier) params.set("tier", tier);
+  if (priceFilter) params.set("price", priceFilter);
+  if (reviewFilter) params.set("reviews", reviewFilter);
   const qs = params.toString();
   return qs ? `?${qs}` : "";
 }
@@ -69,6 +83,8 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const query = await searchParams;
   const sortParam = firstValue(query.sort);
   const tierParam = firstValue(query.tier);
+  const priceFilter = parsePriceFilter(firstValue(query.price));
+  const reviewFilter = parseReviewFilter(firstValue(query.reviews));
   const sort: SortKey = SORTS.some((s) => s.key === sortParam)
     ? (sortParam as SortKey)
     : "featured";
@@ -79,7 +95,13 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const category = (await getCategories()).find((c) => c.slug === slug);
   if (!category) notFound();
 
-  const products = await getPublishedProducts({ categorySlug: slug, sort, tier });
+  const products = await getPublishedProducts({
+    categorySlug: slug,
+    sort,
+    tier,
+    priceFilter,
+    reviewFilter,
+  });
   const content = getCategoryContent(slug, category.name);
   const relatedFeatures = getFeaturesForCategory(slug);
   const origin = siteOrigin();
@@ -164,7 +186,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             {SORTS.map((s) => (
               <Link
                 key={s.key}
-                href={`/category/${slug}${buildQuery(s.key, tier)}`}
+                href={`/category/${slug}${buildQuery(s.key, tier, priceFilter, reviewFilter)}`}
                 className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-sm border transition-colors ${
                   sort === s.key
                     ? "bg-sumi text-washi border-sumi"
@@ -184,7 +206,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             {TIERS.map((t) => (
               <Link
                 key={t.key ?? "all"}
-                href={`/category/${slug}${buildQuery(sort, t.key)}`}
+                href={`/category/${slug}${buildQuery(sort, t.key, priceFilter, reviewFilter)}`}
                 className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-sm border transition-colors ${
                   tier === t.key
                     ? "bg-hinomaru text-white border-hinomaru"
@@ -198,10 +220,33 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         </div>
       </div>
 
+      <ProductFilters
+        action={`/category/${slug}`}
+        priceFilter={priceFilter}
+        reviewFilter={reviewFilter}
+        hiddenFields={{
+          ...(sort !== "featured" ? { sort } : {}),
+          ...(tier ? { tier } : {}),
+        }}
+        resetHref={`/category/${slug}${buildQuery(sort, tier)}`}
+      />
+
       {products.length === 0 ? (
-        <p className="py-20 text-center text-sumi-soft">
-          このカテゴリの商品はまだ掲載されていません。
-        </p>
+        <div className="py-20 text-center text-sumi-soft">
+          <p>
+            {priceFilter || reviewFilter
+              ? "条件に合う商品がありませんでした。"
+              : "このカテゴリの商品はまだ掲載されていません。"}
+          </p>
+          {(priceFilter || reviewFilter) && (
+            <Link
+              href={`/category/${slug}${buildQuery(sort, tier)}`}
+              className="mt-5 inline-block text-sm text-hinomaru hover:underline"
+            >
+              条件を解除する →
+            </Link>
+          )}
+        </div>
       ) : (
         <section className="mt-8" aria-labelledby="category-products-heading">
           <div className="flex items-end justify-between gap-4 border-b border-line pb-4">
