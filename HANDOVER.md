@@ -127,6 +127,8 @@ supabase/
   レビュー件数順の候補から同一カテゴリ最大4件までを自動選定する。TOPの高評価棚は最大2件/カテゴリ
 - `/recommended` はAI日本度50%以上を必須に、市場性を加味した注目順の候補から
   同一カテゴリ最大4件・全体48件までを自動選定する
+- `/popular` と `/recommended` は価格帯で絞り込み可能。絞り込みURLはcanonicalを基本一覧へ向け、
+  `noindex,follow` にして検索結果の重複登録を防ぐ。計測面には価格条件を保存しない
 - `judgments`: 判定履歴(追記型。表示は最新を使う)。score, tier('high'|'mid'|'low'),
   evidence_type, evidence_text, origin_check/company_check/material_check('yes'|'unknown'|'no')
 - `products_with_judgment`: 最新判定をJOINしたビュー。**サイト表示は必ずこのビューを読む**

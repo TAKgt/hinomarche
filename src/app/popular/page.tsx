@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
 import { ProductCard } from "@/components/ProductCard";
+import { ProductFilters } from "@/components/ProductFilters";
 import { getPopularReviewedProducts } from "@/lib/db";
 import { selectCategoryDiverseProducts } from "@/lib/product-selection";
 import { displayProductTitle } from "@/lib/product-title";
 import { siteOrigin } from "@/lib/site-url";
+import { matchesShoppingFilters, parsePriceFilter } from "@/lib/product-filters";
 
 const title = "販売先レビューで高評価の商品";
 const description =
@@ -13,16 +15,34 @@ const description =
 
 export const revalidate = 3600;
 
-export const metadata: Metadata = {
-  title,
-  description,
-  alternates: { canonical: "/popular" },
-  openGraph: { title, description, url: "/popular", type: "website" },
+type Props = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default async function PopularProductsPage() {
-  const candidates = await getPopularReviewedProducts(80);
-  const products = selectCategoryDiverseProducts(candidates, {
+function firstValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+  const query = await searchParams;
+  const isFiltered = Object.values(query).some((value) => value !== undefined);
+  return {
+    title,
+    description,
+    alternates: { canonical: "/popular" },
+    robots: isFiltered ? { index: false, follow: true } : undefined,
+    openGraph: { title, description, url: "/popular", type: "website" },
+  };
+}
+
+export default async function PopularProductsPage({ searchParams }: Props) {
+  const query = await searchParams;
+  const priceFilter = parsePriceFilter(firstValue(query.price));
+  const candidates = await getPopularReviewedProducts(200);
+  const filteredCandidates = candidates.filter((product) =>
+    matchesShoppingFilters(product, priceFilter),
+  );
+  const products = selectCategoryDiverseProducts(filteredCandidates, {
     limit: 40,
     maxPerCategory: 4,
   });
@@ -80,8 +100,18 @@ export default async function PopularProductsPage() {
       </header>
 
       <section className="mx-auto max-w-6xl px-5 py-12 md:py-16">
+        <div className="flex items-end justify-between gap-4">
+          <h2 className="font-mincho text-xl font-semibold">掲載商品</h2>
+          <p className="text-sm text-sumi-soft">表示中 {products.length}件</p>
+        </div>
+        <ProductFilters
+          action="/popular"
+          priceFilter={priceFilter}
+          resetHref="/popular"
+          showReviewFilter={false}
+        />
         {products.length > 0 ? (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
+          <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
             {products.map((product, index) => (
               <ProductCard
                 key={product.id}
@@ -93,7 +123,7 @@ export default async function PopularProductsPage() {
           </div>
         ) : (
           <p className="border-y border-line py-12 text-center text-sm text-sumi-soft">
-            条件に合う商品を準備しています。
+            条件に合う商品がありませんでした。
           </p>
         )}
         <p className="mt-7 text-xs leading-relaxed text-sumi-soft">
