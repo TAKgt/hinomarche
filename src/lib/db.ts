@@ -127,7 +127,13 @@ export async function getCategories(): Promise<Category[]> {
   }));
 }
 
-export type SortKey = "featured" | "score" | "price_asc" | "price_desc" | "new";
+export type SortKey =
+  | "featured"
+  | "score"
+  | "reviews"
+  | "price_asc"
+  | "price_desc"
+  | "new";
 
 function productFeaturedScore(product: Product): number {
   return product.featuredScore ?? calculateFeaturedScore(product.score, product.demandScore ?? 0);
@@ -167,6 +173,13 @@ export async function getPublishedProducts(opts: {
       if (sort === "new") {
         return timeValue(b.priceUpdatedAt) - timeValue(a.priceUpdatedAt);
       }
+      if (sort === "reviews") {
+        return (
+          (b.reviewCount ?? 0) - (a.reviewCount ?? 0) ||
+          (b.reviewAverage ?? 0) - (a.reviewAverage ?? 0) ||
+          productFeaturedScore(b) - productFeaturedScore(a)
+        );
+      }
       if (sort === "featured") {
         return productFeaturedScore(b) - productFeaturedScore(a) || b.score - a.score;
       }
@@ -192,6 +205,12 @@ export async function getPublishedProducts(opts: {
   if (sort === "price_asc") query = query.order("price", { ascending: true });
   else if (sort === "price_desc") query = query.order("price", { ascending: false });
   else if (sort === "new") query = query.order("created_at", { ascending: false });
+  else if (sort === "reviews") {
+    query = query
+      .order("review_count", { ascending: false })
+      .order("review_average", { ascending: false })
+      .order("featured_score", { ascending: false });
+  }
   else if (sort === "featured") {
     query = query
       .order("featured_score", { ascending: false })
@@ -214,6 +233,15 @@ export async function getTopProducts(limit = 12): Promise<Product[]> {
     limit: limit - high.length,
   });
   return [...high, ...mid];
+}
+
+export async function getPopularReviewedProducts(limit = 24): Promise<Product[]> {
+  const candidates = await getPublishedProducts({
+    sort: "reviews",
+    reviewFilter: "popular-100",
+    limit: Math.max(limit * 2, 40),
+  });
+  return candidates.filter((product) => product.tier !== "low").slice(0, limit);
 }
 
 export async function searchPublishedProducts(

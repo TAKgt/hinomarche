@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getCategories, getTopProducts } from "@/lib/db";
+import { getCategories, getPopularReviewedProducts, getTopProducts } from "@/lib/db";
 import { ProductCard } from "@/components/ProductCard";
 import { FEATURES } from "@/lib/features";
 import { REGIONS } from "@/lib/regions";
@@ -7,10 +7,22 @@ import { REGIONS } from "@/lib/regions";
 export const revalidate = 3600;
 
 export default async function Home() {
-  const [products, categories] = await Promise.all([
+  const [products, categories, popularCandidates] = await Promise.all([
     getTopProducts(12),
     getCategories(),
+    getPopularReviewedProducts(24),
   ]);
+  const featuredIds = new Set(products.map((product) => product.id));
+  const categoryCounts = new Map<string, number>();
+  const popularProducts = popularCandidates
+    .filter((product) => {
+      if (featuredIds.has(product.id)) return false;
+      const count = categoryCounts.get(product.categorySlug) ?? 0;
+      if (count >= 2) return false;
+      categoryCounts.set(product.categorySlug, count + 1);
+      return true;
+    })
+    .slice(0, 8);
 
   return (
     <div>
@@ -64,7 +76,35 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="border-y border-line bg-white/30">
+      {popularProducts.length > 0 && (
+        <section id="popular" className="scroll-mt-28 border-y border-line bg-white/30">
+          <div className="mx-auto max-w-6xl px-5 py-14 md:py-16">
+            <p className="text-xs font-medium tracking-[0.35em] text-hinomaru">
+              HIGHLY REVIEWED
+            </p>
+            <div className="mt-2 sm:flex sm:items-end sm:justify-between sm:gap-4">
+              <h2 className="font-mincho text-2xl font-semibold md:text-3xl">
+                レビューで高評価の商品
+              </h2>
+              <p className="mt-2 text-xs leading-relaxed text-sumi-soft sm:mt-0 sm:text-right">
+                販売先評価4.0以上<br />レビュー100件以上
+              </p>
+            </div>
+            <div className="mt-7 grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
+              {popularProducts.map((product, index) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  index={products.length + index}
+                  surface="home"
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="border-b border-line">
         <div className="mx-auto max-w-6xl px-5 py-14 md:py-16">
           <p className="text-xs font-medium tracking-[0.35em] text-hinomaru">
             FEATURE STORIES

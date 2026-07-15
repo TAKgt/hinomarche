@@ -20,6 +20,7 @@ import {
 const SORTS: { key: SortKey; label: string }[] = [
   { key: "featured", label: "注目順" },
   { key: "score", label: "日本度順" },
+  { key: "reviews", label: "レビュー件数順" },
   { key: "new", label: "新着順" },
   { key: "price_asc", label: "価格が安い順" },
   { key: "price_desc", label: "価格が高い順" },
