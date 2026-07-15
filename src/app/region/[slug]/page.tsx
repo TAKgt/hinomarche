@@ -7,8 +7,72 @@ import { getRegionProducts } from "@/lib/db";
 import { getRegion, REGIONS } from "@/lib/regions";
 import { siteOrigin } from "@/lib/site-url";
 import { displayProductTitle } from "@/lib/product-title";
+import type { Product } from "@/lib/types";
 
 type Props = { params: Promise<{ slug: string }> };
+
+type ProductHighlight = {
+  label: string;
+  product: Product;
+};
+
+function includesAny(title: string, terms: string[]): boolean {
+  return terms.some((term) => title.includes(term));
+}
+
+function byReviewsThenScore(a: Product, b: Product): number {
+  return (
+    (b.reviewCount ?? 0) - (a.reviewCount ?? 0) ||
+    (b.reviewAverage ?? 0) - (a.reviewAverage ?? 0) ||
+    b.score - a.score
+  );
+}
+
+function getProductHighlights(slug: string, products: Product[]): ProductHighlight[] {
+  if (slug !== "tsubame-sanjo") return [];
+
+  const waterTerms = ["水切り", "ラック", "水切りかご"];
+  const knifeTerms = ["包丁", "ナイフ"];
+  const selected = new Set<string>();
+  const strategies = [
+    {
+      label: "水切りラックをレビュー件数から比較",
+      candidates: products
+        .filter((product) => includesAny(product.title, waterTerms))
+        .sort(byReviewsThenScore),
+    },
+    {
+      label: "5,000円以下の包丁を比較",
+      candidates: products
+        .filter(
+          (product) =>
+            includesAny(product.title, knifeTerms) &&
+            product.price != null &&
+            product.price <= 5000,
+        )
+        .sort(byReviewsThenScore),
+    },
+    {
+      label: "1,000円以下の調理小物を比較",
+      candidates: products
+        .filter(
+          (product) =>
+            !includesAny(product.title, waterTerms) &&
+            !includesAny(product.title, knifeTerms) &&
+            product.price != null &&
+            product.price <= 1000,
+        )
+        .sort(byReviewsThenScore),
+    },
+  ];
+
+  return strategies.flatMap(({ label, candidates }) => {
+    const product = candidates.find((candidate) => !selected.has(candidate.id));
+    if (!product) return [];
+    selected.add(product.id);
+    return [{ label, product }];
+  });
+}
 
 export function generateStaticParams() {
   return REGIONS.map((region) => ({ slug: region.slug }));
@@ -40,6 +104,13 @@ export default async function RegionPage({ params }: Props) {
     titleTerms: region.titleTerms,
     minScore: region.minScore,
   });
+  const highlights = getProductHighlights(region.slug, products);
+  const highlightedIds = new Set(highlights.map(({ product }) => product.id));
+  const remainingProducts = products.filter((product) => !highlightedIds.has(product.id));
+  const displayProducts = [
+    ...highlights.map(({ product }) => product),
+    ...remainingProducts,
+  ];
   const origin = siteOrigin();
   const pageUrl = `${origin}/region/${region.slug}`;
   const structuredData = [
@@ -56,7 +127,7 @@ export default async function RegionPage({ params }: Props) {
       "@type": "ItemList",
       name: region.title,
       numberOfItems: products.length,
-      itemListElement: products.map((product, index) => ({
+      itemListElement: displayProducts.map((product, index) => ({
         "@type": "ListItem",
         position: index + 1,
         url: `${origin}/product/${product.id}`,
@@ -90,18 +161,79 @@ export default async function RegionPage({ params }: Props) {
         </div>
       </header>
 
+      {region.selectionGuide && (
+        <section className="border-b border-line bg-washi-deep/35">
+          <div className="mx-auto max-w-6xl px-5 py-10 md:py-12">
+            <h2 className="font-mincho text-2xl font-semibold md:text-3xl">
+              {region.selectionGuide.title}
+            </h2>
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-sumi-soft md:text-base">
+              {region.selectionGuide.description}
+            </p>
+            <ol className="mt-7 grid gap-4 md:grid-cols-3">
+              {region.selectionGuide.points.map((point, index) => (
+                <li key={point.title} className="border border-line bg-white/60 p-5">
+                  <p className="text-xs font-medium tracking-[0.18em] text-hinomaru">
+                    POINT {index + 1}
+                  </p>
+                  <h3 className="mt-2 font-mincho text-lg font-semibold">{point.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
+                    {point.description}
+                  </p>
+                </li>
+              ))}
+            </ol>
+            {region.selectionGuide.relatedLink && (
+              <Link
+                href={region.selectionGuide.relatedLink.href}
+                className="mt-6 inline-flex border-b border-hinomaru pb-1 text-sm font-medium text-hinomaru transition-colors hover:text-hinomaru-deep"
+              >
+                {region.selectionGuide.relatedLink.label} →
+              </Link>
+            )}
+          </div>
+        </section>
+      )}
+
       <section className="mx-auto max-w-6xl px-5 py-12 md:py-16">
+        {highlights.length > 0 && (
+          <div className="mb-14">
+            <div className="border-b border-line pb-4">
+              <h2 className="font-mincho text-2xl font-semibold">用途別の比較入口</h2>
+              <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
+                水切りラック、包丁、手頃な調理小物から候補を確認できます。
+              </p>
+            </div>
+            <div className="mt-8 grid gap-5 sm:grid-cols-3">
+              {highlights.map(({ label, product }, index) => (
+                <div key={product.id} className="flex flex-col">
+                  <p className="mb-2 border-l-2 border-hinomaru pl-3 text-sm font-medium">
+                    {label}
+                  </p>
+                  <ProductCard
+                    product={product}
+                    index={index}
+                    surface="region"
+                    surfaceKey={slug}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="flex items-end justify-between gap-4 border-b border-line pb-4">
-          <h2 className="font-mincho text-2xl font-semibold">注目商品</h2>
+          <h2 className="font-mincho text-2xl font-semibold">
+            {highlights.length > 0 ? "条件に合う商品をさらに見る" : "注目商品"}
+          </h2>
           <p className="text-sm text-sumi-soft">{products.length}件</p>
         </div>
-        {products.length > 0 ? (
+        {remainingProducts.length > 0 ? (
           <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
-            {products.map((product, index) => (
+            {remainingProducts.map((product, index) => (
               <ProductCard
                 key={product.id}
                 product={product}
-                index={index}
+                index={index + highlights.length}
                 surface="region"
                 surfaceKey={slug}
               />

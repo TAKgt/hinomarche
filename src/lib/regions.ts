@@ -8,6 +8,18 @@ export type RegionDefinition = {
   description: string;
   titleTerms: string[];
   minScore: number;
+  selectionGuide?: {
+    title: string;
+    description: string;
+    points: {
+      title: string;
+      description: string;
+    }[];
+    relatedLink?: {
+      href: string;
+      label: string;
+    };
+  };
 };
 
 export const REGIONS: RegionDefinition[] = [
@@ -15,11 +27,37 @@ export const REGIONS: RegionDefinition[] = [
     slug: "tsubame-sanjo",
     name: "燕三条",
     eyebrow: "NIIGATA",
-    title: "燕三条のキッチン用品・工具",
+    title: "燕三条のキッチン用品｜包丁・水切りラック・調理器具",
     description:
-      "商品名に「燕三条」などの表記がある、調理器具やステンレス用品、工具を紹介します。",
+      "商品名に「燕三条」「燕市」「三条市」の表記がある包丁、水切りラック、調理小物を、AI日本度の根拠と販売先レビュー、価格から比較できます。",
     titleTerms: ["燕三条", "燕市", "三条市"],
     minScore: 80,
+    selectionGuide: {
+      title: "燕三条のキッチン用品を比べる3つの視点",
+      description:
+        "産地名だけでなく、置き場所や普段の調理に合う仕様まで確認すると候補を絞りやすくなります。",
+      points: [
+        {
+          title: "水切りは設置寸法を優先",
+          description:
+            "シンク横・シンク上など置き方を決め、幅と奥行き、伸縮範囲、トレーの排水方向を販売ページで確認してください。",
+        },
+        {
+          title: "包丁は用途と手入れで比較",
+          description:
+            "三徳や小型包丁などの用途に加え、刃渡り、重さ、食洗機への対応可否、研ぎ方の説明も比較材料になります。",
+        },
+        {
+          title: "調理小物はサイズを確認",
+          description:
+            "ピーラー、バット、トングなどは収納場所や一緒に使う器具との相性があるため、寸法と素材を確認して選びます。",
+        },
+      ],
+      relatedLink: {
+        href: "/feature/japanese-kitchen-knives",
+        label: "日本とのかかわりで選ぶ包丁特集を見る",
+      },
+    },
   },
   {
     slug: "imabari",
