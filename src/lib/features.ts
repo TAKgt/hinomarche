@@ -11,6 +11,14 @@ export type FeatureDefinition = {
   maxPrice?: number;
   titleTermGroups?: string[][];
   excludeTitleTerms?: string[];
+  selectionGuide?: {
+    title: string;
+    description: string;
+    points: {
+      title: string;
+      description: string;
+    }[];
+  };
 };
 
 export const FEATURES: FeatureDefinition[] = [
@@ -127,6 +135,29 @@ export const FEATURES: FeatureDefinition[] = [
     categorySlugs: ["kitchen"],
     minScore: 80,
     titleTermGroups: [["包丁", "ナイフ"]],
+    excludeTitleTerms: ["コロッケ抜き"],
+    selectionGuide: {
+      title: "日本製包丁を比べる3つの視点",
+      description:
+        "価格や販売先レビューだけで決めず、普段切る食材と手入れのしやすさまで確認すると候補を絞りやすくなります。",
+      points: [
+        {
+          title: "用途と形を先に決める",
+          description:
+            "肉・魚・野菜を1本で扱いたい場合は三徳、小回りを重視する場合は小三徳やペティナイフも比較候補になります。",
+        },
+        {
+          title: "刃渡りと重さを確認する",
+          description:
+            "同じ三徳包丁でも刃渡りや重さは異なります。収納場所、まな板の大きさ、普段の使い方に合うかを販売ページで確認してください。",
+        },
+        {
+          title: "素材と手入れ方法を見る",
+          description:
+            "オールステンレスでも食洗機への対応可否は商品ごとに異なります。研ぎ方や日常の手入れに関する説明も比較材料になります。",
+        },
+      ],
+    },
   },
   {
     slug: "iron-frying-pans",

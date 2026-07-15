@@ -7,8 +7,53 @@ import { getFeatureProducts } from "@/lib/db";
 import { FEATURES, getFeature, getRelatedFeatures } from "@/lib/features";
 import { siteOrigin } from "@/lib/site-url";
 import { displayProductTitle } from "@/lib/product-title";
+import type { Product } from "@/lib/types";
 
 type Props = { params: Promise<{ slug: string }> };
+
+type ProductHighlight = {
+  label: string;
+  product: Product;
+};
+
+function getProductHighlights(slug: string, products: Product[]): ProductHighlight[] {
+  if (slug !== "japanese-kitchen-knives") return [];
+
+  const selected = new Set<string>();
+  const strategies = [
+    {
+      label: "販売先レビュー件数から比較",
+      candidates: [...products].sort(
+        (a, b) =>
+          (b.reviewCount ?? 0) - (a.reviewCount ?? 0) ||
+          (b.reviewAverage ?? 0) - (a.reviewAverage ?? 0),
+      ),
+    },
+    {
+      label: "5,000円以下から比較",
+      candidates: products
+        .filter((product) => product.price != null && product.price <= 5000)
+        .sort(
+          (a, b) =>
+            (b.reviewCount ?? 0) - (a.reviewCount ?? 0) ||
+            (b.reviewAverage ?? 0) - (a.reviewAverage ?? 0),
+        ),
+    },
+    {
+      label: "AI日本度から比較",
+      candidates: [...products].sort(
+        (a, b) => b.score - a.score || (b.reviewCount ?? 0) - (a.reviewCount ?? 0),
+      ),
+    },
+  ];
+
+  return strategies.flatMap(({ label, candidates }) => {
+    const product = candidates.find((candidate) => !selected.has(candidate.id));
+    if (!product) return [];
+    selected.add(product.id);
+    return [{ label, product }];
+  });
+}
 
 export function generateStaticParams() {
   return FEATURES.map((feature) => ({ slug: feature.slug }));
@@ -44,6 +89,13 @@ export default async function FeaturePage({ params }: Props) {
     excludeTitleTerms: feature.excludeTitleTerms,
   });
   const relatedFeatures = getRelatedFeatures(feature);
+  const highlights = getProductHighlights(feature.slug, products);
+  const highlightedIds = new Set(highlights.map(({ product }) => product.id));
+  const remainingProducts = products.filter((product) => !highlightedIds.has(product.id));
+  const displayProducts = [
+    ...highlights.map(({ product }) => product),
+    ...remainingProducts,
+  ];
   const origin = siteOrigin();
   const pageUrl = `${origin}/feature/${feature.slug}`;
   const structuredData = [
@@ -60,7 +112,7 @@ export default async function FeaturePage({ params }: Props) {
       "@type": "ItemList",
       name: feature.title,
       numberOfItems: products.length,
-      itemListElement: products.map((product, index) => ({
+      itemListElement: displayProducts.map((product, index) => ({
         "@type": "ListItem",
         position: index + 1,
         url: `${origin}/product/${product.id}`,
@@ -94,18 +146,71 @@ export default async function FeaturePage({ params }: Props) {
         </div>
       </header>
 
+      {feature.selectionGuide && (
+        <section className="border-b border-line bg-washi-deep/35">
+          <div className="mx-auto max-w-6xl px-5 py-10 md:py-12">
+            <h2 className="font-mincho text-2xl font-semibold md:text-3xl">
+              {feature.selectionGuide.title}
+            </h2>
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-sumi-soft md:text-base">
+              {feature.selectionGuide.description}
+            </p>
+            <ol className="mt-7 grid gap-4 md:grid-cols-3">
+              {feature.selectionGuide.points.map((point, index) => (
+                <li key={point.title} className="border border-line bg-white/60 p-5">
+                  <p className="text-xs font-medium tracking-[0.18em] text-hinomaru">
+                    POINT {index + 1}
+                  </p>
+                  <h3 className="mt-2 font-mincho text-lg font-semibold">{point.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
+                    {point.description}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+      )}
+
       <section className="mx-auto max-w-6xl px-5 py-12 md:py-16">
+        {highlights.length > 0 && (
+          <div className="mb-14">
+            <div className="border-b border-line pb-4">
+              <h2 className="font-mincho text-2xl font-semibold">比較の入口</h2>
+              <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
+                販売先レビュー件数、価格帯、AI日本度の異なる基準から候補を確認できます。
+              </p>
+            </div>
+            <div className="mt-8 grid gap-5 sm:grid-cols-3">
+              {highlights.map(({ label, product }, index) => (
+                <div key={product.id} className="flex flex-col">
+                  <p className="mb-2 border-l-2 border-hinomaru pl-3 text-sm font-medium">
+                    {label}
+                  </p>
+                  <ProductCard
+                    product={product}
+                    index={index}
+                    surface="feature"
+                    surfaceKey={slug}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="flex items-end justify-between gap-4 border-b border-line pb-4">
-          <h2 className="font-mincho text-2xl font-semibold">注目商品</h2>
+          <h2 className="font-mincho text-2xl font-semibold">
+            {highlights.length > 0 ? "条件に合う商品をさらに見る" : "注目商品"}
+          </h2>
           <p className="text-sm text-sumi-soft">{products.length}件</p>
         </div>
-        {products.length > 0 ? (
+        {remainingProducts.length > 0 ? (
           <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
-            {products.map((product, index) => (
+            {remainingProducts.map((product, index) => (
               <ProductCard
                 key={product.id}
                 product={product}
-                index={index}
+                index={index + highlights.length}
                 surface="feature"
                 surfaceKey={slug}
               />
