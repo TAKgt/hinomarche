@@ -61,20 +61,23 @@ export function ProductCard({
           <span className="absolute left-0 top-3 bg-sumi text-washi text-[11px] tracking-wider px-2.5 py-1">
             {sourceLabel}
           </span>
+          <div className="absolute bottom-2 right-2 md:hidden">
+            <ScoreRing score={product.score} size={44} />
+          </div>
         </div>
 
-        <div className="p-4 flex gap-3">
-          <div className="shrink-0 pt-0.5">
+        <div className="p-3 md:flex md:gap-3 md:p-4">
+          <div className="hidden shrink-0 pt-0.5 md:block">
             <ScoreRing score={product.score} size={52} />
             <p className="mt-1 text-center text-[10px] text-sumi-soft leading-tight">
               AI日本度
             </p>
           </div>
           <div className="min-w-0">
-            <h3 className="text-sm font-medium leading-snug line-clamp-2 group-hover:text-hinomaru-deep transition-colors">
+            <h3 className="line-clamp-3 text-[13px] font-medium leading-snug transition-colors group-hover:text-hinomaru-deep md:line-clamp-2 md:text-sm">
               {displayTitle}
             </h3>
-            <p className="mt-1.5 font-mincho text-lg font-semibold">
+            <p className="mt-2 font-mincho text-lg font-semibold md:mt-1.5">
               {formatPrice(product.price)}
             </p>
             {hasReview && (
@@ -88,24 +91,24 @@ export function ProductCard({
               </p>
             )}
             {product.checks && (
-              <p className="mt-1">
+              <p className="mt-1 hidden md:block">
                 <CheckMarksCompact checks={product.checks} />
               </p>
             )}
-            <p className="mt-1 text-xs text-sumi-soft line-clamp-2">
+            <p className="mt-2 line-clamp-3 border-t border-line/70 pt-2 text-[11px] leading-relaxed text-sumi-soft md:mt-1 md:line-clamp-2 md:border-0 md:pt-0 md:text-xs">
               {product.evidenceText}
             </p>
           </div>
         </div>
       </Link>
 
-      <div className="mt-auto px-4 pb-4">
+      <div className="mt-auto px-3 pb-3 md:px-4 md:pb-4">
         <a
           href={outboundUrl}
           target="_blank"
           rel="nofollow sponsored noopener"
           aria-label={`${displayTitle}を${sourceLabel}で見る`}
-          className="block w-full border border-sumi/25 bg-white/50 px-2 py-2.5 text-center text-xs font-medium text-sumi transition-colors hover:border-hinomaru hover:bg-hinomaru hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hinomaru"
+          className="block w-full border border-sumi/25 bg-white/50 px-2 py-3 text-center text-xs font-medium text-sumi transition-colors hover:border-hinomaru hover:bg-hinomaru hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hinomaru md:py-2.5"
         >
           {sourceLabel}で見る
         </a>
