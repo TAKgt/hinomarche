@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Shippori_Mincho, Zen_Kaku_Gothic_New } from "next/font/google";
 import { CategoryMenu } from "@/components/CategoryMenu";
+import { ProductSearchForm } from "@/components/ProductSearchForm";
 import { getCategories } from "@/lib/db";
 import { siteUrl } from "@/lib/site-url";
 import "./globals.css";
@@ -44,7 +45,7 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <header className="border-b border-line bg-washi/90 backdrop-blur sticky top-0 z-20">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3 md:py-4">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3 lg:flex-nowrap lg:gap-5 lg:py-4">
             <Link href="/" className="flex items-center gap-3 group shrink-0">
               <span
                 aria-hidden
@@ -54,7 +55,10 @@ export default async function RootLayout({
                 ヒノマルシェ
               </span>
             </Link>
-            <nav className="flex min-w-0 items-center gap-5 text-sm font-medium text-sumi-soft md:gap-7">
+            <div className="order-3 w-full lg:order-none lg:ml-auto lg:w-[19rem]">
+              <ProductSearchForm compact />
+            </div>
+            <nav className="ml-auto flex min-w-0 items-center gap-5 text-sm font-medium text-sumi-soft md:gap-7 lg:ml-0">
               <Link
                 href="/#featured"
                 className="hidden whitespace-nowrap transition-colors hover:text-hinomaru sm:block"

@@ -6,6 +6,7 @@ import { FEATURES, matchesFeatureProduct } from "./features";
 import { matchesRegionProduct, REGIONS } from "./regions";
 import { calculateCollectionRanking } from "./collection-ranking";
 import type { ProductPlacement } from "./product-metrics";
+import { matchesProductSearch } from "./product-search";
 import demoProducts from "../data/demo-products.json";
 
 /**
@@ -192,6 +193,56 @@ export async function getTopProducts(limit = 12): Promise<Product[]> {
     limit: limit - high.length,
   });
   return [...high, ...mid];
+}
+
+export async function searchPublishedProducts(
+  terms: string[],
+  limit = 60,
+): Promise<Product[]> {
+  if (terms.length === 0) return [];
+
+  if (isDemoMode()) {
+    return (demoProducts as unknown as Product[])
+      .filter((product) => showLowTier() || product.tier !== "low")
+      .filter((product) => matchesProductSearch(product, terms))
+      .sort((a, b) => productFeaturedScore(b) - productFeaturedScore(a) || b.score - a.score)
+      .slice(0, limit);
+  }
+
+  const firstTerm = terms[0];
+  const candidateLimit = Math.max(limit * 3, 180);
+  const baseQuery = () => {
+    let query = publicSupabase()
+      .from("products_with_judgment")
+      .select("*")
+      .eq("is_published", true)
+      .order("featured_score", { ascending: false })
+      .order("demand_score", { ascending: false })
+      .order("score", { ascending: false })
+      .limit(candidateLimit);
+    if (!showLowTier()) query = query.neq("tier", "low");
+    return query;
+  };
+
+  const responses = await Promise.all([
+    baseQuery().ilike("title", `%${firstTerm}%`),
+    baseQuery().ilike("brand", `%${firstTerm}%`),
+    baseQuery().ilike("maker", `%${firstTerm}%`),
+  ]);
+  const failed = responses.find((response) => response.error);
+  if (failed?.error) throw failed.error;
+
+  const candidates = new Map<string, Product>();
+  for (const response of responses) {
+    for (const row of response.data ?? []) {
+      const product = rowToProduct(row);
+      candidates.set(product.id, product);
+    }
+  }
+  return [...candidates.values()]
+    .filter((product) => matchesProductSearch(product, terms))
+    .sort((a, b) => productFeaturedScore(b) - productFeaturedScore(a) || b.score - a.score)
+    .slice(0, limit);
 }
 
 export async function getSitemapProducts(): Promise<

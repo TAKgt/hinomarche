@@ -62,6 +62,7 @@ src/
     admin/ranking/page.tsx  Basic認証必須の非公開ランキング画面(読み取り専用)
     admin/collections/page.tsx 特集・産地の28日成果とshadow候補を比較する非公開画面
     admin/surfaces/page.tsx 掲載面・表示位置ごとの匿名成果を比較する非公開画面
+    search/page.tsx         商品名・ブランド・メーカー検索(検索語は保存しない)
     go/[id]/route.ts        販売サイトへの安全なリダイレクト+匿名クリック集計
     not-found.tsx           404
     sitemap.ts / robots.ts / icon.svg / opengraph-image.tsx  SEO・メタ系(sitemapは1時間再生成)
@@ -106,6 +107,7 @@ supabase/
   migrations/011_expand_digital_categories.sql デジタル系5カテゴリ追加(適用済み)
   migrations/012_product_surface_metrics.sql 掲載面別の匿名表示/移動計測(適用済み)
   migrations/013_surface_position_performance.sql 掲載位置別の非公開集計ビュー(適用済み)
+  migrations/014_product_search_surface.sql 検索結果面の匿名計測(適用済み)
 ```
 
 ## 5. データモデル(Supabase)
@@ -125,6 +127,7 @@ supabase/
 - `outbound_clicks`: 商品から販売サイトへの移動数。掲載面・文脈slug・表示位置も記録する。IP/Cookie/User-Agent/セッションIDは保存しない。anon/authenticatedに権限なし
 - `product_page_views`: 商品閲覧数。商品IDと時刻のみ。anon/authenticatedに権限なし
 - `product_impressions`: 商品カードが50%以上、600ms表示された回数。商品ID・掲載面・文脈slug・表示位置・時刻のみ。anon/authenticatedに権限なし
+- 商品検索は48文字・5語までに正規化し、商品名・ブランド・メーカーを対象に注目順で表示する。検索語は計測DBへ保存しない
 - 閲覧・外部移動の集計は本番環境の同一オリジン操作だけを記録し、ローカル確認では書き込まない
 - `ranking_snapshots`: `commercial-v2` の日次計算結果。掲載表示があれば一覧CTRを使い、クリック数は表示数以下に制限する。現在は `shadow` のみで表示順には未反映
 - `surface_position_performance_28d`: 掲載面・表示位置別の28日集計。匿名権限からは読めず、位置補正前の観測専用

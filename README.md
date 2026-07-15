@@ -72,6 +72,8 @@ TOP/カテゴリの「注目順」を有効にするには、続けて
 `supabase/migrations/009_shadow_ranking.sql` を実行します。
 商品カードの表示数、掲載面、表示位置を匿名で比較する場合は
 `supabase/migrations/012_product_surface_metrics.sql` も実行します。
+商品検索結果の表示位置も同じ匿名集計に含める場合は
+`supabase/migrations/014_product_search_surface.sql` も実行します。検索語自体は保存しません。
 計測テーブルにIPアドレス、Cookie、User-Agent等は保存しません。
 
 ### 3. 商品を収集する
