@@ -66,6 +66,7 @@ src/
     admin/layout.tsx        全管理画面をリクエスト時描画に固定し、認証後HTMLのキャッシュを禁止
     search/page.tsx         商品名・ブランド・メーカー検索(検索語は保存しない)
     popular/page.tsx        販売先評価4.0以上・100件以上・AI日本度50%以上の高評価商品一覧
+    recommended/page.tsx    AI日本度50%以上と市場性を組み合わせたジャンル横断の注目商品一覧
     go/[id]/route.ts        販売サイトへの安全なリダイレクト+匿名クリック集計
     not-found.tsx           404
     sitemap.ts / robots.ts / icon.svg / opengraph-image.tsx  SEO・メタ系(sitemapは1時間再生成)
@@ -112,6 +113,7 @@ supabase/
   migrations/013_surface_position_performance.sql 掲載位置別の非公開集計ビュー(適用済み)
   migrations/014_product_search_surface.sql 検索結果面の匿名計測(適用済み)
   migrations/015_popular_products_surface.sql 高評価一覧面の匿名計測(適用済み)
+  migrations/016_recommended_products_surface.sql 注目商品一覧面の匿名計測(適用済み)
 ```
 
 ## 5. データモデル(Supabase)
@@ -123,6 +125,8 @@ supabase/
   price_updated_at, is_published など
 - `/popular` は販売先評価4.0以上・レビュー100件以上・AI日本度50%以上を条件に、
   レビュー件数順の候補から同一カテゴリ最大4件までを自動選定する。TOPの高評価棚は最大2件/カテゴリ
+- `/recommended` はAI日本度50%以上を必須に、市場性を加味した注目順の候補から
+  同一カテゴリ最大4件・全体48件までを自動選定する
 - `judgments`: 判定履歴(追記型。表示は最新を使う)。score, tier('high'|'mid'|'low'),
   evidence_type, evidence_text, origin_check/company_check/material_check('yes'|'unknown'|'no')
 - `products_with_judgment`: 最新判定をJOINしたビュー。**サイト表示は必ずこのビューを読む**

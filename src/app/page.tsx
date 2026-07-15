@@ -58,10 +58,10 @@ export default async function Home() {
             </h2>
           </div>
           <Link
-            href="/category/kitchen"
+            href="/recommended"
             className="text-sm text-sumi-soft hover:text-hinomaru transition-colors"
           >
-            すべて見る →
+            注目商品をすべて見る →
           </Link>
         </div>
 

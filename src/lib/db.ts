@@ -235,6 +235,14 @@ export async function getTopProducts(limit = 12): Promise<Product[]> {
   return [...high, ...mid];
 }
 
+export async function getRecommendedProducts(limit = 120): Promise<Product[]> {
+  const candidates = await getPublishedProducts({
+    sort: "featured",
+    limit: Math.max(limit * 2, 180),
+  });
+  return candidates.filter((product) => product.tier !== "low").slice(0, limit);
+}
+
 export async function getPopularReviewedProducts(limit = 24): Promise<Product[]> {
   const candidates = await getPublishedProducts({
     sort: "reviews",
@@ -879,7 +887,7 @@ export type AdminCollectionReport = {
 };
 
 export type AdminSurfacePositionRow = {
-  surface: "home" | "popular" | "category" | "search" | "feature" | "region" | "related";
+  surface: "home" | "popular" | "recommended" | "category" | "search" | "feature" | "region" | "related";
   position: number;
   impressions28d: number;
   listingClicks28d: number;
@@ -905,6 +913,7 @@ export async function getAdminSurfacePositionReport(): Promise<AdminSurfacePosit
   const allowedSurfaces = new Set([
     "home",
     "popular",
+    "recommended",
     "category",
     "search",
     "feature",

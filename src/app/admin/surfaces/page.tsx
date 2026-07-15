@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 const SURFACE_LABELS: Record<AdminSurfacePositionRow["surface"], string> = {
   home: "TOP",
   popular: "高評価一覧",
+  recommended: "注目商品一覧",
   category: "ジャンル",
   search: "商品検索",
   feature: "特集",
@@ -25,6 +26,7 @@ const SURFACE_LABELS: Record<AdminSurfacePositionRow["surface"], string> = {
 const SURFACE_ORDER = [
   "home",
   "popular",
+  "recommended",
   "category",
   "search",
   "feature",

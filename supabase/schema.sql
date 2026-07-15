@@ -68,7 +68,7 @@ create table outbound_clicks (
   product_id uuid not null references products(id) on delete cascade,
   destination text not null check (destination in ('primary', 'cross')),
   merchant text not null check (merchant in ('rakuten', 'amazon')),
-  surface text check (surface is null or surface in ('home', 'category', 'feature', 'region', 'related', 'search', 'popular', 'product')),
+  surface text check (surface is null or surface in ('home', 'category', 'feature', 'region', 'related', 'search', 'popular', 'recommended', 'product')),
   surface_key text check (surface_key is null or surface_key ~ '^[a-z0-9][a-z0-9-]{0,63}$'),
   position smallint check (position is null or position between 1 and 100),
   clicked_at timestamptz not null default now()
@@ -83,7 +83,7 @@ create table product_page_views (
 create table product_impressions (
   id bigserial primary key,
   product_id uuid not null references products(id) on delete cascade,
-  surface text not null check (surface in ('home', 'category', 'feature', 'region', 'related', 'search', 'popular')),
+  surface text not null check (surface in ('home', 'category', 'feature', 'region', 'related', 'search', 'popular', 'recommended')),
   surface_key text check (surface_key is null or surface_key ~ '^[a-z0-9][a-z0-9-]{0,63}$'),
   position smallint not null check (position between 1 and 100),
   viewed_at timestamptz not null default now()
@@ -186,7 +186,7 @@ left join (
   select product_id, count(*) as listing_clicks_28d
   from outbound_clicks
   where clicked_at >= now() - interval '28 days'
-    and surface in ('home', 'category', 'feature', 'region', 'related', 'search', 'popular')
+    and surface in ('home', 'category', 'feature', 'region', 'related', 'search', 'popular', 'recommended')
   group by product_id
 ) lc on lc.product_id = p.id
 where p.is_published;
@@ -230,7 +230,7 @@ with impression_totals as (
   select surface, position, count(*)::integer as listing_clicks_28d
   from outbound_clicks
   where clicked_at >= now() - interval '28 days'
-    and surface in ('home', 'category', 'feature', 'region', 'related', 'search', 'popular')
+    and surface in ('home', 'category', 'feature', 'region', 'related', 'search', 'popular', 'recommended')
     and position is not null
   group by surface, position
 )
