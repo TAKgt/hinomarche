@@ -28,50 +28,82 @@ function byReviewsThenScore(a: Product, b: Product): number {
   );
 }
 
-function getProductHighlights(slug: string, products: Product[]): ProductHighlight[] {
-  if (slug !== "tsubame-sanjo") return [];
-
-  const waterTerms = ["水切り", "ラック", "水切りかご"];
-  const knifeTerms = ["包丁", "ナイフ"];
+function selectUniqueHighlights(
+  strategies: { label: string; candidates: Product[] }[],
+): ProductHighlight[] {
   const selected = new Set<string>();
-  const strategies = [
-    {
-      label: "水切りラックをレビュー件数から比較",
-      candidates: products
-        .filter((product) => includesAny(product.title, waterTerms))
-        .sort(byReviewsThenScore),
-    },
-    {
-      label: "5,000円以下の包丁を比較",
-      candidates: products
-        .filter(
-          (product) =>
-            includesAny(product.title, knifeTerms) &&
-            product.price != null &&
-            product.price <= 5000,
-        )
-        .sort(byReviewsThenScore),
-    },
-    {
-      label: "1,000円以下の調理小物を比較",
-      candidates: products
-        .filter(
-          (product) =>
-            !includesAny(product.title, waterTerms) &&
-            !includesAny(product.title, knifeTerms) &&
-            product.price != null &&
-            product.price <= 1000,
-        )
-        .sort(byReviewsThenScore),
-    },
-  ];
-
   return strategies.flatMap(({ label, candidates }) => {
     const product = candidates.find((candidate) => !selected.has(candidate.id));
     if (!product) return [];
     selected.add(product.id);
     return [{ label, product }];
   });
+}
+
+function getProductHighlights(slug: string, products: Product[]): ProductHighlight[] {
+  if (slug === "tsubame-sanjo") {
+    const waterTerms = ["水切り", "ラック", "水切りかご"];
+    const knifeTerms = ["包丁", "ナイフ"];
+    return selectUniqueHighlights([
+      {
+        label: "水切りラックをレビュー件数から比較",
+        candidates: products
+          .filter((product) => includesAny(product.title, waterTerms))
+          .sort(byReviewsThenScore),
+      },
+      {
+        label: "5,000円以下の包丁を比較",
+        candidates: products
+          .filter(
+            (product) =>
+              includesAny(product.title, knifeTerms) &&
+              product.price != null &&
+              product.price <= 5000,
+          )
+          .sort(byReviewsThenScore),
+      },
+      {
+        label: "1,000円以下の調理小物を比較",
+        candidates: products
+          .filter(
+            (product) =>
+              !includesAny(product.title, waterTerms) &&
+              !includesAny(product.title, knifeTerms) &&
+              product.price != null &&
+              product.price <= 1000,
+          )
+          .sort(byReviewsThenScore),
+      },
+    ]);
+  }
+
+  if (slug === "imabari") {
+    const giftTerms = ["ギフト", "内祝い", "お祝い", "引き出物", "木箱"];
+    const isHometownTax = (product: Product) => product.title.includes("ふるさと納税");
+    return selectUniqueHighlights([
+      {
+        label: "普段使いをレビュー件数から比較",
+        candidates: products
+          .filter((product) => !isHometownTax(product))
+          .sort(byReviewsThenScore),
+      },
+      {
+        label: "ギフト用途から比較",
+        candidates: products
+          .filter(
+            (product) =>
+              !isHometownTax(product) && includesAny(product.title, giftTerms),
+          )
+          .sort(byReviewsThenScore),
+      },
+      {
+        label: "ふるさと納税の返礼品から比較",
+        candidates: products.filter(isHometownTax).sort(byReviewsThenScore),
+      },
+    ]);
+  }
+
+  return [];
 }
 
 export function generateStaticParams() {
@@ -201,7 +233,7 @@ export default async function RegionPage({ params }: Props) {
             <div className="border-b border-line pb-4">
               <h2 className="font-mincho text-2xl font-semibold">用途別の比較入口</h2>
               <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
-                水切りラック、包丁、手頃な調理小物から候補を確認できます。
+                ページ内の商品を用途や価格帯、販売先レビュー件数から比較できます。
               </p>
             </div>
             <div className="mt-8 grid gap-5 sm:grid-cols-3">
