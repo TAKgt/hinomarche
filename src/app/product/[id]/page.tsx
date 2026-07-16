@@ -65,7 +65,9 @@ export default async function ProductPage({ params }: Props) {
 
   const isRakuten = product.source === "rakuten";
   const buttonLabel = isRakuten ? "楽天市場で見る" : "Amazonで見る";
-  const crossLabel = isRakuten ? "Amazonで探す" : "楽天市場で探す";
+  const crossLabel = isRakuten
+    ? "Amazonで商品名を検索"
+    : "楽天市場で商品名を検索";
   const primaryPlacement = productPlacementQuery({
     surface: "product",
     surfaceKey: null,
@@ -173,6 +175,24 @@ export default async function ProductPage({ params }: Props) {
             外部の販売ページに移動します(アフィリエイトリンク)
           </p>
 
+          <div className="mt-4 border-t border-line pt-4">
+            <p className="mb-2 text-center text-xs font-medium text-sumi-soft">
+              ほかの販売先でも比較する
+            </p>
+            <a
+              href={crossUrl}
+              target="_blank"
+              rel="nofollow sponsored noopener"
+              aria-label={`${displayTitle}を${crossLabel}`}
+              className="block border border-sumi/25 px-8 py-3.5 text-center text-sm font-medium tracking-[0.08em] text-sumi transition-colors hover:border-sumi hover:bg-white/50"
+            >
+              {crossLabel}
+            </a>
+            <p className="mt-2 text-center text-[11px] text-sumi-soft">
+              商品名による検索結果ページに移動します(同一商品とは限りません)
+            </p>
+          </div>
+
           {/* AI判定カード */}
           <div className="mt-7 border border-line bg-white/60 p-5">
             <div className="flex items-center gap-5">
@@ -203,17 +223,6 @@ export default async function ProductPage({ params }: Props) {
             </p>
           </div>
 
-          <a
-            href={crossUrl}
-            target="_blank"
-            rel="nofollow sponsored noopener"
-            className="mt-3 block text-center border border-sumi/25 text-sumi px-8 py-3.5 text-sm tracking-[0.2em] font-medium hover:border-sumi hover:bg-white/50 transition-colors"
-          >
-            {crossLabel}
-          </a>
-          <p className="mt-2 text-center text-[11px] text-sumi-soft">
-            「{crossLabel}」は商品名での検索結果ページに移動します(同一商品とは限りません)
-          </p>
         </div>
       </div>
 
