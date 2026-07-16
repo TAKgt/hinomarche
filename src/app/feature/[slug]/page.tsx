@@ -16,10 +16,58 @@ type ProductHighlight = {
   product: Product;
 };
 
+function byReviewsThenScore(a: Product, b: Product): number {
+  return (
+    (b.reviewCount ?? 0) - (a.reviewCount ?? 0) ||
+    (b.reviewAverage ?? 0) - (a.reviewAverage ?? 0) ||
+    b.score - a.score
+  );
+}
+
+function selectUniqueHighlights(
+  strategies: { label: string; candidates: Product[] }[],
+): ProductHighlight[] {
+  const selected = new Set<string>();
+  return strategies.flatMap(({ label, candidates }) => {
+    const product = candidates.find((candidate) => !selected.has(candidate.id));
+    if (!product) return [];
+    selected.add(product.id);
+    return [{ label, product }];
+  });
+}
+
 function getProductHighlights(slug: string, products: Product[]): ProductHighlight[] {
+  if (slug === "gifts-under-5000-yen") {
+    return selectUniqueHighlights([
+      {
+        label: "1,500円以下から比較",
+        candidates: products
+          .filter((product) => product.price != null && product.price <= 1500)
+          .sort(byReviewsThenScore),
+      },
+      {
+        label: "1,501〜3,000円から比較",
+        candidates: products
+          .filter(
+            (product) =>
+              product.price != null && product.price > 1500 && product.price <= 3000,
+          )
+          .sort(byReviewsThenScore),
+      },
+      {
+        label: "3,001〜5,000円から比較",
+        candidates: products
+          .filter(
+            (product) =>
+              product.price != null && product.price > 3000 && product.price <= 5000,
+          )
+          .sort(byReviewsThenScore),
+      },
+    ]);
+  }
+
   if (slug !== "japanese-kitchen-knives") return [];
 
-  const selected = new Set<string>();
   const strategies = [
     {
       label: "販売先レビュー件数から比較",
@@ -47,12 +95,14 @@ function getProductHighlights(slug: string, products: Product[]): ProductHighlig
     },
   ];
 
-  return strategies.flatMap(({ label, candidates }) => {
-    const product = candidates.find((candidate) => !selected.has(candidate.id));
-    if (!product) return [];
-    selected.add(product.id);
-    return [{ label, product }];
-  });
+  return selectUniqueHighlights(strategies);
+}
+
+function highlightDescription(slug: string): string {
+  if (slug === "gifts-under-5000-yen") {
+    return "贈る相手や場面に合わせて、3つの価格帯から候補を確認できます。";
+  }
+  return "販売先レビュー件数、価格帯、AI日本度の異なる基準から候補を確認できます。";
 }
 
 export function generateStaticParams() {
@@ -178,7 +228,7 @@ export default async function FeaturePage({ params }: Props) {
             <div className="border-b border-line pb-4">
               <h2 className="font-mincho text-2xl font-semibold">比較の入口</h2>
               <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
-                販売先レビュー件数、価格帯、AI日本度の異なる基準から候補を確認できます。
+                {highlightDescription(feature.slug)}
               </p>
             </div>
             <div className="mt-8 grid gap-5 sm:grid-cols-3">
