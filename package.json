@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:judge": "tsx --test src/lib/judge-policy.test.ts",
     "ingest": "tsx scripts/ingest.ts",
     "judge:backlog": "tsx scripts/judge-backlog.ts"
   },

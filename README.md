@@ -106,6 +106,15 @@ npm run judge:backlog
 `INGEST_CATEGORY_SLUGS=smartphone,computer`のように指定できます。
 `npm run dev` で実データが表示されるようになります。
 
+AI判定ポリシーの変更時は、課金の発生しない回帰テストを先に実行します。
+
+```bash
+npm run test:judge
+```
+
+素材産地の明記がない場合は素材チェックを不明に戻し、入力にない事実や断定語を含む根拠を
+保存しない安全弁を設けています。このテストは既存商品の再判定を行いません。
+
 ### 4. Vercelにデプロイ
 
 1. GitHubにpush → vercel.com でImport
