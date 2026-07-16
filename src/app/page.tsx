@@ -8,6 +8,20 @@ import { selectCategoryDiverseProducts } from "@/lib/product-selection";
 
 export const revalidate = 3600;
 
+const HOME_FEATURE_SLUGS = [
+  "gifts-under-5000-yen",
+  "imabari-towel-gifts",
+  "japanese-green-tea",
+  "regional-japanese-rice",
+  "iron-frying-pans",
+  "japanese-kitchen-knives",
+];
+
+const HOME_FEATURES = HOME_FEATURE_SLUGS.flatMap((slug) => {
+  const feature = FEATURES.find((item) => item.slug === slug);
+  return feature ? [feature] : [];
+});
+
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
   openGraph: {
@@ -152,7 +166,7 @@ export default async function Home() {
             </Link>
           </div>
           <div className="mt-7 grid border-t border-line md:grid-cols-3">
-            {FEATURES.slice(0, 6).map((feature, index) => (
+            {HOME_FEATURES.map((feature, index) => (
               <Link
                 key={feature.slug}
                 href={`/feature/${feature.slug}`}
