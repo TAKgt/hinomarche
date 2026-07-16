@@ -5,8 +5,7 @@
  * 匿名ファネルの判断前に商品順を変えないため、AIが返したscore/tierは監査記録だけに残し、
  * DBへは既存score/tierを保持した新しい根拠文と3要素チェックだけを追記する。
  */
-import { writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { config } from "dotenv";
 
@@ -104,7 +103,9 @@ async function main() {
     throw new Error("承認トークンが一致しないため、有料再判定を開始しません");
   }
 
-  const auditPath = join(tmpdir(), `hinomarche-absolute-rejudge-${Date.now()}.json`);
+  const auditDir = join(process.cwd(), ".backups", "rejudge");
+  await mkdir(auditDir, { recursive: true });
+  const auditPath = join(auditDir, `hinomarche-absolute-rejudge-${Date.now()}.json`);
   const audit = {
     startedAt: new Date().toISOString(),
     expectedCount,
