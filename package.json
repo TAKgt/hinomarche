@@ -10,6 +10,7 @@
     "test:judge": "tsx --test src/lib/judge-policy.test.ts",
     "ingest": "tsx scripts/ingest.ts",
     "judge:backlog": "tsx scripts/judge-backlog.ts",
+    "migrate:moshimo": "tsx scripts/migrate-moshimo-links.ts",
     "rejudge:absolute": "tsx scripts/rejudge-absolute-language.ts"
   },
   "dependencies": {

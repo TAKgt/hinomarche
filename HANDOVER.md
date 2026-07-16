@@ -98,6 +98,8 @@ scripts/
   ingest.ts                 ローカル収集: npm run ingest
   judge-backlog.ts          商品再検索なしで判定待ちを追加消化
   rejudge.ts                チェック未付与の商品だけ再判定(判定スキーマ変更時に使う)
+  rejudge-absolute-language.ts 承認制で断定語候補だけを再判定（既定は読み取り専用）
+  migrate-moshimo-links.ts  承認制で楽天商品のもしもa_idだけを移行（既定は読み取り専用）
 supabase/
   schema.sql                初期スキーマ(新規プロジェクト用。マイグレーション適用済みの完全版)
   migrations/002_add_checks.sql       3要素チェック列追加(適用済み)
@@ -216,6 +218,9 @@ supabase/
   専用楽天リンクの`a_id`は5700338。ただしローカル・本番設定は別IDのままで、DB内の楽天商品
   2,920件（公開937件を含む）は専用IDが0件。設定・DBリンク・本番環境を切り替えるまでは
   ヒノマルシェ成果を分離できないため、切替は追加承認後に実行する。
+- `npm run migrate:moshimo -- --target-a-id=<専用ID>` は読み取り専用プレビュー。2026-07-17に
+  2,920件・公開937件・移行済み0件・単一旧ID・形式不正0件を確認済み。`--execute`には承認トークンと
+  期待件数を必須とし、全URLを一時領域へJSONバックアップしてからa_id部分だけを更新する。
 
 ### AI日本度の標本監査(2026-07-16)
 
