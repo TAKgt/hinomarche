@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test:judge": "tsx --test src/lib/judge-policy.test.ts",
     "ingest": "tsx scripts/ingest.ts",
-    "judge:backlog": "tsx scripts/judge-backlog.ts"
+    "judge:backlog": "tsx scripts/judge-backlog.ts",
+    "rejudge:absolute": "tsx scripts/rejudge-absolute-language.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",
