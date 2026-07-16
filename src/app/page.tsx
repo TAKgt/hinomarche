@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getCategories, getPopularReviewedProducts, getTopProducts } from "@/lib/db";
 import { ProductCard } from "@/components/ProductCard";
 import { FEATURES } from "@/lib/features";
@@ -6,6 +7,17 @@ import { REGIONS } from "@/lib/regions";
 import { selectCategoryDiverseProducts } from "@/lib/product-selection";
 
 export const revalidate = 3600;
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "ヒノマルシェ | 日本製品 買って応援",
+    description:
+      "日本とのかかわりが深い商品を中心に集めたセレクトサイト。AIが商品ごとの「日本度」を判定根拠つきで表示します。",
+    url: "/",
+    type: "website",
+  },
+};
 
 export default async function Home() {
   const [topCandidates, categories, popularCandidates] = await Promise.all([
