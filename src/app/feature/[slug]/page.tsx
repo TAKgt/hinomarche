@@ -16,6 +16,10 @@ type ProductHighlight = {
   product: Product;
 };
 
+function includesAny(title: string, terms: string[]): boolean {
+  return terms.some((term) => title.includes(term));
+}
+
 function byReviewsThenScore(a: Product, b: Product): number {
   return (
     (b.reviewCount ?? 0) - (a.reviewCount ?? 0) ||
@@ -66,6 +70,55 @@ function getProductHighlights(slug: string, products: Product[]): ProductHighlig
     ]);
   }
 
+  if (slug === "imabari-towel-gifts") {
+    const formalGiftTerms = [
+      "内祝い",
+      "お返し",
+      "ご挨拶",
+      "引き出物",
+      "結婚祝い",
+      "出産祝い",
+      "快気祝い",
+      "香典返し",
+    ];
+    const hasFormalGiftUse = (product: Product) =>
+      includesAny(product.title, formalGiftTerms);
+    return selectUniqueHighlights([
+      {
+        label: "内祝い・お礼向け（1,000円以下）",
+        candidates: products
+          .filter(
+            (product) =>
+              hasFormalGiftUse(product) &&
+              product.price != null &&
+              product.price <= 1000,
+          )
+          .sort(byReviewsThenScore),
+      },
+      {
+        label: "バス・フェイスタオルの組み合わせ",
+        candidates: products
+          .filter(
+            (product) =>
+              product.title.includes("バス") && product.title.includes("フェイス"),
+          )
+          .sort(byReviewsThenScore),
+      },
+      {
+        label: "自宅用セットをレビュー件数から比較",
+        candidates: products
+          .filter(
+            (product) =>
+              !hasFormalGiftUse(product) &&
+              product.title.includes("セット") &&
+              product.price != null &&
+              product.price <= 5000,
+          )
+          .sort(byReviewsThenScore),
+      },
+    ]);
+  }
+
   if (slug !== "japanese-kitchen-knives") return [];
 
   const strategies = [
@@ -101,6 +154,9 @@ function getProductHighlights(slug: string, products: Product[]): ProductHighlig
 function highlightDescription(slug: string): string {
   if (slug === "gifts-under-5000-yen") {
     return "贈る相手や場面に合わせて、3つの価格帯から候補を確認できます。";
+  }
+  if (slug === "imabari-towel-gifts") {
+    return "内祝い・お礼、セット内容、自宅用の異なる基準から候補を確認できます。";
   }
   return "販売先レビュー件数、価格帯、AI日本度の異なる基準から候補を確認できます。";
 }
