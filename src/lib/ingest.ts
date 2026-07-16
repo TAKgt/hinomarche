@@ -164,7 +164,7 @@ export async function runIngest(): Promise<IngestSummary> {
           if (String(e).includes("AssociateNotEligible")) {
             amazonEnabled = false;
             summary.errors.push(
-              "Amazon: アソシエイトの利用資格未達のため今回はスキップ(売上3件達成後に自動再開)"
+              "Amazon: アソシエイトの利用資格未達のため今回はスキップ(資格条件達成後に自動再開)"
             );
           }
         }

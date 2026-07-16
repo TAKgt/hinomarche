@@ -5,6 +5,7 @@ import { ScoreRing } from "./ScoreRing";
 import { CheckMarksCompact } from "./CheckMarks";
 import { displayProductTitle } from "@/lib/product-title";
 import { ProductImpression } from "./ProductImpression";
+import { productCardImageUrl } from "@/lib/product-image";
 import {
   productPlacementQuery,
   type ProductPlacement,
@@ -48,9 +49,12 @@ export function ProductCard({
           {product.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- 外部モール画像はドメインが多岐に渡るためimgで表示
             <img
-              src={product.imageUrl}
+              src={productCardImageUrl(product.imageUrl)}
               alt={displayTitle}
+              width={320}
+              height={320}
               loading="lazy"
+              decoding="async"
               className="size-full object-contain transition-transform duration-500 group-hover:scale-105"
             />
           ) : (

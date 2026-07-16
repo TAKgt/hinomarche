@@ -20,8 +20,8 @@
   --color-hinomaru-deep: var(--hinomaru-deep);
   --color-kin: var(--kin);
   --color-line: var(--line);
-  --font-mincho: var(--font-shippori), "Hiragino Mincho ProN", serif;
-  --font-gothic: var(--font-zen-kaku), "Hiragino Kaku Gothic ProN", sans-serif;
+  --font-mincho: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, serif;
+  --font-gothic: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
 }
 
 body {

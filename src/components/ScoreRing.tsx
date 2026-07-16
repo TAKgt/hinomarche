@@ -8,7 +8,7 @@
 
 const BANDS = {
   red: { fill: "#bc002d", text: "#ffffff", sub: "rgba(255,255,255,0.85)" },
-  orange: { fill: "#d76e1e", text: "#ffffff", sub: "rgba(255,255,255,0.85)" },
+  orange: { fill: "#b85700", text: "#ffffff", sub: "#ffffff" },
   yellow: { fill: "#e8c04a", text: "#221f1a", sub: "rgba(34,31,26,0.7)" },
 } as const;
 

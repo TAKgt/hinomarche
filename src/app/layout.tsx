@@ -1,25 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Shippori_Mincho, Zen_Kaku_Gothic_New } from "next/font/google";
 import { CategoryMenu } from "@/components/CategoryMenu";
 import { ProductSearchForm } from "@/components/ProductSearchForm";
 import { getCategories } from "@/lib/db";
 import { siteUrl } from "@/lib/site-url";
 import "./globals.css";
-
-const shippori = Shippori_Mincho({
-  variable: "--font-shippori",
-  weight: ["500", "600", "800"],
-  subsets: ["latin"],
-  preload: false,
-});
-
-const zenKaku = Zen_Kaku_Gothic_New({
-  variable: "--font-zen-kaku",
-  weight: ["400", "500", "700"],
-  subsets: ["latin"],
-  preload: false,
-});
 
 export const metadata: Metadata = {
   metadataBase: siteUrl(),
@@ -42,10 +27,7 @@ export default async function RootLayout({
   const categories = await getCategories();
 
   return (
-    <html
-      lang="ja"
-      className={`${shippori.variable} ${zenKaku.variable} h-full antialiased`}
-    >
+    <html lang="ja" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
         <header className="border-b border-line bg-washi/90 backdrop-blur sticky top-0 z-20">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3 lg:flex-nowrap lg:gap-5 lg:py-4">
