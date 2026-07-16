@@ -213,6 +213,29 @@ export const FEATURES: FeatureDefinition[] = [
     categorySlugs: ["kitchen"],
     minScore: 50,
     titleTermGroups: [["フライパン"]],
+    excludeTitleTerms: ["コロッケ抜き", "揚げザル", "揚げ網"],
+    selectionGuide: {
+      title: "鉄フライパンを選ぶ3つの視点",
+      description:
+        "用途に合う形とサイズ、手入れ方法、熱源や重さを順に確認すると、毎日の調理に合う候補を比較しやすくなります。",
+      points: [
+        {
+          title: "料理とサイズから選ぶ",
+          description:
+            "焼く量や使う食材に合わせて直径と深さを確認します。卵焼き器など用途を絞った形もあるため、普段よく作る料理を基準に比較してください。",
+        },
+        {
+          title: "使い始めと手入れ方法を見る",
+          description:
+            "油ならしの要否、洗い方、さびを防ぐ保管方法は商品ごとに異なります。販売ページにある使用前後の手入れ方法を確認してください。",
+        },
+        {
+          title: "熱源・重さ・持ち手を確認する",
+          description:
+            "IHとガス火への対応、製品重量、持ち手の素材や形を確認します。同じ直径でも重量は異なるため、扱いやすさの比較材料になります。",
+        },
+      ],
+    },
   },
   {
     slug: "imabari-towel-gifts",
@@ -258,6 +281,28 @@ export const FEATURES: FeatureDefinition[] = [
     categorySlugs: ["drinks", "food"],
     minScore: 80,
     titleTermGroups: [["緑茶", "日本茶", "ほうじ茶", "玄米茶"]],
+    selectionGuide: {
+      title: "日本茶・緑茶を選ぶ3つの視点",
+      description:
+        "淹れ方、茶葉の産地や加工表示、内容量を確認すると、普段の飲み方に合う候補を比較しやすくなります。",
+      points: [
+        {
+          title: "淹れ方からタイプを選ぶ",
+          description:
+            "急須で淹れる茶葉、手軽なティーバッグ、水にも溶かしやすい粉末タイプがあります。使う場面と準備にかけられる時間から選びます。",
+        },
+        {
+          title: "産地・品種・加工表示を見る",
+          description:
+            "同じ緑茶でも産地、品種、蒸し方や焙煎方法などの表示は異なります。正確な原料原産地と加工情報は販売ページで確認してください。",
+        },
+        {
+          title: "内容量と飲む頻度を比べる",
+          description:
+            "価格だけでなく、1袋の内容量やティーバッグの個数、保存方法を確認します。飲み切れる量かどうかも比較材料になります。",
+        },
+      ],
+    },
   },
   {
     slug: "regional-japanese-rice",
@@ -269,6 +314,39 @@ export const FEATURES: FeatureDefinition[] = [
     categorySlugs: ["food", "emergency"],
     minScore: 80,
     titleTermGroups: [["お米", "無洗米", "コシヒカリ", "ひとめぼれ", "はえぬき", "さがびより", "つや姫"]],
+    excludeTitleTerms: [
+      "味噌",
+      "みそ",
+      "ミソ",
+      "醤油",
+      "しょうゆ",
+      "梅干し",
+      "漬物",
+      "佃煮",
+      "加工品",
+    ],
+    selectionGuide: {
+      title: "お米・無洗米を選ぶ3つの視点",
+      description:
+        "年産と産地、精米方法と内容量、通常購入かふるさと納税かを分けて確認すると、条件の違う商品を比較しやすくなります。",
+      points: [
+        {
+          title: "年産・産地・品種を確認する",
+          description:
+            "商品名が似ていても年産、都道府県、品種、単一原料米か複数原料米かは異なります。現在の商品表示を販売ページで確認してください。",
+        },
+        {
+          title: "精米方法と実容量を見る",
+          description:
+            "白米、無洗米、玄米などの違いに加え、総重量と小分け単位を確認します。配送時期や保存場所も含め、消費できる量から選びます。",
+        },
+        {
+          title: "購入価格と寄附額を分ける",
+          description:
+            "通常購入の商品価格と、ふるさと納税の寄附額は意味が異なります。返礼品は寄附条件や発送時期を自治体の販売ページで確認してください。",
+        },
+      ],
+    },
   },
   {
     slug: "domestic-pet-treats",

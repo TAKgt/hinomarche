@@ -119,6 +119,89 @@ function getProductHighlights(slug: string, products: Product[]): ProductHighlig
     ]);
   }
 
+  if (slug === "japanese-green-tea") {
+    const teaBagTerms = ["ティーバッグ", "ティーパック"];
+    const powderTerms = ["粉末", "パウダー"];
+    return selectUniqueHighlights([
+      {
+        label: "ティーバッグをレビュー件数から比較",
+        candidates: products
+          .filter((product) => includesAny(product.title, teaBagTerms))
+          .sort(byReviewsThenScore),
+      },
+      {
+        label: "粉末タイプをレビュー件数から比較",
+        candidates: products
+          .filter((product) => includesAny(product.title, powderTerms))
+          .sort(byReviewsThenScore),
+      },
+      {
+        label: "茶葉タイプをレビュー件数から比較",
+        candidates: products
+          .filter(
+            (product) =>
+              includesAny(product.title, ["茶葉", "煎茶"]) &&
+              !includesAny(product.title, teaBagTerms) &&
+              !includesAny(product.title, powderTerms),
+          )
+          .sort(byReviewsThenScore),
+      },
+    ]);
+  }
+
+  if (slug === "regional-japanese-rice") {
+    const isHometownTax = (product: Product) => product.title.includes("ふるさと納税");
+    return selectUniqueHighlights([
+      {
+        label: "通常購入をレビュー件数から比較",
+        candidates: products.filter((product) => !isHometownTax(product)).sort(byReviewsThenScore),
+      },
+      {
+        label: "無洗米をレビュー件数から比較",
+        candidates: products
+          .filter((product) => product.title.includes("無洗米"))
+          .sort(byReviewsThenScore),
+      },
+      {
+        label: "ふるさと納税の返礼品から比較",
+        candidates: products.filter(isHometownTax).sort(byReviewsThenScore),
+      },
+    ]);
+  }
+
+  if (slug === "iron-frying-pans") {
+    const eggPanTerms = ["卵焼", "玉子焼", "たまご焼", "エッグパン"];
+    return selectUniqueHighlights([
+      {
+        label: "焼き物向けをレビュー件数から比較",
+        candidates: products
+          .filter((product) => !includesAny(product.title, eggPanTerms))
+          .sort(byReviewsThenScore),
+      },
+      {
+        label: "手入れのしやすさに関する表示から比較",
+        candidates: products
+          .filter(
+            (product) =>
+              !includesAny(product.title, eggPanTerms) &&
+              includesAny(product.title, [
+                "油ならし不要",
+                "お手入れ簡単",
+                "錆びにくい",
+                "焦げにくい",
+              ]),
+          )
+          .sort(byReviewsThenScore),
+      },
+      {
+        label: "卵焼き器から比較",
+        candidates: products
+          .filter((product) => includesAny(product.title, eggPanTerms))
+          .sort(byReviewsThenScore),
+      },
+    ]);
+  }
+
   if (slug !== "japanese-kitchen-knives") return [];
 
   const strategies = [
@@ -157,6 +240,15 @@ function highlightDescription(slug: string): string {
   }
   if (slug === "imabari-towel-gifts") {
     return "内祝い・お礼、セット内容、自宅用の異なる基準から候補を確認できます。";
+  }
+  if (slug === "japanese-green-tea") {
+    return "ティーバッグ、粉末、茶葉の淹れ方別に候補を確認できます。";
+  }
+  if (slug === "regional-japanese-rice") {
+    return "通常購入、無洗米、ふるさと納税の異なる条件から候補を確認できます。";
+  }
+  if (slug === "iron-frying-pans") {
+    return "焼き物向け、手入れに関する表示、卵焼き器の用途別に候補を確認できます。";
   }
   return "販売先レビュー件数、価格帯、AI日本度の異なる基準から候補を確認できます。";
 }
