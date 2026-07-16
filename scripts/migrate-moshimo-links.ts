@@ -4,8 +4,7 @@
  * 既定は読み取り専用プレビュー。実行時は対象件数・公開件数・承認トークンを要求し、
  * 全URLをバックアップしてからa_id部分だけを更新する。商品順・判定・ランキングは触らない。
  */
-import { readFile, rename, stat, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { config } from "dotenv";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -137,7 +136,9 @@ async function main() {
     throw new Error("移行前a_idが単一、かつ専用ID移行済み0件ではないため停止します");
   }
 
-  const backupPath = join(tmpdir(), `hinomarche-moshimo-links-${Date.now()}.json`);
+  const backupDir = join(process.cwd(), ".backups", "moshimo");
+  await mkdir(backupDir, { recursive: true });
+  const backupPath = join(backupDir, `hinomarche-moshimo-links-${Date.now()}.json`);
   await writeFile(
     backupPath,
     JSON.stringify(

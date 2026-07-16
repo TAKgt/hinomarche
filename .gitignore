@@ -25,6 +25,7 @@
 *.pem
 .claude/
 preview.html
+/.backups/
 
 # debug
 npm-debug.log*
