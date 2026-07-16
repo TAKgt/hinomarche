@@ -236,6 +236,13 @@ supabase/
   オレンジのスコアバッジは白文字とのコントラスト不足を解消するため#b85700へ変更した。
 - 390x844でTOPと商品詳細を確認し、横はみ出しなし（scrollWidth=390）。TOPの1〜3位カードCTA、
   商品詳細の主販売先(position=1)・Amazon検索(position=3)はいずれも幅内で表示された。
+- 本番反映後の同条件再計測はPerformance 99 / Accessibility 100 / Best Practices 100 / SEO 100。
+  FCP 1.0秒、LCP 1.8秒、TBT 0ms、CLS 0、Speed Index 2.3秒。レンダリングブロックの削減余地は
+  7,560msから60msへ減った。画像には279KBの追加削減余地が残るが、外部モール画像の品質を
+  これ以上落とす変更はスコア99の現時点では行わない。
+- 公開環境でTOP・サイトマップ・代表商品詳細は200、未認証の管理画面・2つのCronは401。
+  サイトマップは991 URL、商品詳細の主ボタンposition=1、固定ボタンposition=2、
+  Amazon検索position=3をHTML上で再確認した。
 
 ### 運用点検(2026-07-16)
 
