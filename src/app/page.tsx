@@ -2,19 +2,21 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getCategories, getPopularReviewedProducts, getTopProducts } from "@/lib/db";
 import { ProductCard } from "@/components/ProductCard";
+import { CommercialTopicNav } from "@/components/CommercialTopicNav";
 import { FEATURES } from "@/lib/features";
 import { REGIONS } from "@/lib/regions";
 import { selectCategoryDiverseProducts } from "@/lib/product-selection";
+import { COMMERCIAL_TOPICS } from "@/lib/commercial-topics";
 
 export const revalidate = 3600;
 
 const HOME_FEATURE_SLUGS = [
-  "gifts-under-5000-yen",
+  "japanese-kitchen-knives",
   "imabari-towel-gifts",
+  "gifts-under-5000-yen",
   "japanese-green-tea",
   "regional-japanese-rice",
   "iron-frying-pans",
-  "japanese-kitchen-knives",
 ];
 
 const HOME_FEATURES = HOME_FEATURE_SLUGS.flatMap((slug) => {
@@ -92,6 +94,12 @@ export default async function Home() {
           </nav>
         </div>
       </section>
+
+      <CommercialTopicNav
+        topics={COMMERCIAL_TOPICS}
+        heading="まずは3つの購入目的から比較"
+        description="候補を広く眺める前に、用途・予算・販売先レビュー・AI日本度の根拠を一画面で比べられるテーマです。"
+      />
 
       {/* 高スコア商品 */}
       <section id="featured" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-16">

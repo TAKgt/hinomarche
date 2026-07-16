@@ -226,23 +226,14 @@ export default async function ProductPage({ params }: Props) {
         </div>
       </div>
 
-      {/* 説明文 */}
-      {product.description && (
-        <section className="mt-14 max-w-3xl">
-          <h2 className="font-mincho text-xl font-semibold border-l-4 border-hinomaru pl-3">
-            商品について
-          </h2>
-          <p className="mt-4 text-sm leading-relaxed text-sumi-soft whitespace-pre-line">
-            {product.description}
-          </p>
-        </section>
-      )}
-
       {(matchingFeatures.length > 0 || matchingRegions.length > 0) && (
         <section className="mt-14 border-y border-line py-8">
-          <p className="text-xs font-medium tracking-[0.3em] text-hinomaru">DISCOVER MORE</p>
-          <h2 className="mt-2 font-mincho text-xl font-semibold">関連する特集・産地</h2>
-          <nav className="mt-5 grid border-l border-t border-line sm:grid-cols-2" aria-label="関連する特集・産地">
+          <p className="text-xs font-medium tracking-[0.3em] text-hinomaru">COMPARE OPTIONS</p>
+          <h2 className="mt-2 font-mincho text-xl font-semibold">この商品をほかの候補と比較</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-sumi-soft">
+            用途・予算・販売先レビュー・AI日本度の根拠を、特集や産地別のページで比較できます。
+          </p>
+          <nav className="mt-5 grid border-l border-t border-line sm:grid-cols-2" aria-label="この商品の比較ページ">
             {matchingFeatures.map((feature) => (
               <Link
                 key={`feature-${feature.slug}`}
@@ -264,6 +255,18 @@ export default async function ProductPage({ params }: Props) {
               </Link>
             ))}
           </nav>
+        </section>
+      )}
+
+      {/* 説明文 */}
+      {product.description && (
+        <section className="mt-14 max-w-3xl">
+          <h2 className="font-mincho text-xl font-semibold border-l-4 border-hinomaru pl-3">
+            商品について
+          </h2>
+          <p className="mt-4 text-sm leading-relaxed text-sumi-soft whitespace-pre-line">
+            {product.description}
+          </p>
         </section>
       )}
 

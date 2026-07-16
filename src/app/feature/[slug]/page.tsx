@@ -3,8 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { ProductCard } from "@/components/ProductCard";
+import {
+  ProductComparison,
+  type ProductComparisonChoice,
+} from "@/components/ProductComparison";
+import { CommercialTopicNav } from "@/components/CommercialTopicNav";
 import { getFeatureProducts } from "@/lib/db";
 import { FEATURES, getFeature, getRelatedFeatures } from "@/lib/features";
+import { COMMERCIAL_TOPICS } from "@/lib/commercial-topics";
 import { siteOrigin } from "@/lib/site-url";
 import { displayProductTitle } from "@/lib/product-title";
 import type { Product } from "@/lib/types";
@@ -15,6 +21,12 @@ type ProductHighlight = {
   label: string;
   product: Product;
 };
+
+const REVENUE_FOCUS_FEATURES = new Set([
+  "japanese-kitchen-knives",
+  "imabari-towel-gifts",
+  "gifts-under-5000-yen",
+]);
 
 function includesAny(title: string, terms: string[]): boolean {
   return terms.some((term) => title.includes(term));
@@ -253,6 +265,63 @@ function highlightDescription(slug: string): string {
   return "販売先レビュー件数、価格帯、AI日本度の異なる基準から候補を確認できます。";
 }
 
+function comparisonCopy(slug: string, label: string): Pick<ProductComparisonChoice, "audience" | "reason"> {
+  if (slug === "gifts-under-5000-yen") {
+    if (label.includes("1,500円以下")) {
+      return {
+        audience: "気軽なお礼や手土産を低めの予算から探したい方",
+        reason: "取得価格が1,500円以下の候補から、販売先レビュー件数とAI日本度を順に確認して選定しています。",
+      };
+    }
+    if (label.includes("1,501〜3,000円")) {
+      return {
+        audience: "内祝いや季節のご挨拶を3,000円以内で探したい方",
+        reason: "取得価格が1,501〜3,000円の候補から、販売先レビュー件数とAI日本度を順に確認して選定しています。",
+      };
+    }
+    return {
+      audience: "内容量や見栄えも含めて5,000円以内で比べたい方",
+      reason: "取得価格が3,001〜5,000円の候補から、販売先レビュー件数とAI日本度を順に確認して選定しています。",
+    };
+  }
+
+  if (slug === "imabari-towel-gifts") {
+    if (label.includes("内祝い・お礼")) {
+      return {
+        audience: "ご挨拶や小さなお礼に使うタオルを探したい方",
+        reason: "商品名で内祝い・お礼などの用途を確認でき、取得価格が1,000円以下の候補から選定しています。",
+      };
+    }
+    if (label.includes("組み合わせ")) {
+      return {
+        audience: "バスタオルとフェイスタオルを組み合わせて贈りたい方",
+        reason: "商品名でバスタオルとフェイスタオルの両方を確認できる候補から、販売先レビュー件数を優先しています。",
+      };
+    }
+    return {
+      audience: "包装より枚数や普段使いを重視してセットを選びたい方",
+      reason: "通常購入できる5,000円以下のセット候補から、販売先レビュー件数とAI日本度を順に確認して選定しています。",
+    };
+  }
+
+  if (label.includes("レビュー件数")) {
+    return {
+      audience: "販売先レビューの蓄積を比較の入口にしたい方",
+      reason: "ページ内候補を販売先レビュー件数、評価、AI日本度の順で確認して選定しています。",
+    };
+  }
+  if (label.includes("5,000円以下")) {
+    return {
+      audience: "初めての家庭用包丁を5,000円以内から探したい方",
+      reason: "取得価格が5,000円以下の候補から、販売先レビュー件数と評価を順に確認して選定しています。",
+    };
+  }
+  return {
+    audience: "商品情報にある産地・企業の根拠を重視したい方",
+    reason: "AI日本度と販売先レビュー件数を順に確認し、判定根拠を商品詳細で確認できる候補を選定しています。",
+  };
+}
+
 export function generateStaticParams() {
   return FEATURES.map((feature) => ({ slug: feature.slug }));
 }
@@ -288,6 +357,12 @@ export default async function FeaturePage({ params }: Props) {
   });
   const relatedFeatures = getRelatedFeatures(feature);
   const highlights = getProductHighlights(feature.slug, products);
+  const isRevenueFocus = REVENUE_FOCUS_FEATURES.has(feature.slug);
+  const comparisonChoices = highlights.map(({ label, product }) => ({
+    label,
+    product,
+    ...comparisonCopy(feature.slug, label),
+  }));
   const highlightedIds = new Set(highlights.map(({ product }) => product.id));
   const remainingProducts = products.filter((product) => !highlightedIds.has(product.id));
   const displayProducts = [
@@ -379,21 +454,25 @@ export default async function FeaturePage({ params }: Props) {
                 {highlightDescription(feature.slug)}
               </p>
             </div>
-            <div className="mt-8 grid gap-5 sm:grid-cols-3">
-              {highlights.map(({ label, product }, index) => (
-                <div key={product.id} className="flex flex-col">
-                  <p className="mb-2 border-l-2 border-hinomaru pl-3 text-sm font-medium">
-                    {label}
-                  </p>
-                  <ProductCard
-                    product={product}
-                    index={index}
-                    surface="feature"
-                    surfaceKey={slug}
-                  />
-                </div>
-              ))}
-            </div>
+            {isRevenueFocus ? (
+              <ProductComparison choices={comparisonChoices} surface="feature" surfaceKey={slug} />
+            ) : (
+              <div className="mt-8 grid gap-5 sm:grid-cols-3">
+                {highlights.map(({ label, product }, index) => (
+                  <div key={product.id} className="flex flex-col">
+                    <p className="mb-2 border-l-2 border-hinomaru pl-3 text-sm font-medium">
+                      {label}
+                    </p>
+                    <ProductCard
+                      product={product}
+                      index={index}
+                      surface="feature"
+                      surfaceKey={slug}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
         <div className="flex items-end justify-between gap-4 border-b border-line pb-4">
@@ -418,6 +497,14 @@ export default async function FeaturePage({ params }: Props) {
           <p className="py-16 text-center text-sumi-soft">条件に合う公開商品を準備中です。</p>
         )}
       </section>
+
+      {isRevenueFocus && (
+        <CommercialTopicNav
+          topics={COMMERCIAL_TOPICS.filter((topic) => topic.href !== `/feature/${feature.slug}`)}
+          heading="次の購入目的も続けて比較"
+          description="商品を広く探し直さず、予算や用途が近い別テーマへ移動できます。"
+        />
+      )}
 
       <nav className="border-y border-line bg-washi-deep/40" aria-label="他の特集">
         <div className="mx-auto grid max-w-6xl md:grid-cols-2 lg:grid-cols-4">

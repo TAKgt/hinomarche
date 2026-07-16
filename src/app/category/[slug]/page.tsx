@@ -9,6 +9,7 @@ import { getCategoryContent } from "@/lib/category-content";
 import { displayProductTitle } from "@/lib/product-title";
 import { siteOrigin } from "@/lib/site-url";
 import { getFeaturesForCategory } from "@/lib/features";
+import { getCommercialTopicsForCategory } from "@/lib/commercial-topics";
 import { ProductFilters } from "@/components/ProductFilters";
 import {
   parsePriceFilter,
@@ -105,6 +106,11 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   });
   const content = getCategoryContent(slug, category.name);
   const relatedFeatures = getFeaturesForCategory(slug);
+  const commercialTopics = getCommercialTopicsForCategory(slug);
+  const commercialFeatureHrefs = new Set(commercialTopics.map((topic) => topic.href));
+  const remainingRelatedFeatures = relatedFeatures.filter(
+    (feature) => !commercialFeatureHrefs.has(`/feature/${feature.slug}`),
+  );
   const origin = siteOrigin();
   const pageUrl = `${origin}/category/${slug}`;
   const structuredData = [
@@ -161,11 +167,36 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         </div>
       </div>
 
-      {relatedFeatures.length > 0 && (
+      {commercialTopics.length > 0 && (
+        <nav className="mt-8 border-y border-line py-6" aria-label={`${category.name}の購入目的別比較`}>
+          <p className="text-xs font-medium tracking-[0.25em] text-hinomaru">START WITH A PURPOSE</p>
+          <h2 className="mt-2 font-mincho text-xl font-semibold">購入目的から候補を絞る</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {commercialTopics.map((topic) => (
+              <div key={topic.slug} className="border border-line bg-white/50 p-4">
+                <p className="font-mincho text-lg font-semibold">{topic.title}</p>
+                <p className="mt-2 text-xs leading-relaxed text-sumi-soft">{topic.description}</p>
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                  <Link href={topic.href} className="font-medium text-hinomaru hover:underline">
+                    {topic.linkLabel} →
+                  </Link>
+                  {topic.secondaryHref && topic.secondaryLabel && (
+                    <Link href={topic.secondaryHref} className="text-sumi-soft hover:text-hinomaru">
+                      {topic.secondaryLabel} →
+                    </Link>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </nav>
+      )}
+
+      {remainingRelatedFeatures.length > 0 && (
         <nav className="mt-8" aria-label={`${category.name}の関連特集`}>
           <p className="text-xs font-medium tracking-[0.25em] text-hinomaru">RELATED FEATURES</p>
           <div className="mt-3 grid border-l border-t border-line sm:grid-cols-2">
-            {relatedFeatures.map((feature) => (
+            {remainingRelatedFeatures.map((feature) => (
               <Link
                 key={feature.slug}
                 href={`/feature/${feature.slug}`}

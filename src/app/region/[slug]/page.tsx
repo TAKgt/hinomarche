@@ -3,8 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { ProductCard } from "@/components/ProductCard";
+import {
+  ProductComparison,
+  type ProductComparisonChoice,
+} from "@/components/ProductComparison";
+import { CommercialTopicNav } from "@/components/CommercialTopicNav";
 import { getRegionProducts } from "@/lib/db";
 import { getRegion, REGIONS } from "@/lib/regions";
+import { COMMERCIAL_TOPICS } from "@/lib/commercial-topics";
 import { siteOrigin } from "@/lib/site-url";
 import { displayProductTitle } from "@/lib/product-title";
 import type { Product } from "@/lib/types";
@@ -15,6 +21,8 @@ type ProductHighlight = {
   label: string;
   product: Product;
 };
+
+const REVENUE_FOCUS_REGIONS = new Set(["tsubame-sanjo", "imabari"]);
 
 function includesAny(title: string, terms: string[]): boolean {
   return terms.some((term) => title.includes(term));
@@ -106,6 +114,44 @@ function getProductHighlights(slug: string, products: Product[]): ProductHighlig
   return [];
 }
 
+function comparisonCopy(slug: string, label: string): Pick<ProductComparisonChoice, "audience" | "reason"> {
+  if (slug === "tsubame-sanjo") {
+    if (label.includes("水切りラック")) {
+      return {
+        audience: "シンク周りの寸法と収納量から水切りラックを比べたい方",
+        reason: "商品名で水切り・ラックの用途を確認できる候補から、販売先レビュー件数とAI日本度を順に確認して選定しています。",
+      };
+    }
+    if (label.includes("包丁")) {
+      return {
+        audience: "燕三条表記のある家庭用包丁を5,000円以内から探したい方",
+        reason: "商品名で包丁・ナイフを確認でき、取得価格が5,000円以下の候補から販売先レビュー件数を優先しています。",
+      };
+    }
+    return {
+      audience: "燕三条の調理小物を1,000円以内から試したい方",
+      reason: "水切り・包丁以外の調理小物で、取得価格が1,000円以下の候補から販売先レビュー件数を優先しています。",
+    };
+  }
+
+  if (label.includes("普段使い")) {
+    return {
+      audience: "今治表記のあるタオルを普段使いの枚数・価格から比べたい方",
+      reason: "ふるさと納税を除く通常購入候補から、販売先レビュー件数とAI日本度を順に確認して選定しています。",
+    };
+  }
+  if (label.includes("ギフト")) {
+    return {
+      audience: "内祝いやお祝い向けのセット・包装条件を比べたい方",
+      reason: "商品名でギフト・内祝い・木箱などの用途を確認できる候補から、販売先レビュー件数を優先しています。",
+    };
+  }
+  return {
+    audience: "今治の返礼品を寄付条件とセット内容から比べたい方",
+    reason: "商品名でふるさと納税を確認できる候補から、販売先レビュー件数とAI日本度を順に確認して選定しています。",
+  };
+}
+
 export function generateStaticParams() {
   return REGIONS.map((region) => ({ slug: region.slug }));
 }
@@ -137,6 +183,12 @@ export default async function RegionPage({ params }: Props) {
     minScore: region.minScore,
   });
   const highlights = getProductHighlights(region.slug, products);
+  const isRevenueFocus = REVENUE_FOCUS_REGIONS.has(region.slug);
+  const comparisonChoices = highlights.map(({ label, product }) => ({
+    label,
+    product,
+    ...comparisonCopy(region.slug, label),
+  }));
   const highlightedIds = new Set(highlights.map(({ product }) => product.id));
   const remainingProducts = products.filter((product) => !highlightedIds.has(product.id));
   const displayProducts = [
@@ -236,21 +288,25 @@ export default async function RegionPage({ params }: Props) {
                 ページ内の商品を用途や価格帯、販売先レビュー件数から比較できます。
               </p>
             </div>
-            <div className="mt-8 grid gap-5 sm:grid-cols-3">
-              {highlights.map(({ label, product }, index) => (
-                <div key={product.id} className="flex flex-col">
-                  <p className="mb-2 border-l-2 border-hinomaru pl-3 text-sm font-medium">
-                    {label}
-                  </p>
-                  <ProductCard
-                    product={product}
-                    index={index}
-                    surface="region"
-                    surfaceKey={slug}
-                  />
-                </div>
-              ))}
-            </div>
+            {isRevenueFocus ? (
+              <ProductComparison choices={comparisonChoices} surface="region" surfaceKey={slug} />
+            ) : (
+              <div className="mt-8 grid gap-5 sm:grid-cols-3">
+                {highlights.map(({ label, product }, index) => (
+                  <div key={product.id} className="flex flex-col">
+                    <p className="mb-2 border-l-2 border-hinomaru pl-3 text-sm font-medium">
+                      {label}
+                    </p>
+                    <ProductCard
+                      product={product}
+                      index={index}
+                      surface="region"
+                      surfaceKey={slug}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
         <div className="flex items-end justify-between gap-4 border-b border-line pb-4">
@@ -275,6 +331,16 @@ export default async function RegionPage({ params }: Props) {
           <p className="py-16 text-center text-sumi-soft">条件に合う公開商品を準備中です。</p>
         )}
       </section>
+
+      {isRevenueFocus && (
+        <CommercialTopicNav
+          topics={COMMERCIAL_TOPICS.filter(
+            (topic) => topic.secondaryHref !== `/region/${region.slug}`,
+          )}
+          heading="用途の近い比較ページへ"
+          description="地域名だけで広く探さず、包丁・タオルギフト・予算別ギフトへ候補を絞れます。"
+        />
+      )}
 
       <nav className="border-y border-line bg-washi-deep/40" aria-label="他の産地・工芸">
         <div className="mx-auto grid max-w-6xl grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
