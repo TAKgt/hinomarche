@@ -13,6 +13,38 @@ export type ProductComparisonChoice = {
   product: Product;
 };
 
+function comparisonOutboundLabel(
+  sourceLabel: string,
+  surfaceKey: string,
+  choiceLabel: string,
+): string {
+  if (surfaceKey === "gifts-under-5000-yen" || surfaceKey === "imabari-towel-gifts") {
+    return `${sourceLabel}で送料・包装条件を見る`;
+  }
+  if (surfaceKey === "japanese-kitchen-knives") {
+    return `${sourceLabel}で刃渡り・仕様を見る`;
+  }
+  if (surfaceKey === "tsubame-sanjo") {
+    if (choiceLabel.includes("水切りラック")) {
+      return `${sourceLabel}で設置寸法・在庫を見る`;
+    }
+    if (choiceLabel.includes("包丁")) {
+      return `${sourceLabel}で刃渡り・仕様を見る`;
+    }
+    return `${sourceLabel}でサイズ・仕様を見る`;
+  }
+  if (surfaceKey === "imabari") {
+    if (choiceLabel.includes("ふるさと納税")) {
+      return `${sourceLabel}で寄付条件・発送時期を見る`;
+    }
+    if (choiceLabel.includes("ギフト")) {
+      return `${sourceLabel}で送料・包装条件を見る`;
+    }
+    return `${sourceLabel}でサイズ・在庫を見る`;
+  }
+  return `${sourceLabel}で価格・在庫を見る`;
+}
+
 export function ProductComparison({
   choices,
   surface,
@@ -31,6 +63,7 @@ export function ProductComparison({
         const detailUrl = `/product/${product.id}?${query}`;
         const outboundUrl = `/go/${product.id}?target=primary&${query}`;
         const sourceLabel = SOURCE_LABEL[product.source];
+        const outboundLabel = comparisonOutboundLabel(sourceLabel, surfaceKey, label);
         const hasReview =
           product.reviewAverage != null &&
           product.reviewAverage > 0 &&
@@ -107,9 +140,10 @@ export function ProductComparison({
               href={outboundUrl}
               target="_blank"
               rel="nofollow sponsored noopener"
+              aria-label={`${title}を${outboundLabel}`}
               className="mt-3 block bg-hinomaru px-3 py-3.5 text-center text-sm font-medium text-white transition-colors hover:bg-hinomaru-deep"
             >
-              {sourceLabel}で価格・在庫を見る
+              {outboundLabel}
             </a>
           </article>
         );
