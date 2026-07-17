@@ -36,7 +36,7 @@
     (例: `params`/`searchParams` は Promise になっており `await` が必要)
 - **Supabase**(Postgres): 商品・判定データ。service_roleキーでサーバー側からのみアクセス
 - **Claude API**: AI判定。モデルは `claude-haiku-4-5`、構造化出力(JSONスキーマ保証)使用
-- デプロイ先(予定): Vercel。`vercel.json` に日次Cron設定済み
+- デプロイ先: Vercel。`vercel.json` に日次Cron設定済み
 
 ## 4. ソースコード全体図
 
@@ -171,7 +171,7 @@ supabase/
 カテゴリ充足度による自動優先を実装し、全23カテゴリを最低12件まで重点補充済み。
 購入目的・商品別の特集は15件。`/feature` の一覧、TOP導線、sitemap、構造化データに反映済み。
 
-### Search Console確認待ち(2026-07-17)
+### Search Console基準値と優先申請(2026-07-17)
 
 - `sc-domain:hinomarche.com` は引き続き利用できないが、同じ保存済みアカウントから
   URLプレフィックス `https://www.hinomarche.com/` を閲覧できることを確認した。権限変更はしていない。
@@ -185,6 +185,12 @@ supabase/
   `sc-domain` が必要な場合だけ、所有者ログインまたは閲覧権限付与をユーザーへ依頼する。
 - 2026-07-17にURLプレフィックスを再確認したが、3か月は5クリック・11表示のまま。
   最終更新は4.5時間前で、実行基準未達のためタイトル・説明・コンテンツは変更していない。
+- 売上獲得ページの公開後に再確認した最新値は、7クリック・15表示・CTR 46.7%・平均掲載順位23.3
+  （最終更新3時間前）。「ldk 包丁」は0クリック・1表示のままで、SEO文言を再調整する母数には未達。
+- URL検査から重点5URLを上限10件以内で再クロール申請し、全5件で「優先クロール キューに追加」を確認。
+  `/feature/japanese-kitchen-knives` と `/feature/gifts-under-5000-yen` は申請前から登録済み、
+  `/region/tsubame-sanjo`、`/feature/imabari-towel-gifts`、`/region/imabari` は
+  「検出 - インデックス未登録」だった。申請はクロールを促すもので、登録完了を保証しない。
 
 ### 匿名計測の判断待ち(2026-07-16)
 
@@ -309,8 +315,17 @@ supabase/
 - ローカルの実データ表示で、5つの重点ページそれぞれに比較候補3件・販売先CTA3件を確認。
   390px幅のフレーム内でTOPと5重点ページの`clientWidth=scrollWidth=388`、横はみ出し0。
   lint・`tsc --noEmit`・Next.js本番buildは成功。
-- ページ改善の次は、公開後に上記5URLをSearch Consoleへ優先申請し、サイト全体の
-  200表示/50詳細/10真正移動までデータをためる。基準未満で商品順を変えず、広告出稿や追加有料再判定も行わない。
+- 実装コミット`839126f`とVercel再実行コミット`81b9ecf`を`main`へpush。Git連携で新しい
+  デプロイが始まらなかったため、ユーザー承認の一時CLI認証で既存プロジェクト
+  `takgts-projects/hinomarche`へProductionデプロイした。deployment IDは
+  `dpl_7f6RZpUMAb5mKJpmPfiR7yy2Ai6M`、READY、`https://www.hinomarche.com`へalias済み。
+- デプロイ直後にVercel CLIをlogoutし、`vercel link`が`.env.local`へ追加した
+  `VERCEL_OIDC_TOKEN`も削除した。アカウント設定・支払い設定は変更していない。
+- 公開環境を390x844で再確認。TOPと重点5ページは全て`clientWidth=scrollWidth=390`で横はみ出し0。
+  重点5ページは各3比較カード・3販売先CTA・AI推定表記・重点導線を表示し、TOPを含む6ページで
+  Amazon必須文言を維持した。
+- 上記5URLのSearch Console優先申請も完了。次はサイト全体の200表示/50詳細/10真正移動まで
+  データをためる。基準未満で商品順を変えず、広告出稿や追加有料再判定も行わない。
 
 ## 6. 外部API仕様(2026年の重要変更を含む)
 
