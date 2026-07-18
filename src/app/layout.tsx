@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Script from "next/script";
 import { CategoryMenu } from "@/components/CategoryMenu";
 import { ProductSearchForm } from "@/components/ProductSearchForm";
 import { getCategories } from "@/lib/db";
 import { siteUrl } from "@/lib/site-url";
 import "./globals.css";
+
+const GA_MEASUREMENT_ID = "G-J2EB04DHPM";
 
 export const metadata: Metadata = {
   metadataBase: siteUrl(),
@@ -94,6 +97,18 @@ export default async function RootLayout({
             </nav>
           </div>
         </footer>
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_MEASUREMENT_ID}');
+          `}
+        </Script>
       </body>
     </html>
   );
