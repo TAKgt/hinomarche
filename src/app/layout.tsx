@@ -27,11 +27,17 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const categories = await getCategories();
+  const categories = await getCategories().catch(() => []);
 
   return (
     <html lang="ja" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
+        <a
+          href="#main-content"
+          className="fixed left-4 top-3 z-50 -translate-y-24 bg-sumi px-4 py-3 text-sm font-medium text-washi transition-transform focus:translate-y-0 focus:outline-2 focus:outline-offset-2 focus:outline-hinomaru"
+        >
+          本文へ移動
+        </a>
         <header className="border-b border-line bg-washi/90 backdrop-blur sticky top-0 z-20">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3 lg:flex-nowrap lg:gap-5 lg:py-4">
             <Link href="/" className="flex items-center gap-3 group shrink-0">
@@ -64,7 +70,9 @@ export default async function RootLayout({
           </div>
         </header>
 
-        <main className="flex-1">{children}</main>
+        <main id="main-content" tabIndex={-1} className="flex-1">
+          {children}
+        </main>
 
         <footer className="mt-20 border-t border-line bg-sumi text-washi">
           <div className="mx-auto max-w-6xl px-5 py-10 space-y-5">

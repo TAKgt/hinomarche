@@ -29,10 +29,70 @@ export interface IngestSummary {
   updated: number;
   judged: number;
   published: number;
+  blocked: number;
   errors: string[];
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+export interface ProductFetchDependencies {
+  searchRakuten: typeof searchRakuten;
+  searchAmazon: typeof searchAmazon;
+  sleep: (ms: number) => Promise<void>;
+}
+
+export interface ProductFetchResult {
+  products: RawProduct[];
+  amazonEnabled: boolean;
+  errors: string[];
+}
+
+/**
+ * 片方の取得元が失敗しても、成功した取得元の商品とエラーを返して収集全体を継続する。
+ */
+export async function fetchProductsForKeyword(
+  keyword: string,
+  categorySlug: string,
+  amazonEnabled: boolean,
+  dependencies: ProductFetchDependencies = {
+    searchRakuten,
+    searchAmazon,
+    sleep,
+  },
+): Promise<ProductFetchResult> {
+  const batches: RawProduct[][] = [];
+  const errors: string[] = [];
+
+  try {
+    batches.push(await dependencies.searchRakuten(keyword, categorySlug));
+  } catch (error) {
+    errors.push(`楽天検索失敗 [${keyword}]: ${String(error)}`);
+  }
+  await dependencies.sleep(1100);
+
+  let nextAmazonEnabled = amazonEnabled;
+  if (nextAmazonEnabled) {
+    try {
+      batches.push(await dependencies.searchAmazon(keyword, categorySlug));
+    } catch (error) {
+      errors.push(`Amazon検索失敗 [${keyword}]: ${String(error)}`);
+      if (String(error).includes("AssociateNotEligible")) {
+        nextAmazonEnabled = false;
+        errors.push(
+          "Amazon: アソシエイトの利用資格未達のため今回はスキップ(資格条件達成後に自動再開)",
+        );
+      }
+    }
+    await dependencies.sleep(1100);
+  }
+
+  return {
+    products: batches.flat(),
+    amazonEnabled: nextAmazonEnabled,
+    errors,
+  };
+}
 
 export async function runIngest(): Promise<IngestSummary> {
   if (isDemoMode()) {
@@ -51,6 +111,7 @@ export async function runIngest(): Promise<IngestSummary> {
     updated: 0,
     judged: 0,
     published: 0,
+    blocked: 0,
     errors: [],
   };
 
@@ -146,32 +207,15 @@ export async function runIngest(): Promise<IngestSummary> {
       keywordLimit,
       category.slug,
     )) {
-      const batches: RawProduct[][] = [];
+      const fetched = await fetchProductsForKeyword(
+        keyword,
+        category.slug,
+        amazonEnabled,
+      );
+      amazonEnabled = fetched.amazonEnabled;
+      summary.errors.push(...fetched.errors);
 
-      try {
-        batches.push(await searchRakuten(keyword, category.slug));
-      } catch (e) {
-        summary.errors.push(`楽天検索失敗 [${keyword}]: ${String(e)}`);
-      }
-      await sleep(1100); // 楽天API・PA-APIとも約1リクエスト/秒に抑える
-
-      if (amazonEnabled) {
-        try {
-          batches.push(await searchAmazon(keyword, category.slug));
-        } catch (e) {
-          summary.errors.push(`Amazon検索失敗 [${keyword}]: ${String(e)}`);
-          // アカウントの利用資格なし(売上要件未達)の間は、この回の残りをスキップ
-          if (String(e).includes("AssociateNotEligible")) {
-            amazonEnabled = false;
-            summary.errors.push(
-              "Amazon: アソシエイトの利用資格未達のため今回はスキップ(資格条件達成後に自動再開)"
-            );
-          }
-        }
-        await sleep(1100);
-      }
-
-      for (const raw of batches.flat()) {
+      for (const raw of fetched.products) {
         summary.fetched++;
         try {
           const newId = await upsertProduct(raw);
@@ -193,9 +237,16 @@ export async function runIngest(): Promise<IngestSummary> {
   for (const { id, raw } of toJudge) {
     try {
       const judgment = await judgeProduct(raw);
-      await saveJudgment(id, judgment);
+      const saved = await saveJudgment(id, judgment);
       summary.judged++;
-      summary.published++;
+      if (saved.published) {
+        summary.published++;
+      } else {
+        summary.blocked++;
+        summary.errors.push(
+          `自動公開保留 [${raw.title.slice(0, 30)}]: ${saved.consistencyIssues.join(",")}`,
+        );
+      }
     } catch (e) {
       summary.errors.push(`判定失敗 [${raw.title.slice(0, 30)}]: ${String(e)}`);
     }

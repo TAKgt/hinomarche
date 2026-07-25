@@ -3,20 +3,22 @@ import type { Metadata } from "next";
 import { getCategories, getPopularReviewedProducts, getTopProducts } from "@/lib/db";
 import { ProductCard } from "@/components/ProductCard";
 import { CommercialTopicNav } from "@/components/CommercialTopicNav";
+import { JsonLd } from "@/components/JsonLd";
 import { FEATURES } from "@/lib/features";
 import { REGIONS } from "@/lib/regions";
 import { selectCategoryDiverseProducts } from "@/lib/product-selection";
 import { COMMERCIAL_TOPICS } from "@/lib/commercial-topics";
+import { siteOrigin } from "@/lib/site-url";
 
 export const revalidate = 3600;
 
 const HOME_FEATURE_SLUGS = [
-  "japanese-kitchen-knives",
-  "imabari-towel-gifts",
+  "japanese-gift-ideas",
   "gifts-under-5000-yen",
+  "imabari-towel-gifts",
+  "japanese-kitchen-knives",
   "japanese-green-tea",
   "regional-japanese-rice",
-  "iron-frying-pans",
 ];
 
 const HOME_FEATURES = HOME_FEATURE_SLUGS.flatMap((slug) => {
@@ -47,21 +49,45 @@ export default async function Home() {
   });
   const featuredIds = new Set(products.map((product) => product.id));
   const popularProducts = selectCategoryDiverseProducts(popularCandidates, {
-    limit: 8,
+    limit: 4,
     maxPerCategory: 2,
     excludeIds: featuredIds,
   });
+  const origin = siteOrigin();
+  const websiteStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "ヒノマルシェ",
+    url: `${origin}/`,
+  };
 
   return (
     <div>
+      <JsonLd data={websiteStructuredData} />
       <section className="relative overflow-hidden border-b border-line">
+        <picture className="absolute inset-0 block opacity-40">
+          <source
+            type="image/avif"
+            srcSet="/images/home-gift-hero-640.avif 640w, /images/home-gift-hero-1280.avif 1280w, /images/home-gift-hero-1672.avif 1672w"
+            sizes="100vw"
+          />
+          <source
+            type="image/webp"
+            srcSet="/images/home-gift-hero-640.webp 640w, /images/home-gift-hero-1280.webp 1280w, /images/home-gift-hero-1672.webp 1672w"
+            sizes="100vw"
+          />
+          <img
+            src="/images/home-gift-hero-1280.webp"
+            alt=""
+            width={1672}
+            height={941}
+            fetchPriority="high"
+            className="size-full object-cover object-[70%_center] md:object-center"
+          />
+        </picture>
         <div
-          aria-hidden
-          className="absolute -right-24 -top-40 size-[420px] rounded-full bg-hinomaru/[0.07]"
-        />
-        <div
-          aria-hidden
-          className="absolute -right-10 -top-24 size-[280px] rounded-full bg-hinomaru/[0.09]"
+          aria-hidden="true"
+          className="absolute inset-0 bg-gradient-to-r from-white via-white/90 to-white/25"
         />
         <div className="relative mx-auto max-w-6xl px-5 py-12 md:py-24">
           <h1 className="rise rise-1 font-mincho text-4xl font-semibold leading-tight tracking-wide md:text-6xl">
@@ -75,10 +101,7 @@ export default async function Home() {
             <strong className="font-medium text-sumi">その根拠まで</strong>
             表示します。
           </p>
-          <nav
-            className="rise rise-4 mt-7 flex flex-wrap gap-3"
-            aria-label="商品を探す"
-          >
+          <nav className="rise rise-4 mt-7 flex flex-wrap gap-3" aria-label="商品を探す">
             <Link
               href="/popular"
               className="bg-hinomaru px-5 py-3 text-sm font-medium text-white shadow-[0_4px_14px_rgba(188,0,45,0.2)] transition-colors hover:bg-hinomaru-deep"
@@ -95,47 +118,15 @@ export default async function Home() {
         </div>
       </section>
 
-      <CommercialTopicNav
-        topics={COMMERCIAL_TOPICS}
-        heading="まずは3つの購入目的から比較"
-        description="候補を広く眺める前に、用途・予算・販売先レビュー・AI日本度の根拠を一画面で比べられるテーマです。"
-      />
-
-      {/* 高スコア商品 */}
-      <section id="featured" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-16">
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <p className="text-xs tracking-[0.35em] text-hinomaru font-medium">
-              FEATURED
-            </p>
-            <h2 className="mt-2 font-mincho text-2xl md:text-3xl font-semibold">
-              日本度が高い注目商品
-            </h2>
-          </div>
-          <Link
-            href="/recommended"
-            className="text-sm text-sumi-soft hover:text-hinomaru transition-colors"
-          >
-            注目商品をすべて見る →
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
-          {products.map((p, i) => (
-            <ProductCard key={p.id} product={p} index={i} surface="home" />
-          ))}
-        </div>
-      </section>
-
       {popularProducts.length > 0 && (
-        <section id="popular" className="scroll-mt-28 border-y border-line bg-white/30">
-          <div className="mx-auto max-w-6xl px-5 py-14 md:py-16">
+        <section id="popular" className="scroll-mt-28 border-b border-line bg-white/35">
+          <div className="mx-auto max-w-6xl px-5 py-10 md:py-14">
             <p className="text-xs font-medium tracking-[0.35em] text-hinomaru">
-              HIGHLY REVIEWED
+              POPULAR PICKS
             </p>
             <div className="mt-2 sm:flex sm:items-end sm:justify-between sm:gap-4">
               <h2 className="font-mincho text-2xl font-semibold md:text-3xl">
-                レビューで高評価の商品
+                販売先で高評価の商品
               </h2>
               <div className="mt-3 flex flex-wrap items-end justify-between gap-x-5 gap-y-2 sm:mt-0 sm:block sm:text-right">
                 <p className="text-xs leading-relaxed text-sumi-soft">
@@ -146,19 +137,76 @@ export default async function Home() {
                 </Link>
               </div>
             </div>
-            <div className="mt-7 grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
+            <div
+              className="-mx-5 mt-7 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-3 md:mx-0 md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:px-0 lg:grid-cols-4"
+              role="list"
+              aria-label="販売先で高評価の商品"
+            >
               {popularProducts.map((product, index) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  index={products.length + index}
-                  surface="home"
-                />
+                <div key={product.id} className="w-[72vw] shrink-0 snap-start md:w-auto" role="listitem">
+                  <ProductCard product={product} index={index} surface="home" />
+                </div>
               ))}
             </div>
           </div>
         </section>
       )}
+
+      <CommercialTopicNav
+        topics={COMMERCIAL_TOPICS}
+        heading="目的・予算から探す"
+        description="探しているものに近いテーマから、候補商品と選び方を確認できます。"
+        showSecondary={false}
+      />
+
+      <section id="featured" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-12 md:py-16">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium tracking-[0.35em] text-hinomaru">RECOMMENDED</p>
+            <h2 className="mt-2 font-mincho text-2xl font-semibold md:text-3xl">
+              日本度から選ぶ注目商品
+            </h2>
+          </div>
+          <Link href="/recommended" className="text-sm text-sumi-soft transition-colors hover:text-hinomaru">
+            すべて見る →
+          </Link>
+        </div>
+        <div
+          className="-mx-5 mt-7 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-3 md:mx-0 md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:px-0 lg:grid-cols-4"
+          role="list"
+          aria-label="日本度から選ぶ注目商品"
+        >
+          {products.map((product, index) => (
+            <div key={product.id} className="w-[72vw] shrink-0 snap-start md:w-auto" role="listitem">
+              <ProductCard
+                product={product}
+                index={popularProducts.length + index}
+                surface="home"
+              />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section id="categories" className="scroll-mt-24 border-y border-line bg-washi-deep/50">
+        <div className="mx-auto max-w-6xl px-5 py-12 md:py-14">
+          <p className="text-xs font-medium tracking-[0.35em] text-hinomaru">CATEGORIES</p>
+          <h2 className="mt-2 font-mincho text-2xl font-semibold md:text-3xl">ジャンルから探す</h2>
+          <ul className="mt-6 grid grid-cols-2 gap-x-5 gap-y-1 md:grid-cols-3 lg:grid-cols-4">
+            {categories.map((category) => (
+              <li key={category.slug}>
+                <Link
+                  href={`/category/${category.slug}`}
+                  className="group flex min-h-12 items-center justify-between gap-3 border-b border-line/80 py-2 text-sm sm:text-base"
+                >
+                  <span className="transition-colors group-hover:text-hinomaru">{category.name}</span>
+                  <span aria-hidden className="text-hinomaru">→</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
 
       <section className="border-b border-line">
         <div className="mx-auto max-w-6xl px-5 py-14 md:py-16">
@@ -225,36 +273,6 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* カテゴリ */}
-      <section id="categories" className="scroll-mt-24 border-t border-line bg-washi-deep/50">
-        <div className="mx-auto max-w-6xl px-5 py-16">
-          <h2 className="font-mincho text-2xl font-semibold">カテゴリ</h2>
-          <ul className="mt-6 grid grid-cols-2 gap-x-5 gap-y-1 md:grid-cols-3">
-            {categories.map((c) => (
-              <li key={c.slug}>
-                <Link
-                  href={`/category/${c.slug}`}
-                  className="group flex min-h-12 items-center gap-3 border-b border-line/70 py-2 text-sm sm:text-base"
-                >
-                  <span
-                    aria-hidden
-                    className="size-2 rounded-full bg-hinomaru transition-transform group-hover:scale-150"
-                  />
-                  <span className="group-hover:text-hinomaru transition-colors">
-                    {c.name}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-4 text-sm text-sumi-soft">
-            各ジャンルでも、人気とAI日本度をもとに注目商品を上位表示しています。
-            <Link href="/about" className="ml-3 text-hinomaru hover:underline">
-              AI日本度判定のしくみ →
-            </Link>
-          </p>
-        </div>
-      </section>
     </div>
   );
 }

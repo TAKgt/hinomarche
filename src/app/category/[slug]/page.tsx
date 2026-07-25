@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getCategories, getPublishedProducts, type SortKey } from "@/lib/db";
+import { getCategories, getPublishedProductPage, type SortKey } from "@/lib/db";
 import type { Tier } from "@/lib/types";
 import { ProductCard } from "@/components/ProductCard";
 import { JsonLd } from "@/components/JsonLd";
@@ -14,9 +14,13 @@ import { ProductFilters } from "@/components/ProductFilters";
 import {
   parsePriceFilter,
   parseReviewFilter,
-  type PriceFilterKey,
-  type ReviewFilterKey,
 } from "@/lib/product-filters";
+import {
+  buildCategoryQuery,
+  categoryListingSeo,
+  firstQueryValue,
+  parseCategoryPage,
+} from "@/lib/category-pagination";
 
 const SORTS: { key: SortKey; label: string }[] = [
   { key: "featured", label: "注目順" },
@@ -39,38 +43,18 @@ type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-function firstValue(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-function buildQuery(
-  sort: SortKey,
-  tier: Tier | undefined,
-  priceFilter?: PriceFilterKey,
-  reviewFilter?: ReviewFilterKey,
-): string {
-  const params = new URLSearchParams();
-  if (sort !== "featured") params.set("sort", sort);
-  if (tier) params.set("tier", tier);
-  if (priceFilter) params.set("price", priceFilter);
-  if (reviewFilter) params.set("reviews", reviewFilter);
-  const qs = params.toString();
-  return qs ? `?${qs}` : "";
-}
-
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { slug } = await params;
   const query = await searchParams;
   const category = (await getCategories()).find((c) => c.slug === slug);
   if (!category) return {};
   const content = getCategoryContent(slug, category.name);
-  const canonical = `/category/${slug}`;
-  const isListingVariant = Object.values(query).some((value) => value !== undefined);
+  const { canonical, noindex } = categoryListingSeo(slug, query);
   return {
     title: content.title,
     description: content.description,
     alternates: { canonical },
-    robots: isListingVariant ? { index: false, follow: true } : undefined,
+    robots: noindex ? { index: false, follow: true } : undefined,
     openGraph: {
       title: content.title,
       description: content.description,
@@ -83,10 +67,11 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 export default async function CategoryPage({ params, searchParams }: Props) {
   const { slug } = await params;
   const query = await searchParams;
-  const sortParam = firstValue(query.sort);
-  const tierParam = firstValue(query.tier);
-  const priceFilter = parsePriceFilter(firstValue(query.price));
-  const reviewFilter = parseReviewFilter(firstValue(query.reviews));
+  const sortParam = firstQueryValue(query.sort);
+  const tierParam = firstQueryValue(query.tier);
+  const priceFilter = parsePriceFilter(firstQueryValue(query.price));
+  const reviewFilter = parseReviewFilter(firstQueryValue(query.reviews));
+  const requestedPage = parseCategoryPage(query.page);
   const sort: SortKey = SORTS.some((s) => s.key === sortParam)
     ? (sortParam as SortKey)
     : "featured";
@@ -97,13 +82,16 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const category = (await getCategories()).find((c) => c.slug === slug);
   if (!category) notFound();
 
-  const products = await getPublishedProducts({
+  const productPage = await getPublishedProductPage({
     categorySlug: slug,
     sort,
     tier,
     priceFilter,
     reviewFilter,
+    page: requestedPage,
   });
+  if (requestedPage > productPage.totalPages) notFound();
+  const { products, totalCount, currentPage, totalPages, pageSize } = productPage;
   const content = getCategoryContent(slug, category.name);
   const relatedFeatures = getFeaturesForCategory(slug);
   const commercialTopics = getCommercialTopicsForCategory(slug);
@@ -126,10 +114,10 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       "@context": "https://schema.org",
       "@type": "ItemList",
       name: content.title,
-      numberOfItems: products.length,
+      numberOfItems: totalCount,
       itemListElement: products.map((product, index) => ({
         "@type": "ListItem",
-        position: index + 1,
+        position: (currentPage - 1) * pageSize + index + 1,
         url: `${origin}/product/${product.id}`,
         name: displayProductTitle(product.title),
       })),
@@ -218,7 +206,12 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             {SORTS.map((s) => (
               <Link
                 key={s.key}
-                href={`/category/${slug}${buildQuery(s.key, tier, priceFilter, reviewFilter)}`}
+                href={`/category/${slug}${buildCategoryQuery({
+                  sort: s.key,
+                  tier,
+                  priceFilter,
+                  reviewFilter,
+                })}`}
                 className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-sm border transition-colors ${
                   sort === s.key
                     ? "bg-sumi text-washi border-sumi"
@@ -238,7 +231,12 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             {TIERS.map((t) => (
               <Link
                 key={t.key ?? "all"}
-                href={`/category/${slug}${buildQuery(sort, t.key, priceFilter, reviewFilter)}`}
+                href={`/category/${slug}${buildCategoryQuery({
+                  sort,
+                  tier: t.key,
+                  priceFilter,
+                  reviewFilter,
+                })}`}
                 className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-sm border transition-colors ${
                   tier === t.key
                     ? "bg-hinomaru text-white border-hinomaru"
@@ -260,7 +258,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           ...(sort !== "featured" ? { sort } : {}),
           ...(tier ? { tier } : {}),
         }}
-        resetHref={`/category/${slug}${buildQuery(sort, tier)}`}
+        resetHref={`/category/${slug}${buildCategoryQuery({ sort, tier })}`}
       />
 
       {products.length === 0 ? (
@@ -272,7 +270,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           </p>
           {(priceFilter || reviewFilter) && (
             <Link
-              href={`/category/${slug}${buildQuery(sort, tier)}`}
+              href={`/category/${slug}${buildCategoryQuery({ sort, tier })}`}
               className="mt-5 inline-block text-sm text-hinomaru hover:underline"
             >
               条件を解除する →
@@ -285,7 +283,9 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             <h2 id="category-products-heading" className="font-mincho text-xl font-semibold">
               掲載商品
             </h2>
-            <p className="text-sm text-sumi-soft">表示中 {products.length}件</p>
+            <p className="text-right text-sm text-sumi-soft">
+              全{totalCount}件・{currentPage}/{totalPages}ページ
+            </p>
           </div>
           <div className="mt-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
             {products.map((p, i) => (
@@ -298,6 +298,60 @@ export default async function CategoryPage({ params, searchParams }: Props) {
               />
             ))}
           </div>
+          {totalPages > 1 && (
+            <nav
+              className="mt-10 flex items-center justify-between gap-4 border-t border-line pt-6"
+              aria-label={`${category.name}の商品ページ`}
+            >
+              {currentPage > 1 ? (
+                <Link
+                  href={`/category/${slug}${buildCategoryQuery({
+                    sort,
+                    tier,
+                    priceFilter,
+                    reviewFilter,
+                    page: currentPage - 1,
+                  })}`}
+                  rel="prev"
+                  className="inline-flex min-h-11 min-w-24 items-center justify-center border border-line px-4 py-2 text-sm text-sumi transition-colors hover:border-hinomaru hover:text-hinomaru focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hinomaru"
+                >
+                  ← 前へ
+                </Link>
+              ) : (
+                <span
+                  aria-disabled="true"
+                  className="inline-flex min-h-11 min-w-24 items-center justify-center border border-line/60 px-4 py-2 text-sm text-sumi-soft/50"
+                >
+                  ← 前へ
+                </span>
+              )}
+              <span aria-current="page" className="shrink-0 text-sm text-sumi-soft">
+                {currentPage} / {totalPages}
+              </span>
+              {currentPage < totalPages ? (
+                <Link
+                  href={`/category/${slug}${buildCategoryQuery({
+                    sort,
+                    tier,
+                    priceFilter,
+                    reviewFilter,
+                    page: currentPage + 1,
+                  })}`}
+                  rel="next"
+                  className="inline-flex min-h-11 min-w-24 items-center justify-center border border-line px-4 py-2 text-sm text-sumi transition-colors hover:border-hinomaru hover:text-hinomaru focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hinomaru"
+                >
+                  次へ →
+                </Link>
+              ) : (
+                <span
+                  aria-disabled="true"
+                  className="inline-flex min-h-11 min-w-24 items-center justify-center border border-line/60 px-4 py-2 text-sm text-sumi-soft/50"
+                >
+                  次へ →
+                </span>
+              )}
+            </nav>
+          )}
         </section>
       )}
     </div>

@@ -1,65 +1,86 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { Category } from "@/lib/types";
 
 export function CategoryMenu({ categories }: { categories: Category[] }) {
   const menuId = useId();
+  const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const toggleRef = useRef<HTMLInputElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const focusFirstItem = useRef(false);
 
   useEffect(() => {
     function closeOnOutside(event: Event) {
-      if (!toggleRef.current?.checked) return;
       if (event.target && !menuRef.current?.contains(event.target as Node)) {
-        toggleRef.current.checked = false;
+        setIsOpen(false);
       }
     }
 
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape" && toggleRef.current?.checked) {
-        toggleRef.current.checked = false;
-        toggleRef.current.focus();
+      if (event.key === "Escape") {
+        setIsOpen(false);
+        buttonRef.current?.focus();
       }
     }
 
-    document.addEventListener("pointerdown", closeOnOutside);
-    document.addEventListener("keydown", closeOnEscape);
+    if (isOpen) {
+      document.addEventListener("pointerdown", closeOnOutside);
+      document.addEventListener("keydown", closeOnEscape);
+    }
     return () => {
       document.removeEventListener("pointerdown", closeOnOutside);
       document.removeEventListener("keydown", closeOnEscape);
     };
-  }, []);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !focusFirstItem.current) return;
+    focusFirstItem.current = false;
+    panelRef.current?.querySelector<HTMLAnchorElement>("a")?.focus();
+  }, [isOpen]);
 
   function closeMenu() {
-    if (toggleRef.current) toggleRef.current.checked = false;
+    setIsOpen(false);
+  }
+
+  if (categories.length === 0) {
+    return null;
   }
 
   return (
     <div ref={menuRef} className="relative">
-      <input
-        ref={toggleRef}
-        id={menuId}
-        type="checkbox"
-        aria-label="ジャンルメニュー"
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-expanded={isOpen}
         aria-controls={`${menuId}-panel`}
-        className="peer absolute inset-0 z-50 cursor-pointer opacity-0"
-      />
-      <div className="relative z-40 flex items-center gap-1.5 whitespace-nowrap py-2 transition-colors peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-hinomaru peer-hover:text-hinomaru">
+        aria-haspopup="true"
+        onClick={() => setIsOpen((open) => !open)}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            focusFirstItem.current = true;
+            setIsOpen(true);
+          }
+        }}
+        className="relative z-40 flex items-center gap-1.5 whitespace-nowrap py-2 transition-colors hover:text-hinomaru focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hinomaru"
+      >
         <span>ジャンル</span>
-        <span aria-hidden className="text-xs">
+        <span
+          aria-hidden
+          className={`text-xs transition-transform ${isOpen ? "rotate-180" : ""}`}
+        >
           ▾
         </span>
-      </div>
-      <label
-        htmlFor={menuId}
-        aria-label="ジャンルメニューを閉じる"
-        className="fixed left-0 top-0 z-30 hidden h-[100dvh] w-screen cursor-default peer-checked:block"
-      />
+      </button>
       <div
+        ref={panelRef}
         id={`${menuId}-panel`}
-        className="absolute right-0 top-[calc(100%+0.75rem)] z-40 hidden max-h-[calc(100vh-5rem)] w-[min(28rem,calc(100vw-2.5rem))] overflow-y-auto border border-line bg-washi p-4 shadow-[0_14px_36px_rgba(34,31,26,0.16)] peer-checked:block md:p-5"
+        hidden={!isOpen}
+        className="absolute right-0 top-[calc(100%+0.75rem)] z-40 max-h-[calc(100vh-5rem)] w-[min(28rem,calc(100vw-2.5rem))] overflow-y-auto border border-line bg-washi p-4 shadow-[0_14px_36px_rgba(34,31,26,0.16)] md:p-5"
       >
         <p className="mb-3 font-mincho text-base font-semibold text-sumi">
           ジャンルから探す

@@ -29,6 +29,7 @@ async function main() {
 
   let done = 0;
   let failed = 0;
+  let blocked = 0;
   for (const row of products) {
     try {
       const judgment = await judgeProduct({
@@ -44,15 +45,22 @@ async function main() {
         itemUrl: row.item_url ?? "",
         categorySlug: row.category_slug,
       });
-      await saveJudgment(row.id, judgment);
-      done++;
+      const saved = await saveJudgment(row.id, judgment);
+      if (saved.published) {
+        done++;
+      } else {
+        blocked++;
+        console.error(
+          `公開保留 [${row.title.slice(0, 30)}]: ${saved.consistencyIssues.join(",")}`,
+        );
+      }
       if (done % 20 === 0) console.log(`…${done}/${products.length} 件完了`);
     } catch (e) {
       failed++;
       console.error(`失敗 [${row.title.slice(0, 30)}]: ${String(e).slice(0, 150)}`);
     }
   }
-  console.log(`\n完了: ${done}件 / 失敗: ${failed}件`);
+  console.log(`\n完了: ${done}件 / 公開保留: ${blocked}件 / 失敗: ${failed}件`);
 }
 
 main().catch((e) => {

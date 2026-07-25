@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { applyJudgmentPolicy, SYSTEM_PROMPT, type RawJudgmentOutput } from "./judge-policy";
+import { formatJudgmentInput } from "./product-freshness";
 import type { Judgment, RawProduct } from "./types";
 import { tierOf } from "./types";
 
@@ -64,15 +65,7 @@ const OUTPUT_SCHEMA = {
 } as const;
 
 export async function judgeProduct(raw: RawProduct): Promise<Judgment> {
-  const productInfo = [
-    `商品名: ${raw.title}`,
-    raw.brand ? `ブランド: ${raw.brand}` : null,
-    raw.maker ? `メーカー: ${raw.maker}` : null,
-    `販売元: ${raw.source === "rakuten" ? "楽天市場" : "Amazon"}`,
-    `商品説明:\n${(raw.description ?? "(説明文なし)").slice(0, 3000)}`,
-  ]
-    .filter(Boolean)
-    .join("\n");
+  const productInfo = formatJudgmentInput(raw);
 
   const response = await client.messages.create({
     model: MODEL,

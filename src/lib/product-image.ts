@@ -15,3 +15,16 @@ export function productCardImageUrl(imageUrl: string): string {
     return imageUrl;
   }
 }
+
+/** 大きな特集枠では、商品画像を十分な解像度で表示する。 */
+export function productFeatureImageUrl(imageUrl: string): string {
+  try {
+    const url = new URL(imageUrl);
+    if (url.hostname !== RAKUTEN_THUMBNAIL_HOST) return imageUrl;
+
+    url.searchParams.set("_ex", "800x800");
+    return url.toString();
+  } catch {
+    return imageUrl;
+  }
+}

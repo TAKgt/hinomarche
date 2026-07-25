@@ -3,6 +3,7 @@ import { getCategories, getSitemapProducts } from "@/lib/db";
 import { siteOrigin } from "@/lib/site-url";
 import { FEATURES } from "@/lib/features";
 import { REGIONS } from "@/lib/regions";
+import { productSitemapEntries } from "@/lib/product-sitemap";
 
 export const revalidate = 3600;
 
@@ -38,11 +39,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily" as const,
       priority: 0.8,
     })),
-    ...products.map((p) => ({
-      url: `${baseUrl}/product/${p.id}`,
-      lastModified: p.updatedAt ? new Date(p.updatedAt) : undefined,
-      changeFrequency: "weekly" as const,
-      priority: 0.6,
-    })),
+    ...productSitemapEntries(products, baseUrl),
   ];
 }

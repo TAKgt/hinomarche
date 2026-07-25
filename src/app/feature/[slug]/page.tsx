@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { ProductCard } from "@/components/ProductCard";
+import { GiftProductHero } from "@/components/GiftProductHero";
 import {
   ProductComparison,
   type ProductComparisonChoice,
@@ -13,6 +14,7 @@ import { FEATURES, getFeature, getRelatedFeatures } from "@/lib/features";
 import { COMMERCIAL_TOPICS } from "@/lib/commercial-topics";
 import { siteOrigin } from "@/lib/site-url";
 import { displayProductTitle } from "@/lib/product-title";
+import { selectCategoryDiverseProducts } from "@/lib/product-selection";
 import type { Product } from "@/lib/types";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -23,6 +25,7 @@ type ProductHighlight = {
 };
 
 const REVENUE_FOCUS_FEATURES = new Set([
+  "japanese-gift-ideas",
   "japanese-kitchen-knives",
   "imabari-towel-gifts",
   "gifts-under-5000-yen",
@@ -53,6 +56,15 @@ function selectUniqueHighlights(
 }
 
 function getProductHighlights(slug: string, products: Product[]): ProductHighlight[] {
+  if (slug === "japanese-gift-ideas") {
+    return selectUniqueHighlights([
+      {
+        label: "販売先レビュー件数から選ぶ贈りもの",
+        candidates: [...products].sort(byReviewsThenScore),
+      },
+    ]);
+  }
+
   if (slug === "gifts-under-5000-yen") {
     return selectUniqueHighlights([
       {
@@ -247,6 +259,9 @@ function getProductHighlights(slug: string, products: Product[]): ProductHighlig
 }
 
 function highlightDescription(slug: string): string {
+  if (slug === "japanese-gift-ideas") {
+    return "販売先レビュー、食べもの・飲みもの、タオル・日用品の異なる入口から候補を確認できます。";
+  }
   if (slug === "gifts-under-5000-yen") {
     return "贈る相手や場面に合わせて、3つの価格帯から候補を確認できます。";
   }
@@ -266,6 +281,25 @@ function highlightDescription(slug: string): string {
 }
 
 function comparisonCopy(slug: string, label: string): Pick<ProductComparisonChoice, "audience" | "reason"> {
+  if (slug === "japanese-gift-ideas") {
+    if (label.includes("食べもの・飲みもの")) {
+      return {
+        audience: "食べたり飲んだりして楽しめる贈りものを探したい方",
+        reason: "商品名から食品・飲料に関する表記を確認できる候補を、販売先レビュー件数とAI日本度の順で確認しています。",
+      };
+    }
+    if (label.includes("タオル・日用品")) {
+      return {
+        audience: "暮らしの中で使いやすい贈りものを探したい方",
+        reason: "商品名からタオル・日用品に関する表記を確認できる候補を、販売先レビュー件数とAI日本度の順で確認しています。",
+      };
+    }
+    return {
+      audience: "販売先レビューの蓄積を入口に贈りものを探したい方",
+      reason: "ページ内候補を販売先レビュー件数、評価、AI日本度の順で確認して選定しています。",
+    };
+  }
+
   if (slug === "gifts-under-5000-yen") {
     if (label.includes("1,500円以下")) {
       return {
@@ -348,13 +382,18 @@ export default async function FeaturePage({ params }: Props) {
   const feature = getFeature(slug);
   if (!feature) notFound();
 
-  const products = await getFeatureProducts({
+  const productCandidates = await getFeatureProducts({
     categorySlugs: feature.categorySlugs,
     minScore: feature.minScore,
     maxPrice: feature.maxPrice,
     titleTermGroups: feature.titleTermGroups,
     excludeTitleTerms: feature.excludeTitleTerms,
+    limit: feature.slug === "japanese-gift-ideas" ? 80 : 24,
   });
+  const products = feature.slug === "japanese-gift-ideas"
+    ? selectCategoryDiverseProducts(productCandidates, { limit: 24, maxPerCategory: 4 })
+    : productCandidates;
+  const isGiftLanding = feature.slug === "japanese-gift-ideas";
   const relatedFeatures = getRelatedFeatures(feature);
   const highlights = getProductHighlights(feature.slug, products);
   const isRevenueFocus = REVENUE_FOCUS_FEATURES.has(feature.slug);
@@ -398,8 +437,8 @@ export default async function FeaturePage({ params }: Props) {
     <div>
       <JsonLd data={structuredData} />
       <header className="border-b border-line">
-        <div className="mx-auto max-w-6xl px-5 py-12 md:py-16">
-          <nav className="mb-8 text-xs text-sumi-soft" aria-label="パンくず">
+        <div className={`mx-auto max-w-6xl px-5 ${isGiftLanding ? "py-7 md:py-9" : "py-12 md:py-16"}`}>
+          <nav className={`${isGiftLanding ? "mb-5" : "mb-8"} text-xs text-sumi-soft`} aria-label="パンくず">
             <Link href="/" className="hover:text-hinomaru">ホーム</Link>
             <span className="mx-2">/</span>
             <Link href="/feature" className="hover:text-hinomaru">特集</Link>
@@ -410,14 +449,22 @@ export default async function FeaturePage({ params }: Props) {
           <h1 className="mt-3 max-w-4xl font-mincho text-3xl font-semibold leading-snug md:text-5xl">
             {feature.title}
           </h1>
-          <p className="mt-5 max-w-3xl leading-relaxed text-sumi-soft">
-            {feature.description}
-          </p>
-          <p className="mt-3 text-xs leading-relaxed text-sumi-soft">
-            ※ AI日本度は商品情報をもとにした推定です。正確な生産国・原産地は販売ページでご確認ください。
-          </p>
+          {!isGiftLanding && (
+            <>
+              <p className="mt-5 max-w-3xl leading-relaxed text-sumi-soft">
+                {feature.description}
+              </p>
+              <p className="mt-3 text-xs leading-relaxed text-sumi-soft">
+                ※ AI日本度は商品情報をもとにした推定です。正確な生産国・原産地は販売ページでご確認ください。
+              </p>
+            </>
+          )}
         </div>
       </header>
+
+      {isGiftLanding && highlights[0] && (
+        <GiftProductHero product={highlights[0].product} surfaceKey={slug} />
+      )}
 
       {feature.selectionGuide && (
         <section className="border-b border-line bg-washi-deep/35">
@@ -446,7 +493,7 @@ export default async function FeaturePage({ params }: Props) {
       )}
 
       <section className="mx-auto max-w-6xl px-5 py-12 md:py-16">
-        {highlights.length > 0 && (
+        {!isGiftLanding && highlights.length > 0 && (
           <div className="mb-14">
             <div className="border-b border-line pb-4">
               <h2 className="font-mincho text-2xl font-semibold">比較の入口</h2>
@@ -477,7 +524,11 @@ export default async function FeaturePage({ params }: Props) {
         )}
         <div className="flex items-end justify-between gap-4 border-b border-line pb-4">
           <h2 className="font-mincho text-2xl font-semibold">
-            {highlights.length > 0 ? "条件に合う商品をさらに見る" : "注目商品"}
+            {isGiftLanding
+              ? "ほかの贈りものを見る"
+              : highlights.length > 0
+                ? "条件に合う商品をさらに見る"
+                : "注目商品"}
           </h2>
           <p className="text-sm text-sumi-soft">{products.length}件</p>
         </div>

@@ -76,6 +76,15 @@ TOP/カテゴリの「注目順」を有効にするには、続けて
 `supabase/migrations/014_product_search_surface.sql` も実行します。検索語自体は保存しません。
 計測テーブルにIPアドレス、Cookie、User-Agent等は保存しません。
 
+商品内容の更新とAI判定の鮮度を分離する場合は、更新済みアプリをデプロイする前に
+`supabase/migrations/019_product_judgment_freshness.sql` を実行します。
+既存公開商品の表示は維持し、商品を次回取得した時点で判定入力ハッシュを段階的に補完します。
+続けて `supabase/migrations/020_safe_product_page_urls.sql` を実行すると、商品名・説明・
+メーカー・ブランドが変わった商品も既存URLを200で維持します。再判定中と矛盾保留中は
+`noindex,follow` とし、古いAI判定と販売リンクは表示しません。年・数値・製造地および
+同じ主張文脈の明白な競合を検出した判定は自動公開されません。019・020はいずれも、
+本番適用前にSQL内容と影響を確認してください。
+
 ### 3. 商品を収集する
 
 ```bash
@@ -110,10 +119,25 @@ AI判定ポリシーの変更時は、課金の発生しない回帰テストを
 
 ```bash
 npm run test:judge
+npm run test:freshness
+npm run test:index-quality
 ```
 
 素材産地の明記がない場合は素材チェックを不明に戻し、入力にない事実や断定語を含む根拠を
 保存しない安全弁を設けています。このテストは既存商品の再判定を行いません。
+
+公開商品ページのindex品質を安全に監査する場合:
+
+```bash
+npm run audit:index-quality
+```
+
+products全体をページングし、最終確認日、AI判定鮮度、販売元の商品参照、情報整合性、
+販売状態をtechnical基準として集計します。一次情報URL・原文抜粋・取得日・人手確認・
+独自比較情報はeditorial基準として別集計し、販売元リンクを一次情報出典とは扱いません。
+商品ID・商品名・URLは表示しません。technical品質未達の商品URLは削除せず、
+商品詳細を`noindex,follow`にしてsitemapから除外します。
+改善後は同じ判定を再実行して自動的にindex対象へ戻ります。
 
 ### 4. Vercelにデプロイ
 

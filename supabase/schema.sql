@@ -31,6 +31,13 @@ create table products (
   demand_score integer not null default 0 check (demand_score between 0 and 100),
   featured_score integer not null default 0 check (featured_score between 0 and 100),
   last_seen_at timestamptz,
+  fetched_at timestamptz not null default now(),
+  content_updated_at timestamptz not null default now(),
+  judgment_input_hash text check (
+    judgment_input_hash is null or judgment_input_hash ~ '^[0-9a-f]{64}$'
+  ),
+  judgment_status text not null default 'pending'
+    check (judgment_status in ('pending', 'current', 'blocked')),
   is_published boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -49,6 +56,10 @@ create table judgments (
   material_check text check (material_check in ('yes', 'unknown', 'no')),
   confidence text,
   model text,
+  input_hash text check (input_hash is null or input_hash ~ '^[0-9a-f]{64}$'),
+  consistency_status text not null default 'passed'
+    check (consistency_status in ('passed', 'blocked')),
+  consistency_issues text[] not null default '{}',
   judged_at timestamptz not null default now()
 );
 
@@ -124,6 +135,8 @@ create table ranking_snapshots (
 
 create index idx_products_category on products (category_slug) where is_published;
 create index idx_products_featured on products (is_published, featured_score desc, demand_score desc, updated_at desc);
+create index idx_products_judgment_backlog on products (judgment_status, created_at)
+  where judgment_status = 'pending';
 create index idx_judgments_product on judgments (product_id, judged_at desc);
 create index idx_contact_messages_created_at on contact_messages (created_at desc);
 create index idx_outbound_clicks_clicked_at on outbound_clicks (clicked_at desc);
@@ -149,16 +162,103 @@ select
   j.origin_check,
   j.company_check,
   j.material_check,
-  j.judged_at
+  j.judged_at,
+  j.input_hash as judgment_input_hash_at_judgment,
+  j.consistency_status,
+  j.consistency_issues
 from products p
 join lateral (
   select score, tier, evidence_type, evidence_text,
-         origin_check, company_check, material_check, judged_at
+         origin_check, company_check, material_check, judged_at,
+         input_hash, consistency_status, consistency_issues
   from judgments
   where product_id = p.id
-  order by judged_at desc
+    and input_hash is not distinct from p.judgment_input_hash
+  order by judged_at desc, id desc
   limit 1
-) j on true;
+) j on j.consistency_status = 'passed';
+
+-- 商品詳細URL専用。再判定中も限定した商品列だけを返し、AI判定列はcurrent+passed時だけ返す。
+create or replace function public.get_public_product_page(p_product_id uuid)
+returns table (
+  id uuid,
+  source text,
+  source_item_id text,
+  title text,
+  description text,
+  maker text,
+  brand text,
+  image_url text,
+  price integer,
+  fetched_at timestamptz,
+  content_updated_at timestamptz,
+  price_updated_at timestamptz,
+  affiliate_url text,
+  category_slug text,
+  review_count integer,
+  review_average numeric,
+  affiliate_rate numeric,
+  search_rank integer,
+  demand_score integer,
+  featured_score integer,
+  is_published boolean,
+  judgment_status text,
+  judgment_input_hash text,
+  score integer,
+  tier text,
+  evidence_type text,
+  evidence_text text,
+  origin_check text,
+  company_check text,
+  material_check text,
+  judged_at timestamptz,
+  judgment_input_hash_at_judgment text,
+  consistency_status text,
+  consistency_issues text[]
+)
+language sql
+stable
+security definer
+set search_path = pg_catalog
+as $$
+  select
+    p.id, p.source,
+    case when j.score is not null then p.source_item_id else '' end,
+    p.title,
+    case when j.score is not null then p.description else null end,
+    p.maker, p.brand, p.image_url,
+    case when j.score is not null then p.price else null end,
+    p.fetched_at, p.content_updated_at, p.price_updated_at,
+    case when j.score is not null then p.affiliate_url else '' end,
+    p.category_slug,
+    case when j.score is not null then p.review_count else null end,
+    case when j.score is not null then p.review_average else null end,
+    case when j.score is not null then p.affiliate_rate else null end,
+    case when j.score is not null then p.search_rank else null end,
+    p.demand_score,
+    p.featured_score, p.is_published, p.judgment_status,
+    p.judgment_input_hash, j.score, j.tier, j.evidence_type,
+    j.evidence_text, j.origin_check, j.company_check, j.material_check,
+    j.judged_at, j.input_hash, j.consistency_status, j.consistency_issues
+  from public.products p
+  left join lateral (
+    select
+      judgment.score, judgment.tier, judgment.evidence_type,
+      judgment.evidence_text, judgment.origin_check,
+      judgment.company_check, judgment.material_check, judgment.judged_at,
+      judgment.input_hash, judgment.consistency_status,
+      judgment.consistency_issues
+    from public.judgments judgment
+    where judgment.product_id = p.id
+      and p.is_published
+      and p.judgment_status = 'current'
+      and judgment.input_hash is not distinct from p.judgment_input_hash
+      and judgment.consistency_status = 'passed'
+    order by judgment.judged_at desc, judgment.id desc
+    limit 1
+  ) j on true
+  where p.id = p_product_id;
+$$;
 
 create view product_ranking_inputs
 with (security_invoker = true) as
@@ -174,12 +274,13 @@ select
   coalesce(lc.listing_clicks_28d, 0)::integer as listing_clicks_28d
 from products p
 join lateral (
-  select score
+  select score, consistency_status
   from judgments
   where product_id = p.id
-  order by judged_at desc
+    and input_hash is not distinct from p.judgment_input_hash
+  order by judged_at desc, id desc
   limit 1
-) j on true
+) j on j.consistency_status = 'passed'
 left join (
   select product_id, count(*) as page_views_28d
   from product_page_views
@@ -205,7 +306,8 @@ left join (
     and surface in ('home', 'category', 'feature', 'region', 'related', 'search', 'popular', 'recommended')
   group by product_id
 ) lc on lc.product_id = p.id
-where p.is_published;
+where p.is_published
+  and p.judgment_status = 'current';
 
 create view collection_performance_28d
 with (security_invoker = true) as
@@ -332,6 +434,9 @@ alter table ranking_snapshots enable row level security;
 
 grant usage on schema public to anon, authenticated;
 grant select on categories, products, judgments, products_with_judgment to anon, authenticated;
+revoke all on function public.get_public_product_page(uuid) from public;
+grant execute on function public.get_public_product_page(uuid)
+  to anon, authenticated, service_role;
 revoke all on contact_messages from anon, authenticated;
 revoke all on sequence contact_messages_id_seq from anon, authenticated;
 revoke all on outbound_clicks from anon, authenticated;
@@ -353,6 +458,9 @@ create policy "public read published judgments" on judgments for select using (
     from products
     where products.id = judgments.product_id
       and products.is_published
+      and products.judgment_status = 'current'
+      and judgments.input_hash is not distinct from products.judgment_input_hash
+      and judgments.consistency_status = 'passed'
   )
 );
 

@@ -54,9 +54,10 @@ function stringArg(name: string): string | null {
 }
 
 async function main() {
-  const [{ createClient }, { judgeProduct }] = await Promise.all([
+  const [{ createClient }, { judgeProduct }, { saveJudgment }] = await Promise.all([
     import("@supabase/supabase-js"),
     import("../src/lib/judge"),
+    import("../src/lib/db"),
   ]);
 
   const db = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -151,19 +152,20 @@ async function main() {
         throw new Error("再判定後の根拠文に禁止断定語が残っています");
       }
 
-      const { error: insertError } = await db.from("judgments").insert({
-        product_id: row.id,
+      const saved = await saveJudgment(row.id, {
         score: row.score,
         tier: row.tier,
-        evidence_type: judgment.evidenceType,
-        evidence_text: judgment.evidenceText,
-        origin_check: judgment.checks.origin,
-        company_check: judgment.checks.company,
-        material_check: judgment.checks.material,
+        evidenceType: judgment.evidenceType,
+        evidenceText: judgment.evidenceText,
+        checks: judgment.checks,
         confidence: judgment.confidence,
         model: `${judgment.model}:absolute-language-repair`,
       });
-      if (insertError) throw insertError;
+      if (!saved.published) {
+        throw new Error(
+          `整合性検査により公開保留: ${saved.consistencyIssues.join(",")}`,
+        );
+      }
 
       succeeded++;
       audit.results.push({

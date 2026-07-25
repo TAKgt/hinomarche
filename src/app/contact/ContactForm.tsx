@@ -127,10 +127,16 @@ export function ContactForm() {
         >
           {status === "sending" ? "送信中" : "送信"}
         </button>
-        {status === "sent" && (
-          <p className="text-sm text-hinomaru">送信しました。内容を確認いたします。</p>
-        )}
-        {status === "error" && <p className="text-sm text-hinomaru">{error}</p>}
+        <p
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          className="min-h-5 text-sm text-hinomaru"
+        >
+          {status === "sending" && "送信しています。"}
+          {status === "sent" && "送信しました。内容を確認いたします。"}
+          {status === "error" && error}
+        </p>
       </div>
     </form>
   );

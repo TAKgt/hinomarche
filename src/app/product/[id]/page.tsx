@@ -1,7 +1,10 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getCategories, getProduct, getRelatedProducts } from "@/lib/db";
+import {
+  getCategories,
+  getProductPage,
+  getRelatedProducts,
+} from "@/lib/db";
 import { formatDate, formatPrice, SOURCE_LABEL } from "@/lib/format";
 import { ScoreRing } from "@/components/ScoreRing";
 import { CheckMarks } from "@/components/CheckMarks";
@@ -12,10 +15,16 @@ import {
 import { ProductCard } from "@/components/ProductCard";
 import { JsonLd } from "@/components/JsonLd";
 import { productStructuredData } from "@/lib/structured-data";
-import { TIER_LABEL } from "@/lib/types";
+import { TIER_LABEL, type ProductPageData } from "@/lib/types";
 import { displayProductTitle } from "@/lib/product-title";
 import { getFeaturesForProduct } from "@/lib/features";
 import { getRegionsForProduct } from "@/lib/regions";
+import {
+  buildProductPageMetadata,
+  requireProductPage,
+  resolveProductPage,
+  type ProductAiState,
+} from "@/lib/product-page-resolution";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -31,34 +40,37 @@ export function generateStaticParams(): { id: string }[] {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const product = await getProduct(id);
+  const product = await getProductPage(id);
   if (!product) return {};
-  const displayTitle = displayProductTitle(product.title);
-  return {
-    title: displayTitle,
-    description: `${displayTitle} — AI日本度判定 ${product.score}%。${product.evidenceText}`,
-    alternates: { canonical: `/product/${product.id}` },
-    openGraph: {
-      title: displayTitle,
-      description: `${displayTitle} — AI日本度判定 ${product.score}%。${product.evidenceText}`,
-      url: `/product/${product.id}`,
-      type: "website",
-      images: product.imageUrl ? [{ url: product.imageUrl, alt: displayTitle }] : undefined,
-    },
-  };
+  return buildProductPageMetadata(product);
 }
 
 export default async function ProductPage({ params }: Props) {
   const { id } = await params;
-  const product = await getProduct(id);
-  if (!product) notFound();
+  const pageProduct = requireProductPage(await getProductPage(id));
+  const resolution = resolveProductPage(pageProduct);
+  if (!resolution.currentProduct) {
+    const categories = await getCategories();
+    const categoryName =
+      categories.find((category) => category.slug === pageProduct.categorySlug)
+        ?.name ?? "商品カテゴリ";
+    return (
+      <ReviewingProductPage
+        product={pageProduct}
+        categoryName={categoryName}
+        aiState={resolution.aiState}
+      />
+    );
+  }
+
+  const product = resolution.currentProduct;
   const [relatedProducts, categories] = await Promise.all([
     getRelatedProducts(product),
     getCategories(),
   ]);
   const categoryName =
-    categories.find((category) => category.slug === product.categorySlug)?.name ??
-    "商品カテゴリ";
+    categories.find((category) => category.slug === product.categorySlug)
+      ?.name ?? "商品カテゴリ";
   const displayTitle = displayProductTitle(product.title);
   const matchingFeatures = getFeaturesForProduct(product);
   const matchingRegions = getRegionsForProduct(product);
@@ -73,18 +85,12 @@ export default async function ProductPage({ params }: Props) {
     surfaceKey: null,
     position: 1,
   });
-  const stickyPlacement = productPlacementQuery({
-    surface: "product",
-    surfaceKey: null,
-    position: 2,
-  });
   const crossPlacement = productPlacementQuery({
     surface: "product",
     surfaceKey: null,
     position: 3,
   });
   const primaryUrl = `/go/${product.id}?target=primary&${primaryPlacement}`;
-  const stickyPrimaryUrl = `/go/${product.id}?target=primary&${stickyPlacement}`;
   const crossUrl = `/go/${product.id}?target=cross&${crossPlacement}`;
   const hasReview =
     product.reviewAverage != null &&
@@ -94,7 +100,7 @@ export default async function ProductPage({ params }: Props) {
     product.reviewCount > 0;
 
   return (
-    <div className="mx-auto max-w-5xl px-5 py-12 pb-28 md:pb-12">
+    <div className="mx-auto max-w-5xl px-5 py-10 md:py-12">
       <JsonLd data={productStructuredData(product, categoryName)} />
       <ProductViewTracker productId={product.id} />
       <nav className="text-xs text-sumi-soft mb-8">
@@ -107,14 +113,28 @@ export default async function ProductPage({ params }: Props) {
         <span className="text-sumi">{displayTitle.slice(0, 24)}…</span>
       </nav>
 
-      <div className="grid md:grid-cols-2 gap-10">
+      <div className="grid gap-8 md:grid-cols-2 md:gap-x-10 md:gap-y-0">
+        <div className="order-1 min-w-0 md:col-start-2 md:row-start-1">
+          <h1 className="break-words font-mincho text-2xl font-semibold leading-snug md:text-3xl">
+            {displayTitle}
+          </h1>
+
+          {(product.brand || product.maker) && (
+            <p className="mt-2 break-words text-sm text-sumi-soft">
+              {[product.brand, product.maker].filter(Boolean).join(" / ")}
+            </p>
+          )}
+        </div>
+
         {/* 画像 */}
-        <div className="relative aspect-square bg-washi-deep border border-line flex items-center justify-center overflow-hidden">
+        <div className="relative order-2 aspect-square overflow-hidden border border-line bg-washi-deep flex items-center justify-center md:col-start-1 md:row-span-2 md:row-start-1">
           {product.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- 外部モール画像
             <img
               src={product.imageUrl}
               alt={displayTitle}
+              width={800}
+              height={800}
               className="size-full object-contain"
             />
           ) : (
@@ -128,18 +148,41 @@ export default async function ProductPage({ params }: Props) {
         </div>
 
         {/* 情報 */}
-        <div>
-          <h1 className="font-mincho text-2xl md:text-3xl font-semibold leading-snug">
-            {displayTitle}
-          </h1>
-
-          {(product.brand || product.maker) && (
-            <p className="mt-2 text-sm text-sumi-soft">
-              {[product.brand, product.maker].filter(Boolean).join(" / ")}
+        <div className="order-3 min-w-0 md:col-start-2 md:row-start-2 md:mt-7">
+          {/* AI判定カード */}
+          <div className="border border-line bg-white/60 p-5">
+            <div className="flex items-center gap-5">
+              <ScoreRing score={product.score} size={84} />
+              <div>
+                <p className="text-xs tracking-[0.25em] text-hinomaru font-medium">
+                  AI日本度（AI推定）
+                </p>
+                <p className="mt-1 font-mincho text-xl font-semibold">
+                  {TIER_LABEL[product.tier]}
+                  <span className="ml-2 text-sm font-normal text-sumi-soft">
+                    根拠: {product.evidenceType}
+                  </span>
+                </p>
+              </div>
+            </div>
+            {product.checks && (
+              <div className="mt-4 border-t border-line pt-4">
+                <CheckMarks checks={product.checks} />
+              </div>
+            )}
+            <p className="mt-4 text-sm leading-relaxed border-t border-line pt-4">
+              <span className="mb-1 block text-xs font-medium text-sumi-soft">
+                判定根拠の要点
+              </span>
+              {product.evidenceText}
             </p>
-          )}
+            <p className="mt-3 text-xs text-sumi-soft leading-relaxed">
+              ※ このスコアはAIによる推定であり、実際の生産国・原産地を保証するものでは
+              ありません。正確な情報は販売ページでご確認ください。
+            </p>
+          </div>
 
-          <div className="mt-5 flex items-baseline gap-3">
+          <div className="mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span className="font-mincho text-3xl font-semibold">
               {formatPrice(product.price)}
             </span>
@@ -159,70 +202,47 @@ export default async function ProductPage({ params }: Props) {
             </p>
           )}
 
-          <a
-            href={primaryUrl}
-            target="_blank"
-            rel="nofollow sponsored noopener"
-            className={`mt-6 block px-8 py-4 text-center text-sm font-medium tracking-[0.12em] text-white transition-colors ${
-              isRakuten
-                ? "bg-hinomaru hover:bg-hinomaru-deep shadow-[0_4px_16px_rgba(188,0,45,0.3)]"
-                : "bg-sumi hover:bg-black shadow-[0_4px_16px_rgba(34,31,26,0.3)]"
-            }`}
-          >
-            {buttonLabel.replace("で見る", "で価格・在庫を見る")}
-          </a>
-          <p className="mt-2 text-center text-[11px] text-sumi-soft">
-            外部の販売ページに移動します(アフィリエイトリンク)
-          </p>
+          {resolution.purchaseLinkEligible ? (
+            <>
+              <a
+                href={primaryUrl}
+                target="_blank"
+                rel="nofollow sponsored noopener"
+                className={`mt-6 block px-8 py-4 text-center text-sm font-medium tracking-[0.12em] text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hinomaru ${
+                  isRakuten
+                    ? "bg-hinomaru hover:bg-hinomaru-deep shadow-[0_4px_16px_rgba(188,0,45,0.3)]"
+                    : "bg-sumi hover:bg-black shadow-[0_4px_16px_rgba(34,31,26,0.3)]"
+                }`}
+              >
+                {buttonLabel.replace("で見る", "で価格・在庫を見る")}
+              </a>
+              <p className="mt-2 text-center text-[11px] text-sumi-soft">
+                外部の販売ページに移動します(アフィリエイトリンク)
+              </p>
 
-          <div className="mt-4 border-t border-line pt-4">
-            <p className="mb-2 text-center text-xs font-medium text-sumi-soft">
-              ほかの販売先でも比較する
-            </p>
-            <a
-              href={crossUrl}
-              target="_blank"
-              rel="nofollow sponsored noopener"
-              aria-label={`${displayTitle}を${crossLabel}`}
-              className="block border border-sumi/25 px-8 py-3.5 text-center text-sm font-medium tracking-[0.08em] text-sumi transition-colors hover:border-sumi hover:bg-white/50"
-            >
-              {crossLabel}
-            </a>
-            <p className="mt-2 text-center text-[11px] text-sumi-soft">
-              商品名による検索結果ページに移動します(同一商品とは限りません)
-            </p>
-          </div>
-
-          {/* AI判定カード */}
-          <div className="mt-7 border border-line bg-white/60 p-5">
-            <div className="flex items-center gap-5">
-              <ScoreRing score={product.score} size={84} />
-              <div>
-                <p className="text-xs tracking-[0.25em] text-hinomaru font-medium">
-                  AI日本度判定
-                </p>
-                <p className="mt-1 font-mincho text-xl font-semibold">
-                  {TIER_LABEL[product.tier]}
-                  <span className="ml-2 text-sm font-normal text-sumi-soft">
-                    根拠: {product.evidenceType}
-                  </span>
-                </p>
-              </div>
-            </div>
-            {product.checks && (
               <div className="mt-4 border-t border-line pt-4">
-                <CheckMarks checks={product.checks} />
+                <p className="mb-2 text-center text-xs font-medium text-sumi-soft">
+                  ほかの販売先でも比較する
+                </p>
+                <a
+                  href={crossUrl}
+                  target="_blank"
+                  rel="nofollow sponsored noopener"
+                  aria-label={`${displayTitle}を${crossLabel}`}
+                  className="block border border-sumi/25 px-8 py-3.5 text-center text-sm font-medium tracking-[0.08em] text-sumi transition-colors hover:border-sumi hover:bg-white/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hinomaru"
+                >
+                  {crossLabel}
+                </a>
+                <p className="mt-2 text-center text-[11px] text-sumi-soft">
+                  商品名による検索結果ページに移動します(同一商品とは限りません)
+                </p>
               </div>
-            )}
-            <p className="mt-4 text-sm leading-relaxed border-t border-line pt-4">
-              {product.evidenceText}
+            </>
+          ) : (
+            <p className="mt-6 border border-line bg-white/60 p-4 text-sm leading-relaxed text-sumi-soft">
+              販売状態と商品情報を確認できるまで、販売ページへのリンクを一時的に非表示にしています。
             </p>
-            <p className="mt-3 text-xs text-sumi-soft leading-relaxed">
-              ※ このスコアはAIによる推定であり、実際の生産国・原産地を保証するものでは
-              ありません。正確な情報は販売ページでご確認ください。
-            </p>
-          </div>
-
+          )}
         </div>
       </div>
 
@@ -292,24 +312,99 @@ export default async function ProductPage({ params }: Props) {
         </section>
       )}
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-washi/95 px-4 pt-3 shadow-[0_-6px_18px_rgba(34,31,26,0.12)] backdrop-blur md:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <div className="mx-auto flex max-w-md items-center gap-3">
-          <p className="min-w-0 shrink-0 font-mincho text-lg font-semibold">
-            {formatPrice(product.price)}
-          </p>
-          <a
-            href={stickyPrimaryUrl}
-            target="_blank"
-            rel="nofollow sponsored noopener"
-            aria-label={`${displayTitle}を${SOURCE_LABEL[product.source]}で見る`}
-            className={`min-w-0 flex-1 px-3 py-3 text-center text-xs font-medium text-white transition-colors ${
-              isRakuten
-                ? "bg-hinomaru hover:bg-hinomaru-deep"
-                : "bg-sumi hover:bg-black"
-            }`}
+    </div>
+  );
+}
+
+function ReviewingProductPage({
+  product,
+  categoryName,
+  aiState,
+}: {
+  product: ProductPageData;
+  categoryName: string;
+  aiState: ProductAiState;
+}) {
+  const displayTitle = displayProductTitle(product.title);
+  const stateLabel =
+    aiState === "blocked"
+      ? "商品情報の整合性を確認中です"
+      : "商品情報を再確認中です";
+
+  return (
+    <div className="mx-auto max-w-5xl px-5 py-10 md:py-12">
+      <ProductViewTracker productId={product.id} />
+      <nav className="mb-8 text-xs text-sumi-soft" aria-label="パンくず">
+        <Link href="/" className="hover:text-hinomaru">
+          ホーム
+        </Link>
+        <span className="mx-2">/</span>
+        <Link
+          href={`/category/${product.categorySlug}`}
+          className="hover:text-hinomaru"
+        >
+          {categoryName}
+        </Link>
+        <span className="mx-2">/</span>
+        <span className="text-sumi">{displayTitle.slice(0, 24)}…</span>
+      </nav>
+
+      <div className="grid gap-8 md:grid-cols-2 md:gap-10">
+        <div className="min-w-0 md:order-2">
+          <h1 className="break-words font-mincho text-2xl font-semibold leading-snug md:text-3xl">
+            {displayTitle}
+          </h1>
+          {(product.brand || product.maker) && (
+            <p className="mt-2 break-words text-sm text-sumi-soft">
+              {[product.brand, product.maker].filter(Boolean).join(" / ")}
+            </p>
+          )}
+
+          <section
+            className="mt-6 border border-line bg-white/70 p-5"
+            aria-labelledby="reviewing-status"
           >
-            {buttonLabel}
-          </a>
+            <p className="text-xs font-medium tracking-[0.2em] text-hinomaru">
+              AI日本度（AI推定）
+            </p>
+            <h2
+              id="reviewing-status"
+              className="mt-2 font-mincho text-xl font-semibold"
+            >
+              {stateLabel}
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-sumi-soft">
+              販売元の商品情報と判定内容に変更または確認事項があるため、以前のAI判定根拠は表示していません。
+              確認が完了すると、このURLで最新の判定を表示します。
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-sumi-soft">
+              誤認を避けるため、確認中は販売ページへのリンクも一時的に非表示にしています。
+            </p>
+          </section>
+
+          <p className="mt-5 text-xs text-sumi-soft">
+            最終取得: {formatDate(product.fetchedAt)}
+          </p>
+        </div>
+
+        <div className="relative aspect-square overflow-hidden border border-line bg-washi-deep flex items-center justify-center md:order-1">
+          {product.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- 外部モール画像
+            <img
+              src={product.imageUrl}
+              alt={displayTitle}
+              width={800}
+              height={800}
+              className="size-full object-contain"
+            />
+          ) : (
+            <span className="tategaki max-h-[80%] overflow-hidden font-mincho text-2xl text-sumi-soft/60">
+              {displayTitle.slice(0, 14)}
+            </span>
+          )}
+          <span className="absolute left-0 top-4 bg-sumi px-3 py-1.5 text-xs tracking-wider text-washi">
+            {SOURCE_LABEL[product.source]}
+          </span>
         </div>
       </div>
     </div>

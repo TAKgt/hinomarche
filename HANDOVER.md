@@ -1,6 +1,6 @@
 # ヒノマルシェ 引き継ぎ書(完全版)
 
-最終更新: 2026-07-16 / 前任: Claude Code / 更新: Codex
+最終更新: 2026-07-25 / 前任: Claude Code / 更新: Codex
 このドキュメントは、プロジェクトの仕様・現状・制約・残作業のすべてを引き継ぐためのもの。
 **コードを書く前に必ず「絶対に守るルール」と「ハマりどころ」を読むこと。**
 
@@ -90,6 +90,8 @@ src/
     ingest.ts               収集パイプライン本体(cron/ローカル共用)
     ranking.ts              28日間の閲覧/クリックでshadow候補順位を日次計算
     product-metrics.ts      掲載面・文脈slug・表示位置の検証とURL生成
+    product-index-quality.ts 商品詳細のindex可否と理由別監査を一元判定
+    product-sitemap.ts      index品質通過商品のsitemapエントリ生成
     request-security.ts     同一サイト操作/一般的なボットの判定(計測ノイズ抑制)
     crosslinks.ts           相互送客リンク(楽天商品→Amazon検索 / Amazon商品→楽天検索)
     category-content.ts     23カテゴリ固有の検索説明文・画面導入文
@@ -119,6 +121,8 @@ supabase/
   migrations/016_recommended_products_surface.sql 注目商品一覧面の匿名計測(適用済み)
   migrations/017_product_detail_funnel.sql 商品カードから詳細閲覧までの匿名導線(適用済み)
   migrations/018_align_funnel_window.sql ファネル3段階の共通観測期間(適用済み)
+  migrations/019_product_judgment_freshness.sql 商品内容とAI判定の鮮度保証(適用前)
+  migrations/020_safe_product_page_urls.sql 再判定中URLの安全な200維持(適用前、019適用後)
 ```
 
 ## 5. データモデル(Supabase)
@@ -127,17 +131,25 @@ supabase/
   - **カテゴリ追加・キーワード変更はSQLだけで完結**(コード変更不要。ヘッダーのナビも自動反映)
   - 011適用後は23カテゴリ。Amazon・楽天の主要売場をヒノマルシェ向けに再構成
 - `products`: source('rakuten'|'amazon') + source_item_id でユニーク。affiliate_url, price,
-  price_updated_at, is_published など
+  price_updated_at, is_published など。019適用後は取得日時`fetched_at`、判定材料の内容更新日時
+  `content_updated_at`、現在の`judgment_input_hash`、`judgment_status`を分離して保持する
 - `/popular` は販売先評価4.0以上・レビュー100件以上・AI日本度50%以上を条件に、
   レビュー件数順の候補から同一カテゴリ最大4件までを自動選定する。TOPの高評価棚は最大2件/カテゴリ
 - `/recommended` はAI日本度50%以上を必須に、市場性を加味した注目順の候補から
   同一カテゴリ最大4件・全体48件までを自動選定する
 - `/popular` と `/recommended` は価格帯で絞り込み可能。絞り込みURLはcanonicalを基本一覧へ向け、
   `noindex,follow` にして検索結果の重複登録を防ぐ。計測面には価格条件を保存しない
-- `judgments`: 判定履歴(追記型。表示は最新を使う)。score, tier('high'|'mid'|'low'),
-  evidence_type, evidence_text, origin_check/company_check/material_check('yes'|'unknown'|'no')
+- `judgments`: 判定履歴(追記型。表示は現在の商品ハッシュと一致する最新判定を使う)。
+  score, tier('high'|'mid'|'low'), evidence_type, evidence_text,
+  origin_check/company_check/material_check('yes'|'unknown'|'no')。019適用後は判定時の
+  `input_hash`と公開前整合性検査の状態・理由コードも保存する
 - `products_with_judgment`: 最新判定をJOINしたビュー。**サイト表示は必ずこのビューを読む**
 - 商品詳細はGoogleのProduct snippet向け構造化データとBreadcrumbListを出力。AI日本度をレビュ評価として送信しない
+- 商品詳細のindex品質ゲートは、最終確認30日以内、AI判定180日以内、販売元の商品参照、
+  情報整合性、販売状態をtechnical基準として同じ関数で判定する。一次情報URL・原文抜粋・
+  取得日・人手確認・独自比較情報はeditorial基準として別集計し、販売元リンクと混同しない。
+  technical未達ページはURLと公開状態を維持したまま`noindex,follow`とし、
+  sitemapからだけ除外する。改善後は1時間以内の再生成で自動復帰する
 - カテゴリ一覧は23カテゴリ固有のtitle/description/導入文を持ち、BreadcrumbListとItemListを出力。
   並び替え・日本度絞り込みURLはcanonicalをカテゴリ基本URLへ向け、`noindex, follow`で重複登録を避ける
 - 表示用商品名は先頭の期限付き販促文を除き、64文字以内に整形。DBの原文と販売先リンクは変更しない
@@ -378,9 +390,14 @@ supabase/
 毎日03:00 JST台 (Vercel Cron → /api/cron/ingest、ローカルは npm run ingest)
 1. 公開数が既定12件未満のカテゴリを少ない順に優先。判定待ちが目標分あれば商品API検索を省略し、
    既存候補を消化する。全カテゴリが目標到達後は1日4件ずつ日替わり巡回し、各1検索語で楽天(+資格回復後Amazon)を検索(30件/キーワード)
-2. 新商品はINSERT、既存商品は価格・画像・リンクを更新(price_updated_at更新)
-3. 未判定商品(is_published=false)を古い順にINGEST_MAX_NEW件(Vercel既定5、ローカル既定30)AI判定
-4. 判定を保存し全tier公開(is_published=true)
+2. 新商品はINSERT、既存商品は商品名・説明・メーカー・ブランド・価格・画像・リンク等を更新。
+   取得日時、判定材料の内容更新日時、価格取得日時は別々に保存する
+3. 判定材料のSHA-256が変わった既存商品は旧判定を公開に使わず、再判定待ちへ戻す。
+   020適用後はURLだけ200で維持し、`noindex,follow`、古いAI判定・販売リンク非表示とする
+4. 未判定商品(is_published=falseかつjudgment_status=pending)を古い順に
+   INGEST_MAX_NEW件(Vercel既定5、ローカル既定30)AI判定
+5. 判定時ハッシュが現在の商品ハッシュと一致し、年・数値・製造地の明白な矛盾がない場合だけ
+   全tierを公開する。矛盾検出時はblockedとして非公開を維持する
 ```
 
 - 判定しきれない分はバックログとして翌日以降に自動消化される(取りこぼしなし)
@@ -388,6 +405,9 @@ supabase/
   → だから全価格に「YYYY/MM/DD時点」を必ず表示している(対策込みの仕様)
 - `scripts/rejudge.ts` は「最新判定にチェックが無い商品」だけを再判定する
   (判定スキーマを変えたときに全件へ反映する用途。二重課金しない作り)
+- `npm run audit:index-quality` はproducts全体を1000件単位で読み取り、current/pending/blocked、
+  URL表示、404相当、technical index可否、editorial達成状況を集計する。
+  商品ID・商品名・URLは出力せず、総数・除外数・理由別件数だけを表示する
 
 ## 8. 環境変数(.env.local / Vercelに同じものを設定)
 

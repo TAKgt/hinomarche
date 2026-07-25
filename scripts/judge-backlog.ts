@@ -69,6 +69,7 @@ async function main() {
   );
   const errors: string[] = [];
   let published = 0;
+  let blocked = 0;
 
   console.log(
     `判定待ちから最大${limit}件を処理します… 対象: ${categorySlugs.join(", ")}${createdAfter ? ` / ${createdAfter}以降` : ""}`,
@@ -76,14 +77,22 @@ async function main() {
   for (const { id, raw } of products) {
     try {
       const judgment = await judgeProduct(raw);
-      await saveJudgment(id, judgment);
-      published++;
+      const saved = await saveJudgment(id, judgment);
+      if (saved.published) {
+        published++;
+      } else {
+        blocked++;
+        errors.push(
+          `${raw.title.slice(0, 30)}: 自動公開保留 (${saved.consistencyIssues.join(",")})`,
+        );
+      }
     } catch (error) {
       errors.push(`${raw.title.slice(0, 30)}: ${String(error)}`);
     }
   }
 
   console.log(`AI判定・公開: ${published}件`);
+  console.log(`整合性検査で保留: ${blocked}件`);
   if (errors.length > 0) {
     console.log(`エラー: ${errors.length}件`);
     for (const error of errors) console.log(`  - ${error}`);

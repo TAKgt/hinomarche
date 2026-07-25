@@ -16,7 +16,9 @@ async function main() {
 
   console.log("\n===== 収集結果 =====");
   console.log(`取得: ${summary.fetched}件 / 新規: ${summary.created}件 / 更新: ${summary.updated}件`);
-  console.log(`AI判定: ${summary.judged}件(うち公開: ${summary.published}件)`);
+  console.log(
+    `AI判定: ${summary.judged}件(公開: ${summary.published}件 / 整合性保留: ${summary.blocked}件)`,
+  );
   if (summary.errors.length > 0) {
     console.log(`\nエラー ${summary.errors.length}件:`);
     for (const err of summary.errors) console.log(`  - ${err}`);

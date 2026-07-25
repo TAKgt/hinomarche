@@ -1,5 +1,13 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import type { Category, Judgment, Product, RawProduct, Tier } from "./types";
+import { cache } from "react";
+import type {
+  Category,
+  Judgment,
+  Product,
+  ProductPageData,
+  RawProduct,
+  Tier,
+} from "./types";
 import { calculateDemandScore, calculateFeaturedScore } from "./market";
 import type { CategoryInventory } from "./ingest-plan";
 import { FEATURES, matchesFeatureProduct } from "./features";
@@ -12,6 +20,14 @@ import {
   type PriceFilterKey,
   type ReviewFilterKey,
 } from "./product-filters";
+import {
+  detectJudgmentConsistencyIssues,
+  judgmentInputHash,
+  planProductRefresh,
+  refreshedProductFields,
+} from "./product-freshness";
+import { CATEGORY_PAGE_SIZE } from "./category-pagination";
+import { readAllPages } from "./read-all-pages";
 import demoProducts from "../data/demo-products.json";
 
 /**
@@ -87,6 +103,8 @@ function rowToProduct(row: any): Product {
     brand: row.brand,
     imageUrl: row.image_url,
     price: row.price,
+    fetchedAt: row.fetched_at ?? null,
+    contentUpdatedAt: row.content_updated_at ?? null,
     priceUpdatedAt: row.price_updated_at,
     affiliateUrl: row.affiliate_url,
     categorySlug: row.category_slug,
@@ -100,6 +118,17 @@ function rowToProduct(row: any): Product {
     tier: row.tier,
     evidenceType: row.evidence_type,
     evidenceText: row.evidence_text,
+    judgedAt: row.judged_at ?? null,
+    isPublished: row.is_published ?? true,
+    judgmentStatus:
+      row.judgment_status ?? (row.is_published === false ? "pending" : "current"),
+    judgmentInputHash: row.judgment_input_hash ?? null,
+    judgmentInputHashAtJudgment:
+      row.judgment_input_hash_at_judgment ?? row.input_hash ?? null,
+    consistencyStatus: row.consistency_status ?? "legacy",
+    consistencyIssues: Array.isArray(row.consistency_issues)
+      ? row.consistency_issues
+      : [],
     checks:
       row.origin_check && row.company_check && row.material_check
         ? {
@@ -111,7 +140,73 @@ function rowToProduct(row: any): Product {
   };
 }
 
-export async function getCategories(): Promise<Category[]> {
+function rowToProductPage(row: any): ProductPageData {
+  const hasJudgment =
+    row.score != null &&
+    row.tier != null &&
+    row.evidence_type != null &&
+    row.evidence_text != null;
+  return {
+    id: row.id,
+    source: row.source,
+    sourceItemId: row.source_item_id,
+    title: row.title,
+    description: row.description ?? null,
+    maker: row.maker ?? null,
+    brand: row.brand ?? null,
+    imageUrl: row.image_url ?? null,
+    price: row.price ?? null,
+    fetchedAt:
+      row.fetched_at ??
+      row.last_seen_at ??
+      row.price_updated_at ??
+      null,
+    contentUpdatedAt:
+      row.content_updated_at ?? row.updated_at ?? row.created_at ?? null,
+    priceUpdatedAt: row.price_updated_at ?? null,
+    affiliateUrl: row.affiliate_url,
+    categorySlug: row.category_slug,
+    reviewCount: row.review_count ?? null,
+    reviewAverage: row.review_average ?? null,
+    affiliateRate: row.affiliate_rate ?? null,
+    searchRank: row.search_rank ?? null,
+    demandScore: row.demand_score ?? 0,
+    featuredScore: row.featured_score ?? row.score ?? 0,
+    isPublished: row.is_published ?? false,
+    judgmentStatus:
+      row.judgment_status ??
+      (row.is_published === true ? "current" : "pending"),
+    judgmentInputHash: row.judgment_input_hash ?? null,
+    score: hasJudgment ? row.score : null,
+    tier: hasJudgment ? row.tier : null,
+    evidenceType: hasJudgment ? row.evidence_type : null,
+    evidenceText: hasJudgment ? row.evidence_text : null,
+    judgedAt: hasJudgment ? (row.judged_at ?? null) : null,
+    judgmentInputHashAtJudgment: hasJudgment
+      ? (row.judgment_input_hash_at_judgment ?? row.input_hash ?? null)
+      : null,
+    consistencyStatus: hasJudgment
+      ? (row.consistency_status ?? "legacy")
+      : null,
+    consistencyIssues:
+      hasJudgment && Array.isArray(row.consistency_issues)
+        ? row.consistency_issues
+        : [],
+    checks:
+      hasJudgment &&
+      row.origin_check &&
+      row.company_check &&
+      row.material_check
+        ? {
+            origin: row.origin_check,
+            company: row.company_check,
+            material: row.material_check,
+          }
+        : null,
+  };
+}
+
+export const getCategories = cache(async (): Promise<Category[]> => {
   if (isDemoMode()) return DEMO_CATEGORIES;
   const { data, error } = await publicSupabase()
     .from("categories")
@@ -125,7 +220,7 @@ export async function getCategories(): Promise<Category[]> {
     searchKeywords: row.search_keywords ?? [],
     isActive: row.is_active,
   }));
-}
+});
 
 export type SortKey =
   | "featured"
@@ -144,21 +239,42 @@ function timeValue(value: string | null): number {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
-export async function getPublishedProducts(opts: {
+function compareProductIds(a: Product, b: Product): number {
+  return a.id.localeCompare(b.id);
+}
+
+export type PublishedProductOptions = {
   categorySlug?: string;
   sort?: SortKey;
   tier?: Tier;
   priceFilter?: PriceFilterKey;
   reviewFilter?: ReviewFilterKey;
   limit?: number;
-}): Promise<Product[]> {
+};
+
+export type PublishedProductPage = {
+  products: Product[];
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  totalPages: number;
+};
+
+async function queryPublishedProducts(
+  opts: PublishedProductOptions & {
+    offset?: number;
+    includeTotal?: boolean;
+  },
+): Promise<{ products: Product[]; totalCount: number | null }> {
   const {
     categorySlug,
     sort = "featured",
     tier,
     priceFilter,
     reviewFilter,
-    limit = 60,
+    limit = CATEGORY_PAGE_SIZE,
+    offset = 0,
+    includeTotal = false,
   } = opts;
 
   if (isDemoMode()) {
@@ -168,31 +284,50 @@ export async function getPublishedProducts(opts: {
     if (!showLowTier()) items = items.filter((p) => p.tier !== "low");
     items = items.filter((p) => matchesShoppingFilters(p, priceFilter, reviewFilter));
     items = [...items].sort((a, b) => {
-      if (sort === "price_asc") return (a.price ?? 0) - (b.price ?? 0);
-      if (sort === "price_desc") return (b.price ?? 0) - (a.price ?? 0);
+      if (sort === "price_asc") {
+        return (a.price ?? 0) - (b.price ?? 0) || compareProductIds(a, b);
+      }
+      if (sort === "price_desc") {
+        return (b.price ?? 0) - (a.price ?? 0) || compareProductIds(a, b);
+      }
       if (sort === "new") {
-        return timeValue(b.priceUpdatedAt) - timeValue(a.priceUpdatedAt);
+        return (
+          timeValue(b.priceUpdatedAt) - timeValue(a.priceUpdatedAt) ||
+          compareProductIds(a, b)
+        );
       }
       if (sort === "reviews") {
         return (
           (b.reviewCount ?? 0) - (a.reviewCount ?? 0) ||
           (b.reviewAverage ?? 0) - (a.reviewAverage ?? 0) ||
-          productFeaturedScore(b) - productFeaturedScore(a)
+          productFeaturedScore(b) - productFeaturedScore(a) ||
+          compareProductIds(a, b)
         );
       }
       if (sort === "featured") {
-        return productFeaturedScore(b) - productFeaturedScore(a) || b.score - a.score;
+        return (
+          productFeaturedScore(b) - productFeaturedScore(a) ||
+          (b.demandScore ?? 0) - (a.demandScore ?? 0) ||
+          b.score - a.score ||
+          compareProductIds(a, b)
+        );
       }
-      return b.score - a.score;
+      return b.score - a.score || compareProductIds(a, b);
     });
-    return items.slice(0, limit);
+    return {
+      products: items.slice(offset, offset + limit),
+      totalCount: includeTotal ? items.length : null,
+    };
   }
 
-  let query = publicSupabase()
-    .from("products_with_judgment")
-    .select("*")
+  const source = publicSupabase().from("products_with_judgment");
+  let query = (
+    includeTotal
+      ? source.select("*", { count: "exact" })
+      : source.select("*")
+  )
     .eq("is_published", true)
-    .limit(limit);
+    .range(offset, offset + limit - 1);
   if (categorySlug) query = query.eq("category_slug", categorySlug);
   if (tier) query = query.eq("tier", tier);
   if (!showLowTier()) query = query.neq("tier", "low");
@@ -202,13 +337,17 @@ export async function getPublishedProducts(opts: {
   else if (priceFilter === "30000-plus") query = query.gte("price", 30000);
   if (reviewFilter) query = query.gte("review_average", 4).gte("review_count", 1);
   if (reviewFilter === "popular-100") query = query.gte("review_count", 100);
-  if (sort === "price_asc") query = query.order("price", { ascending: true });
-  else if (sort === "price_desc") query = query.order("price", { ascending: false });
-  else if (sort === "new") query = query.order("created_at", { ascending: false });
+  if (sort === "price_asc") {
+    query = query.order("price", { ascending: true, nullsFirst: false });
+  } else if (sort === "price_desc") {
+    query = query.order("price", { ascending: false, nullsFirst: false });
+  } else if (sort === "new") {
+    query = query.order("created_at", { ascending: false });
+  }
   else if (sort === "reviews") {
     query = query
-      .order("review_count", { ascending: false })
-      .order("review_average", { ascending: false })
+      .order("review_count", { ascending: false, nullsFirst: false })
+      .order("review_average", { ascending: false, nullsFirst: false })
       .order("featured_score", { ascending: false });
   }
   else if (sort === "featured") {
@@ -217,10 +356,46 @@ export async function getPublishedProducts(opts: {
       .order("demand_score", { ascending: false })
       .order("score", { ascending: false });
   } else query = query.order("score", { ascending: false });
+  query = query.order("id", { ascending: true });
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) throw error;
-  return data.map(rowToProduct);
+  return {
+    products: data.map(rowToProduct),
+    totalCount: includeTotal ? count ?? 0 : null,
+  };
+}
+
+export async function getPublishedProducts(
+  opts: PublishedProductOptions,
+): Promise<Product[]> {
+  const result = await queryPublishedProducts(opts);
+  return result.products;
+}
+
+export async function getPublishedProductPage(
+  opts: Omit<PublishedProductOptions, "limit"> & {
+    page?: number;
+    pageSize?: number;
+  },
+): Promise<PublishedProductPage> {
+  const currentPage = Math.max(1, Math.floor(opts.page ?? 1));
+  const pageSize = Math.max(1, Math.floor(opts.pageSize ?? CATEGORY_PAGE_SIZE));
+  const result = await queryPublishedProducts({
+    ...opts,
+    limit: pageSize,
+    offset: (currentPage - 1) * pageSize,
+    includeTotal: true,
+  });
+  const totalCount = result.totalCount ?? 0;
+
+  return {
+    products: result.products,
+    totalCount,
+    currentPage,
+    pageSize,
+    totalPages: Math.max(1, Math.ceil(totalCount / pageSize)),
+  };
 }
 
 export async function getTopProducts(limit = 12): Promise<Product[]> {
@@ -315,30 +490,27 @@ export async function searchPublishedProducts(
     .slice(0, limit);
 }
 
-export async function getSitemapProducts(): Promise<
-  { id: string; updatedAt: string | null }[]
-> {
+export async function getSitemapProducts(): Promise<Product[]> {
   if (isDemoMode()) {
     return (demoProducts as unknown as Product[])
-      .filter((product) => showLowTier() || product.tier !== "low")
-      .map((product) => ({ id: product.id, updatedAt: product.priceUpdatedAt }));
+      .filter((product) => showLowTier() || product.tier !== "low");
   }
 
-  const rows: { id: string; price_updated_at: string | null }[] = [];
+  const rows: Product[] = [];
   const pageSize = 1000;
   for (let from = 0; ; from += pageSize) {
     let query = publicSupabase()
       .from("products_with_judgment")
-      .select("id,price_updated_at")
+      .select("*")
       .eq("is_published", true)
       .order("id", { ascending: true });
     if (!showLowTier()) query = query.neq("tier", "low");
     const { data, error } = await query.range(from, from + pageSize - 1);
     if (error) throw error;
-    rows.push(...data);
+    rows.push(...data.map(rowToProduct));
     if (data.length < pageSize) break;
   }
-  return rows.map((row) => ({ id: row.id, updatedAt: row.price_updated_at }));
+  return rows;
 }
 
 export async function getFeatureProducts(opts: {
@@ -450,6 +622,205 @@ export async function getProduct(id: string): Promise<Product | null> {
   return data ? rowToProduct(data) : null;
 }
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isMissingPublicProductPageRpc(error: {
+  code?: string;
+  message?: string;
+}): boolean {
+  return (
+    error.code === "42883" ||
+    error.code === "PGRST202" ||
+    error.code === "PGRST205" ||
+    /get_public_product_page/i.test(error.message ?? "")
+  );
+}
+
+export async function productFreshnessMigrationAvailable(): Promise<boolean> {
+  if (isDemoMode()) return false;
+  const { error } = await adminSupabase()
+    .from("products")
+    .select("fetched_at,content_updated_at,judgment_input_hash,judgment_status")
+    .limit(0);
+  if (!error) return true;
+  if (
+    error.code === "42703" ||
+    error.code === "PGRST204" ||
+    /fetched_at|content_updated_at|judgment_input_hash|judgment_status/i.test(
+      error.message ?? "",
+    )
+  ) {
+    return false;
+  }
+  throw error;
+}
+
+export async function safeProductPageMigrationAvailable(): Promise<boolean> {
+  if (isDemoMode()) return false;
+  const { error } = await publicSupabase().rpc("get_public_product_page", {
+    p_product_id: "00000000-0000-4000-8000-000000000000",
+  });
+  if (!error) return true;
+  if (isMissingPublicProductPageRpc(error)) return false;
+  throw error;
+}
+
+/**
+ * 商品詳細URL専用。020適用後はpending/blockedも安全な限定列だけ取得する。
+ * 移行前DBではcurrent公開商品だけを返す既存経路へ後方互換フォールバックする。
+ */
+export const getProductPage = cache(
+  async (id: string): Promise<ProductPageData | null> => {
+    if (isDemoMode()) {
+      const product = await getProduct(id);
+      return product ? rowToProductPage({
+        ...product,
+        source_item_id: product.sourceItemId,
+        image_url: product.imageUrl,
+        price_updated_at: product.priceUpdatedAt,
+        affiliate_url: product.affiliateUrl,
+        category_slug: product.categorySlug,
+        review_count: product.reviewCount,
+        review_average: product.reviewAverage,
+        affiliate_rate: product.affiliateRate,
+        search_rank: product.searchRank,
+        demand_score: product.demandScore,
+        featured_score: product.featuredScore,
+        is_published: product.isPublished ?? true,
+        judgment_status: product.judgmentStatus ?? "current",
+        judgment_input_hash: product.judgmentInputHash ?? null,
+        evidence_type: product.evidenceType,
+        evidence_text: product.evidenceText,
+        judged_at: product.judgedAt,
+        input_hash: product.judgmentInputHashAtJudgment,
+        consistency_status: product.consistencyStatus,
+        consistency_issues: product.consistencyIssues,
+        origin_check: product.checks?.origin,
+        company_check: product.checks?.company,
+        material_check: product.checks?.material,
+      }) : null;
+    }
+    if (!UUID_PATTERN.test(id)) return null;
+
+    const { data, error } = await publicSupabase()
+      .rpc("get_public_product_page", { p_product_id: id })
+      .maybeSingle();
+    if (error) {
+      if (!isMissingPublicProductPageRpc(error)) throw error;
+      const product = await getProduct(id);
+      return product
+        ? {
+            ...product,
+            isPublished: product.isPublished ?? true,
+            judgmentStatus: product.judgmentStatus ?? "current",
+            judgmentInputHash: product.judgmentInputHash ?? null,
+            judgmentInputHashAtJudgment:
+              product.judgmentInputHashAtJudgment ?? null,
+            consistencyStatus: product.consistencyStatus ?? "legacy",
+            consistencyIssues: product.consistencyIssues ?? [],
+          }
+        : null;
+    }
+    if (!data) return null;
+    const product = rowToProductPage(data);
+    if (
+      !showLowTier() &&
+      product.judgmentStatus === "current" &&
+      product.tier === "low"
+    ) {
+      return null;
+    }
+    return product;
+  },
+);
+
+/**
+ * 管理権限による読み取り専用の全件監査。
+ * products_with_judgmentに出ないpending/blockedと、1000件超の履歴も集計対象にする。
+ */
+export async function getProductIndexAuditRecords(): Promise<ProductPageData[]> {
+  if (isDemoMode()) {
+    return (demoProducts as unknown as Product[]).map((product) => ({
+      ...product,
+      isPublished: product.isPublished ?? true,
+      judgmentStatus: product.judgmentStatus ?? "current",
+      judgmentInputHash: product.judgmentInputHash ?? null,
+      judgmentInputHashAtJudgment:
+        product.judgmentInputHashAtJudgment ?? null,
+      consistencyStatus: product.consistencyStatus ?? "legacy",
+      consistencyIssues: product.consistencyIssues ?? [],
+    }));
+  }
+
+  const db = adminSupabase();
+  const [products, judgments] = await Promise.all([
+    readAllPages<any>(async (from, to) => {
+      const { data, error } = await db
+        .from("products")
+        .select("*")
+        .order("id", { ascending: true })
+        .range(from, to);
+      if (error) throw error;
+      return data;
+    }),
+    readAllPages<any>(async (from, to) => {
+      const { data, error } = await db
+        .from("judgments")
+        .select("*")
+        .order("id", { ascending: true })
+        .range(from, to);
+      if (error) throw error;
+      return data;
+    }),
+  ]);
+
+  const productById = new Map(
+    products.map((product) => [product.id, product]),
+  );
+  const matchingJudgmentByProduct = new Map<string, any>();
+  for (const judgment of judgments) {
+    const product = productById.get(judgment.product_id);
+    if (!product) continue;
+    const productHash = product.judgment_input_hash ?? null;
+    const judgmentHash = judgment.input_hash ?? null;
+    if (productHash !== judgmentHash) continue;
+    const previous = matchingJudgmentByProduct.get(judgment.product_id);
+    const judgmentTime = Date.parse(judgment.judged_at ?? "") || 0;
+    const previousTime = Date.parse(previous?.judged_at ?? "") || 0;
+    if (
+      !previous ||
+      judgmentTime > previousTime ||
+      (judgmentTime === previousTime &&
+        Number(judgment.id) > Number(previous.id))
+    ) {
+      matchingJudgmentByProduct.set(judgment.product_id, judgment);
+    }
+  }
+
+  return products.map((product) => {
+    const judgment = matchingJudgmentByProduct.get(product.id);
+    return rowToProductPage({
+      ...product,
+      ...(judgment
+        ? {
+            score: judgment.score,
+            tier: judgment.tier,
+            evidence_type: judgment.evidence_type,
+            evidence_text: judgment.evidence_text,
+            origin_check: judgment.origin_check,
+            company_check: judgment.company_check,
+            material_check: judgment.material_check,
+            judged_at: judgment.judged_at,
+            judgment_input_hash_at_judgment: judgment.input_hash ?? null,
+            consistency_status: judgment.consistency_status ?? "legacy",
+            consistency_issues: judgment.consistency_issues ?? [],
+          }
+        : {}),
+    });
+  });
+}
+
 export async function getRelatedProducts(product: Product, limit = 4): Promise<Product[]> {
   if (isDemoMode()) {
     return (demoProducts as unknown as Product[])
@@ -478,22 +849,23 @@ export async function getRelatedProducts(product: Product, limit = 4): Promise<P
   return data.map(rowToProduct);
 }
 
-async function latestJudgmentScore(
+async function latestJudgment(
   db: SupabaseClient,
   productId: string
-): Promise<number | null> {
+): Promise<{ id: number; score: number; input_hash: string | null } | null> {
   const { data, error } = await db
     .from("judgments")
-    .select("score")
+    .select("id,score,input_hash")
     .eq("product_id", productId)
     .order("judged_at", { ascending: false })
+    .order("id", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (error) throw error;
-  return data?.score ?? null;
+  return data ?? null;
 }
 
-/** 収集パイプライン用: 商品をupsertし、新規作成ならidを返す(既存なら価格だけ更新してnull) */
+/** 収集パイプライン用: 商品をupsertし、新規作成ならidを返す。 */
 export async function upsertProduct(raw: RawProduct): Promise<string | null> {
   const now = new Date().toISOString();
   const db = adminSupabase();
@@ -506,32 +878,76 @@ export async function upsertProduct(raw: RawProduct): Promise<string | null> {
 
   const { data: existing, error: selErr } = await db
     .from("products")
-    .select("id")
+    .select(
+      "id,source,title,description,maker,brand,judgment_input_hash,content_updated_at,created_at,is_published,judgment_status",
+    )
     .eq("source", raw.source)
     .eq("source_item_id", raw.sourceItemId)
     .maybeSingle();
   if (selErr) throw selErr;
 
   if (existing) {
-    const score = await latestJudgmentScore(db, existing.id);
+    const refresh = planProductRefresh(
+      {
+        source: existing.source,
+        title: existing.title,
+        description: existing.description,
+        maker: existing.maker,
+        brand: existing.brand,
+        judgmentInputHash: existing.judgment_input_hash,
+        contentUpdatedAt: existing.content_updated_at,
+        createdAt: existing.created_at,
+        isPublished: existing.is_published,
+        judgmentStatus: existing.judgment_status,
+      },
+      raw,
+      now,
+    );
+    const latest = await latestJudgment(db, existing.id);
+    const shouldBindLegacyJudgment =
+      !refresh.inputChanged &&
+      existing.judgment_status === "current" &&
+      latest?.input_hash === null;
+
+    const score =
+      latest &&
+      (latest.input_hash === refresh.judgmentInputHash ||
+        shouldBindLegacyJudgment)
+        ? latest.score
+        : null;
     const { error } = await db
       .from("products")
       .update({
-        price: raw.price,
+        ...refreshedProductFields(raw),
         price_updated_at: now,
-        affiliate_url: raw.affiliateUrl,
-        image_url: raw.imageUrl,
-        review_count: raw.reviewCount ?? null,
-        review_average: raw.reviewAverage ?? null,
-        affiliate_rate: raw.affiliateRate ?? null,
-        search_rank: raw.searchRank ?? null,
         demand_score: demandScore,
-        featured_score: score == null ? 0 : calculateFeaturedScore(score, demandScore),
+        featured_score:
+          refresh.inputChanged ||
+          refresh.judgmentStatus !== "current" ||
+          score == null
+            ? 0
+            : calculateFeaturedScore(score, demandScore),
+        judgment_input_hash: refresh.judgmentInputHash,
+        judgment_status: refresh.judgmentStatus,
+        is_published: refresh.isPublished,
+        fetched_at: now,
+        content_updated_at: refresh.contentUpdatedAt,
         last_seen_at: now,
         updated_at: now,
       })
       .eq("id", existing.id);
     if (error) throw error;
+
+    // 商品側を先に更新すると、途中失敗時もハッシュ不一致で判定ビューから隠れる。
+    // 内容が変わっていない移行前行だけ、続けて最新判定へ現在のハッシュを結び付ける。
+    if (shouldBindLegacyJudgment && latest) {
+      const { error: judgmentHashError } = await db
+        .from("judgments")
+        .update({ input_hash: refresh.judgmentInputHash })
+        .eq("id", latest.id)
+        .is("input_hash", null);
+      if (judgmentHashError) throw judgmentHashError;
+    }
     return null;
   }
 
@@ -540,22 +956,15 @@ export async function upsertProduct(raw: RawProduct): Promise<string | null> {
     .insert({
       source: raw.source,
       source_item_id: raw.sourceItemId,
-      title: raw.title,
-      description: raw.description,
-      maker: raw.maker,
-      brand: raw.brand,
-      image_url: raw.imageUrl,
-      price: raw.price,
+      ...refreshedProductFields(raw),
       price_updated_at: now,
-      affiliate_url: raw.affiliateUrl,
-      item_url: raw.itemUrl,
       category_slug: raw.categorySlug,
-      review_count: raw.reviewCount ?? null,
-      review_average: raw.reviewAverage ?? null,
-      affiliate_rate: raw.affiliateRate ?? null,
-      search_rank: raw.searchRank ?? null,
       demand_score: demandScore,
       featured_score: 0,
+      judgment_input_hash: judgmentInputHash(raw),
+      judgment_status: "pending",
+      fetched_at: now,
+      content_updated_at: now,
       last_seen_at: now,
       is_published: false,
     })
@@ -577,12 +986,17 @@ export async function getCategoryInventory(): Promise<Record<string, CategoryInv
     return inventory;
   }
 
-  const rows: { id: string; category_slug: string; is_published: boolean }[] = [];
+  const rows: {
+    id: string;
+    category_slug: string;
+    is_published: boolean;
+    judgment_status: "pending" | "current" | "blocked";
+  }[] = [];
   const pageSize = 1000;
   for (let from = 0; ; from += pageSize) {
     const { data, error } = await adminSupabase()
       .from("products")
-      .select("id,category_slug,is_published")
+      .select("id,category_slug,is_published,judgment_status")
       .order("id", { ascending: true })
       .range(from, from + pageSize - 1);
     if (error) throw error;
@@ -594,7 +1008,7 @@ export async function getCategoryInventory(): Promise<Record<string, CategoryInv
   for (const row of rows) {
     const counts = inventory[row.category_slug] ?? { published: 0, pending: 0 };
     if (row.is_published) counts.published++;
-    else counts.pending++;
+    else if (row.judgment_status === "pending") counts.pending++;
     inventory[row.category_slug] = counts;
   }
   return inventory;
@@ -615,6 +1029,7 @@ export async function getUnjudgedProducts(
     .from("products")
     .select("*")
     .eq("is_published", false)
+    .eq("judgment_status", "pending")
     .order("featured_score", { ascending: false })
     .order("demand_score", { ascending: false })
     .order("search_rank", { ascending: true, nullsFirst: false })
@@ -677,10 +1092,69 @@ export async function getUnjudgedProducts(
  * 低スコアも公開する方針(「日本度は低いが安い」という選択肢もユーザーに委ねる2軸コンセプト)。
  * スコアは必ず表示されるため、低スコア商品の掲載自体は誤認にならない。
  */
-export async function saveJudgment(productId: string, j: Judgment): Promise<void> {
+export interface JudgmentSaveResult {
+  published: boolean;
+  consistencyIssues: string[];
+}
+
+export async function saveJudgment(
+  productId: string,
+  j: Judgment,
+): Promise<JudgmentSaveResult> {
   const db = adminSupabase();
+  const { data: product, error: productErr } = await db
+    .from("products")
+    .select(
+      "id,source,source_item_id,title,description,maker,brand,image_url,price,affiliate_url,item_url,category_slug,review_count,review_average,affiliate_rate,search_rank,demand_score,judgment_input_hash,content_updated_at,created_at",
+    )
+    .eq("id", productId)
+    .single();
+  if (productErr) throw productErr;
+
+  const raw: RawProduct = {
+    source: product.source,
+    sourceItemId: product.source_item_id,
+    title: product.title,
+    description: product.description,
+    maker: product.maker,
+    brand: product.brand,
+    imageUrl: product.image_url,
+    price: product.price,
+    affiliateUrl: product.affiliate_url,
+    itemUrl: product.item_url ?? "",
+    categorySlug: product.category_slug,
+    reviewCount: product.review_count ?? null,
+    reviewAverage: product.review_average ?? null,
+    affiliateRate: product.affiliate_rate ?? null,
+    searchRank: product.search_rank ?? null,
+  };
+  const inputHash = judgmentInputHash(raw);
+  if (
+    product.judgment_input_hash !== null &&
+    product.judgment_input_hash !== inputHash
+  ) {
+    throw new Error("商品内容ハッシュが保存内容と一致しないため判定を保存できません");
+  }
+
+  if (product.judgment_input_hash === null) {
+    const { error: bootstrapError } = await db
+      .from("products")
+      .update({
+        judgment_input_hash: inputHash,
+        content_updated_at:
+          product.content_updated_at ?? product.created_at ?? new Date().toISOString(),
+      })
+      .eq("id", productId)
+      .is("judgment_input_hash", null);
+    if (bootstrapError) throw bootstrapError;
+  }
+
+  const consistencyIssues = detectJudgmentConsistencyIssues(raw, j);
+  const consistencyStatus =
+    consistencyIssues.length === 0 ? "passed" : "blocked";
   const { error } = await db.from("judgments").insert({
     product_id: productId,
+    input_hash: inputHash,
     score: j.score,
     tier: j.tier,
     evidence_type: j.evidenceType,
@@ -690,25 +1164,34 @@ export async function saveJudgment(productId: string, j: Judgment): Promise<void
     material_check: j.checks.material,
     confidence: j.confidence,
     model: j.model,
+    consistency_status: consistencyStatus,
+    consistency_issues: consistencyIssues,
   });
   if (error) throw error;
 
-  const { data: product, error: productErr } = await db
-    .from("products")
-    .select("demand_score")
-    .eq("id", productId)
-    .single();
-  if (productErr) throw productErr;
-
-  const { error: pubErr } = await db
+  const nextPublished = consistencyIssues.length === 0;
+  const { data: updated, error: updateError } = await db
     .from("products")
     .update({
-      is_published: true,
-      featured_score: calculateFeaturedScore(j.score, product.demand_score ?? 0),
+      is_published: nextPublished,
+      judgment_status: nextPublished ? "current" : "blocked",
+      featured_score: nextPublished
+        ? calculateFeaturedScore(j.score, product.demand_score ?? 0)
+        : 0,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", productId);
-  if (pubErr) throw pubErr;
+    .eq("id", productId)
+    .eq("judgment_input_hash", inputHash)
+    .select("id")
+    .maybeSingle();
+  if (updateError) throw updateError;
+  if (!updated) {
+    throw new Error(
+      "判定中に商品内容が更新されたため、この判定は公開せず再判定待ちを維持します",
+    );
+  }
+
+  return { published: nextPublished, consistencyIssues };
 }
 
 export type ContactMessageInput = {

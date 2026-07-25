@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --washi: #f6f2e9;
-  --washi-deep: #ede7d8;
+  --washi: #ffffff;
+  --washi-deep: #ffffff;
   --sumi: #221f1a;
   --sumi-soft: #57534a;
   --hinomaru: #bc002d;
   --hinomaru-deep: #8e0022;
-  --kin: #b08d3e;
-  --line: #d9d2c0;
+  --kin: #80651f;
+  --line: #e8e8e5;
 }
 
 @theme inline {
@@ -25,11 +25,9 @@
 }
 
 body {
-  background-color: var(--washi);
+  background-color: #ffffff;
   color: var(--sumi);
   font-family: var(--font-gothic);
-  /* 和紙の質感: ごく淡い繊維ノイズ */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.5 0 0 0 0 0.4 0 0 0 0.035 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 .font-mincho {
