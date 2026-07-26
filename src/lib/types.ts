@@ -44,6 +44,17 @@ export interface Product {
   reviewCount: number | null;
   reviewAverage: number | null;
   affiliateRate: number | null;
+  /** 楽天APIで送料込み・送料無料対象として取得したか */
+  postageIncluded?: boolean;
+  /** 楽天APIの商品別セール期間 */
+  saleStartAt?: string | null;
+  saleEndAt?: string | null;
+  /** 楽天APIの商品別ポイント倍率と対象期間 */
+  pointRate?: number | null;
+  pointRateStartAt?: string | null;
+  pointRateEndAt?: string | null;
+  /** 送料・セール・ポイント条件を最後に取得した日時 */
+  promotionFetchedAt?: string | null;
   searchRank: number | null;
   demandScore: number;
   featuredScore: number;
@@ -83,6 +94,12 @@ export interface RawProduct {
   reviewCount?: number | null;
   reviewAverage?: number | null;
   affiliateRate?: number | null;
+  postageIncluded?: boolean;
+  saleStartAt?: string | null;
+  saleEndAt?: string | null;
+  pointRate?: number | null;
+  pointRateStartAt?: string | null;
+  pointRateEndAt?: string | null;
   searchRank?: number | null;
 }
 

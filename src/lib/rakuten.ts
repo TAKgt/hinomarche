@@ -12,7 +12,7 @@ import type { RawProduct } from "./types";
  */
 
 const ENDPOINT =
-  "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601";
+  "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20260701";
 
 /** もしもアフィリエイトの楽天市場用リンクにラップする */
 export function wrapMoshimoRakuten(itemUrl: string): string {
@@ -29,6 +29,54 @@ export function wrapMoshimoRakuten(itemUrl: string): string {
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+function parseRakutenDateTime(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const match = value.trim().match(
+    /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/,
+  );
+  if (!match) return null;
+  const [, year, month, day, hour, minute, second = "00"] = match;
+  const iso = `${year}-${month}-${day}T${hour}:${minute}:${second}+09:00`;
+  return Number.isNaN(Date.parse(iso)) ? null : iso;
+}
+
+function parsePointRate(value: unknown): number | null {
+  const rate = Number(value);
+  return Number.isInteger(rate) && rate >= 2 ? rate : null;
+}
+
+export function rakutenItemToRawProduct(
+  item: any,
+  categorySlug: string,
+  searchRank: number,
+): RawProduct {
+  const imageUrl: string | null =
+    item.mediumImageUrls?.[0]?.replace("?_ex=128x128", "?_ex=400x400") ?? null;
+  return {
+    source: "rakuten",
+    sourceItemId: item.itemCode,
+    title: item.itemName,
+    description: item.itemCaption || null,
+    maker: null,
+    brand: null,
+    imageUrl,
+    price: item.itemPrice ?? null,
+    affiliateUrl: wrapMoshimoRakuten(item.itemUrl),
+    itemUrl: item.itemUrl,
+    categorySlug,
+    reviewCount: item.reviewCount ?? null,
+    reviewAverage: item.reviewAverage ?? null,
+    affiliateRate: item.affiliateRate ?? null,
+    postageIncluded: Number(item.postageFlag) === 1,
+    saleStartAt: parseRakutenDateTime(item.startTime),
+    saleEndAt: parseRakutenDateTime(item.endTime),
+    pointRate: parsePointRate(item.pointRate),
+    pointRateStartAt: parseRakutenDateTime(item.pointRateStartTime),
+    pointRateEndAt: parseRakutenDateTime(item.pointRateEndTime),
+    searchRank,
+  };
+}
+
 export async function searchRakuten(
   keyword: string,
   categorySlug: string,
@@ -51,7 +99,7 @@ export async function searchRakuten(
     format: "json",
     formatVersion: "2",
     elements:
-      "itemCode,itemName,itemCaption,itemUrl,itemPrice,mediumImageUrls,shopName,reviewCount,reviewAverage,affiliateRate",
+      "itemCode,itemName,itemCaption,itemUrl,itemPrice,mediumImageUrls,shopName,reviewCount,reviewAverage,affiliateRate,postageFlag,startTime,endTime,pointRate,pointRateStartTime,pointRateEndTime",
   });
 
   // 楽天APIの「許可されたWebサイト」制限に対応: 登録ドメインをRefererとして名乗る。
@@ -66,27 +114,9 @@ export async function searchRakuten(
   const json = await res.json();
 
   // formatVersion=2なら商品オブジェクトの配列、非対応時は {Item: {...}} でラップされる
-  const items = (json.Items ?? []).map((it: any) => it.Item ?? it);
+  const items = (json.Items ?? json.items ?? []).map((it: any) => it.Item ?? it.item ?? it);
 
-  return items.map((item: any, index: number): RawProduct => {
-    const imageUrl: string | null =
-      item.mediumImageUrls?.[0]?.replace("?_ex=128x128", "?_ex=400x400") ?? null;
-    return {
-      source: "rakuten",
-      sourceItemId: item.itemCode,
-      title: item.itemName,
-      description: item.itemCaption || null,
-      maker: null, // 楽天APIにメーカー項目はないため説明文から判定に委ねる
-      brand: null,
-      imageUrl,
-      price: item.itemPrice ?? null,
-      affiliateUrl: wrapMoshimoRakuten(item.itemUrl),
-      itemUrl: item.itemUrl,
-      categorySlug,
-      reviewCount: item.reviewCount ?? null,
-      reviewAverage: item.reviewAverage ?? null,
-      affiliateRate: item.affiliateRate ?? null,
-      searchRank: index + 1,
-    };
-  });
+  return items.map((item: any, index: number): RawProduct =>
+    rakutenItemToRawProduct(item, categorySlug, index + 1),
+  );
 }

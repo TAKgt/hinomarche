@@ -54,6 +54,12 @@ export default async function RootLayout({
             </div>
             <nav className="ml-auto flex min-w-0 items-center gap-5 text-sm font-medium text-sumi-soft md:gap-7 lg:ml-0">
               <Link
+                href="/deals"
+                className="whitespace-nowrap transition-colors hover:text-hinomaru"
+              >
+                セール・特典
+              </Link>
+              <Link
                 href="/#featured"
                 className="hidden whitespace-nowrap transition-colors hover:text-hinomaru sm:block"
               >

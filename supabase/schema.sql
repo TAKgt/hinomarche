@@ -27,6 +27,13 @@ create table products (
   review_count integer,
   review_average numeric(3,2),
   affiliate_rate numeric(5,2),
+  postage_included boolean not null default false,
+  sale_start_at timestamptz,
+  sale_end_at timestamptz,
+  point_rate integer check (point_rate is null or point_rate >= 2),
+  point_rate_start_at timestamptz,
+  point_rate_end_at timestamptz,
+  promotion_fetched_at timestamptz,
   search_rank integer,
   demand_score integer not null default 0 check (demand_score between 0 and 100),
   featured_score integer not null default 0 check (featured_score between 0 and 100),
@@ -79,7 +86,7 @@ create table outbound_clicks (
   product_id uuid not null references products(id) on delete cascade,
   destination text not null check (destination in ('primary', 'cross')),
   merchant text not null check (merchant in ('rakuten', 'amazon')),
-  surface text check (surface is null or surface in ('home', 'category', 'feature', 'region', 'related', 'search', 'popular', 'recommended', 'product')),
+  surface text check (surface is null or surface in ('home', 'category', 'feature', 'region', 'related', 'search', 'popular', 'recommended', 'deals', 'product')),
   surface_key text check (surface_key is null or surface_key ~ '^[a-z0-9][a-z0-9-]{0,63}$'),
   position smallint check (position is null or position between 1 and 100),
   clicked_at timestamptz not null default now()
@@ -97,7 +104,7 @@ create table product_page_views (
     (
       position between 1 and 100
       and (
-        (surface in ('home', 'search', 'popular', 'recommended') and surface_key is null)
+        (surface in ('home', 'search', 'popular', 'recommended', 'deals') and surface_key is null)
         or
         (surface in ('category', 'feature', 'region', 'related') and surface_key is not null)
       )
@@ -109,7 +116,7 @@ create table product_page_views (
 create table product_impressions (
   id bigserial primary key,
   product_id uuid not null references products(id) on delete cascade,
-  surface text not null check (surface in ('home', 'category', 'feature', 'region', 'related', 'search', 'popular', 'recommended')),
+  surface text not null check (surface in ('home', 'category', 'feature', 'region', 'related', 'search', 'popular', 'recommended', 'deals')),
   surface_key text check (surface_key is null or surface_key ~ '^[a-z0-9][a-z0-9-]{0,63}$'),
   position smallint not null check (position between 1 and 100),
   viewed_at timestamptz not null default now()
@@ -137,6 +144,10 @@ create index idx_products_category on products (category_slug) where is_publishe
 create index idx_products_featured on products (is_published, featured_score desc, demand_score desc, updated_at desc);
 create index idx_products_judgment_backlog on products (judgment_status, created_at)
   where judgment_status = 'pending';
+create index idx_products_active_promotions
+  on products (promotion_fetched_at desc)
+  where is_published and source = 'rakuten'
+    and (postage_included or sale_end_at is not null or point_rate is not null);
 create index idx_judgments_product on judgments (product_id, judged_at desc);
 create index idx_contact_messages_created_at on contact_messages (created_at desc);
 create index idx_outbound_clicks_clicked_at on outbound_clicks (clicked_at desc);
@@ -303,7 +314,7 @@ left join (
   select product_id, count(*) as listing_clicks_28d
   from outbound_clicks
   where clicked_at >= now() - interval '28 days'
-    and surface in ('home', 'category', 'feature', 'region', 'related', 'search', 'popular', 'recommended')
+    and surface in ('home', 'category', 'feature', 'region', 'related', 'search', 'popular', 'recommended', 'deals')
   group by product_id
 ) lc on lc.product_id = p.id
 where p.is_published
@@ -348,7 +359,7 @@ with impression_totals as (
   select surface, position, count(*)::integer as listing_clicks_28d
   from outbound_clicks
   where clicked_at >= now() - interval '28 days'
-    and surface in ('home', 'category', 'feature', 'region', 'related', 'search', 'popular', 'recommended')
+    and surface in ('home', 'category', 'feature', 'region', 'related', 'search', 'popular', 'recommended', 'deals')
     and position is not null
   group by surface, position
 )
@@ -394,7 +405,7 @@ with observation_window as (
   select
     oc.product_id,
     count(*) filter (
-      where oc.surface in ('home', 'category', 'feature', 'region', 'related', 'search', 'popular', 'recommended')
+      where oc.surface in ('home', 'category', 'feature', 'region', 'related', 'search', 'popular', 'recommended', 'deals')
     )::integer as listing_outbound_clicks_28d,
     count(*) filter (where oc.surface = 'product')::integer as detail_outbound_clicks_28d
   from outbound_clicks oc

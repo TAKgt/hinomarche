@@ -10,6 +10,7 @@
     "test:judge": "node --import tsx --test src/lib/judge-policy.test.ts",
     "test:freshness": "node --import tsx --test src/lib/product-freshness.test.ts src/lib/ingest.test.ts",
     "test:index-quality": "node --import tsx --test src/lib/product-index-quality.test.ts src/lib/product-index-audit.test.ts src/lib/product-page-resolution.test.ts src/lib/read-all-pages.test.ts",
+    "test:promotions": "node --import tsx --test src/lib/rakuten.test.ts src/lib/product-promotions.test.ts",
     "audit:index-quality": "node --import tsx scripts/audit-product-index-quality.ts",
     "ingest": "tsx scripts/ingest.ts",
     "judge:backlog": "tsx scripts/judge-backlog.ts",

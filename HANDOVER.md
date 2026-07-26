@@ -68,6 +68,7 @@ src/
     search/page.tsx         商品名・ブランド・メーカー検索(検索語は保存しない)
     popular/page.tsx        販売先評価4.0以上・100件以上・AI日本度50%以上の高評価商品一覧
     recommended/page.tsx    AI日本度50%以上と市場性を組み合わせたジャンル横断の注目商品一覧
+    deals/page.tsx          直近48時間に取得したセール・送料無料・商品別ポイントアップ一覧
     go/[id]/route.ts        販売サイトへの安全なリダイレクト+匿名クリック集計
     not-found.tsx           404
     sitemap.ts / robots.ts / icon.svg / opengraph-image.tsx  SEO・メタ系(sitemapは1時間再生成)
@@ -91,6 +92,7 @@ src/
     ranking.ts              28日間の閲覧/クリックでshadow候補順位を日次計算
     product-metrics.ts      掲載面・文脈slug・表示位置の検証とURL生成
     product-index-quality.ts 商品詳細のindex可否と理由別監査を一元判定
+    product-promotions.ts    販促情報の48時間鮮度・期間内判定・表示ラベル
     product-sitemap.ts      index品質通過商品のsitemapエントリ生成
     request-security.ts     同一サイト操作/一般的なボットの判定(計測ノイズ抑制)
     crosslinks.ts           相互送客リンク(楽天商品→Amazon検索 / Amazon商品→楽天検索)
@@ -123,6 +125,7 @@ supabase/
   migrations/018_align_funnel_window.sql ファネル3段階の共通観測期間(適用済み)
   migrations/019_product_judgment_freshness.sql 商品内容とAI判定の鮮度保証(適用前)
   migrations/020_safe_product_page_urls.sql 再判定中URLの安全な200維持(適用前、019適用後)
+  migrations/021_product_promotions.sql セール・送料・ポイント情報とdeals計測面(適用前、019・020後)
 ```
 
 ## 5. データモデル(Supabase)
@@ -132,7 +135,13 @@ supabase/
   - 011適用後は23カテゴリ。Amazon・楽天の主要売場をヒノマルシェ向けに再構成
 - `products`: source('rakuten'|'amazon') + source_item_id でユニーク。affiliate_url, price,
   price_updated_at, is_published など。019適用後は取得日時`fetched_at`、判定材料の内容更新日時
-  `content_updated_at`、現在の`judgment_input_hash`、`judgment_status`を分離して保持する
+  `content_updated_at`、現在の`judgment_input_hash`、`judgment_status`を分離して保持する。
+  021適用後は楽天の`postage_included`、セール期間、商品別ポイント倍率・期間、
+  `promotion_fetched_at`も保持する
+- `/deals` は既存の公開済み楽天商品だけを対象に、販促情報を取得してから48時間以内かつ
+  現在有効なセール・送料無料・商品別ポイントアップを各12件まで表示する。終了日時を過ぎた
+  セール・ポイントアップは1時間以内の再生成で除外し、ショップ全体・楽天市場全体の
+  ポイント企画は商品別ポイントとして扱わない
 - `/popular` は販売先評価4.0以上・レビュー100件以上・AI日本度50%以上を条件に、
   レビュー件数順の候補から同一カテゴリ最大4件までを自動選定する。TOPの高評価棚は最大2件/カテゴリ
 - `/recommended` はAI日本度50%以上を必須に、市場性を加味した注目順の候補から
@@ -350,14 +359,17 @@ supabase/
 
 ## 6. 外部API仕様(2026年の重要変更を含む)
 
-### 楽天(2026年2月に全面刷新済み。ネット上の古い記事に注意)
-- エンドポイント: `https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601`
+### 楽天(2026年7月版。ネット上の古い記事に注意)
+- エンドポイント: `https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20260701`
   (旧 `app.rakuten.co.jp` は2026-05-14停止済み)
 - 認証: `applicationId`(UUID) + `accessKey`(pk_...) を**両方クエリパラメータで**渡す
 - **Refererが必須**。Node.jsのfetchではヘッダー直指定が無視されるため
   `referrer: "https://hinomarche.com/"` オプションで渡している(rakuten.ts参照)
 - 楽天側のアプリ設定で「APIアクセススコープ→楽天市場API」と「許可されたWebサイト」の登録が必要(設定済み)
 - レート: 約1リクエスト/秒に自制(ingest.tsのsleep(1100))
+- 商品別の`postageFlag`、`startTime`/`endTime`、`pointRate`と実施期間を取得する。
+  商品別ポイント情報は終了まで24時間以内になるとAPIから返らない場合がある。
+  ショップ全体・楽天市場全体のキャンペーンは対象外
 
 ### 楽天の報酬リンク = もしもアフィリエイト経由
 - 形式: `https://af.moshimo.com/af/c/click?a_id=<MOSHIMO_A_ID>&p_id=54&pc_id=54&pl_id=616&url=<encodeURIComponent(商品URL)>`
@@ -391,7 +403,7 @@ supabase/
 1. 公開数が既定12件未満のカテゴリを少ない順に優先。判定待ちが目標分あれば商品API検索を省略し、
    既存候補を消化する。全カテゴリが目標到達後は1日4件ずつ日替わり巡回し、各1検索語で楽天(+資格回復後Amazon)を検索(30件/キーワード)
 2. 新商品はINSERT、既存商品は商品名・説明・メーカー・ブランド・価格・画像・リンク等を更新。
-   取得日時、判定材料の内容更新日時、価格取得日時は別々に保存する
+   取得日時、判定材料の内容更新日時、価格取得日時、販促条件の取得日時は別々に保存する
 3. 判定材料のSHA-256が変わった既存商品は旧判定を公開に使わず、再判定待ちへ戻す。
    020適用後はURLだけ200で維持し、`noindex,follow`、古いAI判定・販売リンク非表示とする
 4. 未判定商品(is_published=falseかつjudgment_status=pending)を古い順に
@@ -491,6 +503,8 @@ supabase/
    新規ガイドを公開しない
 6. 検討中の未決事項: スコア帯フィルタの「高(80%〜)」とバッジ色の「赤(90%〜)」の境界不一致を
    揃えるか(ユーザー未回答)
+7. `/deals` はローカル実装済み。本番公開前に019、020、021の順でSQL内容と影響を確認して適用し、
+   その後の楽天取り込みで販促列を埋める。SQL適用、取り込み、デプロイはいずれも未実施
 
 ## 13. ハマりどころ(実際に踏んだ罠)
 

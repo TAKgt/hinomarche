@@ -28,6 +28,7 @@ import {
 } from "./product-freshness";
 import { CATEGORY_PAGE_SIZE } from "./category-pagination";
 import { readAllPages } from "./read-all-pages";
+import { hasActivePromotion } from "./product-promotions";
 import demoProducts from "../data/demo-products.json";
 
 /**
@@ -111,6 +112,13 @@ function rowToProduct(row: any): Product {
     reviewCount: row.review_count ?? null,
     reviewAverage: row.review_average ?? null,
     affiliateRate: row.affiliate_rate ?? null,
+    postageIncluded: row.postage_included === true,
+    saleStartAt: row.sale_start_at ?? null,
+    saleEndAt: row.sale_end_at ?? null,
+    pointRate: row.point_rate ?? null,
+    pointRateStartAt: row.point_rate_start_at ?? null,
+    pointRateEndAt: row.point_rate_end_at ?? null,
+    promotionFetchedAt: row.promotion_fetched_at ?? null,
     searchRank: row.search_rank ?? null,
     demandScore: row.demand_score ?? 0,
     featuredScore: row.featured_score ?? row.score ?? 0,
@@ -425,6 +433,95 @@ export async function getPopularReviewedProducts(limit = 24): Promise<Product[]>
     limit: Math.max(limit * 2, 40),
   });
   return candidates.filter((product) => product.tier !== "low").slice(0, limit);
+}
+
+function demoDealProducts(now: Date): Product[] {
+  const fetchedAt = now.toISOString();
+  const startAt = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
+  const endAt = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString();
+  return (demoProducts as unknown as Product[])
+    .filter((product) => product.source === "rakuten")
+    .slice(0, 6)
+    .map((product, index) => ({
+      ...product,
+      postageIncluded: index % 2 === 0,
+      saleStartAt: index < 3 ? startAt : null,
+      saleEndAt: index < 3 ? endAt : null,
+      pointRate: index >= 2 && index < 5 ? 5 + index : null,
+      pointRateStartAt: index >= 2 && index < 5 ? startAt : null,
+      pointRateEndAt: index >= 2 && index < 5 ? endAt : null,
+      promotionFetchedAt: fetchedAt,
+    }))
+    .filter((product) => hasActivePromotion(product, now));
+}
+
+/** 楽天から直近48時間以内に取得した、現在有効な販促条件つき公開商品。 */
+export async function getDealProducts(limit = 300, now = new Date()): Promise<Product[]> {
+  if (isDemoMode()) return demoDealProducts(now).slice(0, limit);
+
+  const freshSince = new Date(
+    now.getTime() - 48 * 60 * 60 * 1000,
+  ).toISOString();
+  const { data: promotionRows, error: promotionError } = await publicSupabase()
+    .from("products")
+    .select(
+      "id,postage_included,sale_start_at,sale_end_at,point_rate,point_rate_start_at,point_rate_end_at,promotion_fetched_at",
+    )
+    .eq("source", "rakuten")
+    .eq("is_published", true)
+    .gte("promotion_fetched_at", freshSince)
+    .or(`postage_included.eq.true,sale_end_at.gt.${now.toISOString()},point_rate.gte.2`)
+    .order("promotion_fetched_at", { ascending: false })
+    .limit(Math.max(limit * 2, 300));
+
+  if (promotionError) {
+    if (
+      promotionError.code === "42703" ||
+      promotionError.code === "PGRST204" ||
+      /postage_included|sale_start_at|point_rate|promotion_fetched_at/i.test(
+        promotionError.message ?? "",
+      )
+    ) {
+      return [];
+    }
+    throw promotionError;
+  }
+
+  const promotionsById = new Map(
+    promotionRows.map((row) => [String(row.id), row]),
+  );
+  const productIds = [...promotionsById.keys()];
+  if (productIds.length === 0) return [];
+
+  const rows: Product[] = [];
+  for (let index = 0; index < productIds.length; index += 200) {
+    let query = publicSupabase()
+      .from("products_with_judgment")
+      .select("*")
+      .in("id", productIds.slice(index, index + 200))
+      .eq("is_published", true);
+    if (!showLowTier()) query = query.neq("tier", "low");
+    const { data, error } = await query;
+    if (error) throw error;
+    for (const row of data) {
+      const promotion = promotionsById.get(String(row.id));
+      rows.push(
+        rowToProduct({
+          ...row,
+          ...promotion,
+        }),
+      );
+    }
+  }
+
+  return rows
+    .filter((product) => hasActivePromotion(product, now))
+    .sort(
+      (a, b) =>
+        productFeaturedScore(b) - productFeaturedScore(a) ||
+        compareProductIds(a, b),
+    )
+    .slice(0, limit);
 }
 
 export async function searchPublishedProducts(
@@ -919,6 +1016,13 @@ export async function upsertProduct(raw: RawProduct): Promise<string | null> {
       .from("products")
       .update({
         ...refreshedProductFields(raw),
+        postage_included: raw.postageIncluded ?? false,
+        sale_start_at: raw.saleStartAt ?? null,
+        sale_end_at: raw.saleEndAt ?? null,
+        point_rate: raw.pointRate ?? null,
+        point_rate_start_at: raw.pointRateStartAt ?? null,
+        point_rate_end_at: raw.pointRateEndAt ?? null,
+        promotion_fetched_at: raw.source === "rakuten" ? now : null,
         price_updated_at: now,
         demand_score: demandScore,
         featured_score:
@@ -957,6 +1061,13 @@ export async function upsertProduct(raw: RawProduct): Promise<string | null> {
       source: raw.source,
       source_item_id: raw.sourceItemId,
       ...refreshedProductFields(raw),
+      postage_included: raw.postageIncluded ?? false,
+      sale_start_at: raw.saleStartAt ?? null,
+      sale_end_at: raw.saleEndAt ?? null,
+      point_rate: raw.pointRate ?? null,
+      point_rate_start_at: raw.pointRateStartAt ?? null,
+      point_rate_end_at: raw.pointRateEndAt ?? null,
+      promotion_fetched_at: raw.source === "rakuten" ? now : null,
       price_updated_at: now,
       category_slug: raw.categorySlug,
       demand_score: demandScore,
@@ -1376,7 +1487,7 @@ export type AdminCollectionReport = {
 };
 
 export type AdminSurfacePositionRow = {
-  surface: "home" | "popular" | "recommended" | "category" | "search" | "feature" | "region" | "related";
+  surface: "home" | "popular" | "recommended" | "deals" | "category" | "search" | "feature" | "region" | "related";
   position: number;
   impressions28d: number;
   listingClicks28d: number;
@@ -1496,6 +1607,7 @@ export async function getAdminSurfacePositionReport(): Promise<AdminSurfacePosit
     "home",
     "popular",
     "recommended",
+    "deals",
     "category",
     "search",
     "feature",
