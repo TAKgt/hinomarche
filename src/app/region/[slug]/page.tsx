@@ -279,13 +279,81 @@ export default async function RegionPage({ params }: Props) {
         </section>
       )}
 
+      {region.slug === "imabari" && (
+        <section className="border-b border-line">
+          <div className="mx-auto max-w-6xl px-5 py-10 md:py-12">
+            <h2 className="font-mincho text-2xl font-semibold md:text-3xl">
+              ふるさと納税で今治タオルを選ぶときの確認事項
+            </h2>
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-sumi-soft md:text-base">
+              返礼品のカードに表示する金額は、申込先から取得した寄付額です。
+              通常販売の商品価格とは分けて見てください。候補を開いたら、
+              タオルの種類・枚数・色、発送時期、申込条件を申込先で確認します。
+            </p>
+            <div className="mt-7 grid gap-4 md:grid-cols-3">
+              <div className="border border-line bg-white/60 p-5">
+                <h3 className="font-mincho text-lg font-semibold">
+                  寄付額と商品価格を分ける
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
+                  返礼品カードの金額は寄付額として表示します。
+                  通常販売の商品と同じ価格比較には使いません。
+                </p>
+              </div>
+              <div className="border border-line bg-white/60 p-5">
+                <h3 className="font-mincho text-lg font-semibold">
+                  内容と発送時期を申込先で確認
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
+                  候補を開き、タオルの種類・枚数・色、発送時期を申込先で確認します。
+                  ヒノマルシェの取得日もあわせて確認してください。
+                </p>
+              </div>
+              <div className="border border-line bg-white/60 p-5">
+                <h3 className="font-mincho text-lg font-semibold">
+                  申込条件と認定表示を確認
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
+                  今治市内在住者には返礼品が提供されません。
+                  今治タオルブランド認定品を探す場合は、商品ページのブランドマークや認定表示を確認します。
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 flex flex-col items-start gap-3 text-sm sm:flex-row sm:gap-6">
+              <a
+                href="https://www.city.imabari.ehime.jp/furusato-nouzei/003/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="border-b border-hinomaru pb-1 font-medium text-hinomaru transition-colors hover:text-hinomaru-deep"
+              >
+                今治市の寄附・返礼品案内（公式）↗
+              </a>
+              <a
+                href="https://www.imabaritowel.jp/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="border-b border-hinomaru pb-1 font-medium text-hinomaru transition-colors hover:text-hinomaru-deep"
+              >
+                今治タオルの品質基準（公式）↗
+              </a>
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="mx-auto max-w-6xl px-5 py-12 md:py-16">
         {highlights.length > 0 && (
           <div className="mb-14">
             <div className="border-b border-line pb-4">
-              <h2 className="font-mincho text-2xl font-semibold">用途別の比較入口</h2>
+              <h2 className="font-mincho text-2xl font-semibold">
+                {region.slug === "imabari"
+                  ? "普段使い・ギフト・返礼品から候補を比べる"
+                  : "用途別の比較入口"}
+              </h2>
               <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
-                ページ内の商品を用途や価格帯、販売先レビュー件数から比較できます。
+                {region.slug === "imabari"
+                  ? "普段使い、ギフト、ふるさと納税の返礼品から1件ずつ、ページ内の候補を比較します。"
+                  : "ページ内の商品を用途や価格帯、販売先レビュー件数から比較できます。"}
               </p>
             </div>
             {isRevenueFocus ? (

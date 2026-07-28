@@ -64,6 +64,8 @@ export function ProductComparison({
         const outboundUrl = `/go/${product.id}?target=primary&${query}`;
         const sourceLabel = SOURCE_LABEL[product.source];
         const outboundLabel = comparisonOutboundLabel(sourceLabel, surfaceKey, label);
+        const isHometownTaxChoice =
+          surfaceKey === "imabari" && label.includes("ふるさと納税");
         const hasReview =
           product.reviewAverage != null &&
           product.reviewAverage > 0 &&
@@ -105,9 +107,14 @@ export function ProductComparison({
                 <h3 className="line-clamp-3 text-sm font-medium leading-snug group-hover:text-hinomaru">
                   {title}
                 </h3>
-                <p className="mt-2 font-mincho text-xl font-semibold">{formatPrice(product.price)}</p>
+                <p className="mt-2 font-mincho text-xl font-semibold">
+                  {isHometownTaxChoice && (
+                    <span className="mr-1 text-xs font-normal text-sumi-soft">寄付額</span>
+                  )}
+                  {formatPrice(product.price)}
+                </p>
                 <p className="mt-1 text-[10px] text-sumi-soft">
-                  価格取得: {formatDate(product.priceUpdatedAt)}
+                  {isHometownTaxChoice ? "寄付額" : "価格"}取得: {formatDate(product.priceUpdatedAt)}
                 </p>
               </div>
             </Link>
