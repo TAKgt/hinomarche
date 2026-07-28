@@ -24,6 +24,9 @@ function comparisonOutboundLabel(
   if (surfaceKey === "japanese-kitchen-knives") {
     return `${sourceLabel}で刃渡り・仕様を見る`;
   }
+  if (surfaceKey === "rice-cookers") {
+    return `${sourceLabel}で容量・仕様を見る`;
+  }
   if (surfaceKey === "tsubame-sanjo") {
     if (choiceLabel.includes("水切りラック")) {
       return `${sourceLabel}で設置寸法・在庫を見る`;

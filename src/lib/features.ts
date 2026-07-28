@@ -18,6 +18,10 @@ export type FeatureDefinition = {
       title: string;
       description: string;
     }[];
+    officialLinks?: {
+      href: string;
+      label: string;
+    }[];
   };
 };
 
@@ -72,6 +76,38 @@ export const FEATURES: FeatureDefinition[] = [
     categorySlugs: ["electronics"],
     minScore: 70,
     titleTermGroups: [["炊飯器", "炊飯ジャー"]],
+    selectionGuide: {
+      title: "炊飯器・炊飯鍋を選ぶ前に確認すること",
+      description:
+        "電気炊飯器と炊飯鍋では、確認する仕様が異なります。メーカー名だけで生産国を決めず、容量や加熱方式、対応熱源を販売ページやメーカーの仕様表で確認してください。",
+      points: [
+        {
+          title: "日本メーカーと生産国を分ける",
+          description:
+            "日本メーカーの商品でも、生産国は機種ごとに異なる場合があります。ヒノマルシェのAI日本度は商品情報をもとにした推定です。正確な生産国は販売ページやメーカーの仕様表で確認してください。",
+        },
+        {
+          title: "電気炊飯器は容量と加熱方式を確認",
+          description:
+            "普段一度に炊く量に合う容量を先に確認します。電気炊飯器にはIH、圧力IH、マイコンなどの方式があるため、商品ごとの仕様を確認してください。",
+        },
+        {
+          title: "炊飯鍋は容量と対応熱源を確認",
+          description:
+            "3合、5合などの容量に加え、ガス火やIHなどの対応熱源、寸法、手入れ方法を販売ページで確認してください。",
+        },
+      ],
+      officialLinks: [
+        {
+          href: "https://panasonic.jp/suihan/select.html",
+          label: "パナソニック公式「炊飯器の選び方」",
+        },
+        {
+          href: "https://www.tiger-corporation.com/ja/jpn/product/rice-cooker-comparison/",
+          label: "タイガー魔法瓶公式「炊飯器 仕様比較」",
+        },
+      ],
+    },
   },
   {
     slug: "pc-accessories",

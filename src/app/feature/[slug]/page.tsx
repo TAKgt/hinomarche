@@ -31,6 +31,11 @@ const REVENUE_FOCUS_FEATURES = new Set([
   "gifts-under-5000-yen",
 ]);
 
+const PRODUCT_COMPARISON_FEATURES = new Set([
+  ...REVENUE_FOCUS_FEATURES,
+  "rice-cookers",
+]);
+
 function includesAny(title: string, terms: string[]): boolean {
   return terms.some((term) => title.includes(term));
 }
@@ -56,6 +61,42 @@ function selectUniqueHighlights(
 }
 
 function getProductHighlights(slug: string, products: Product[]): ProductHighlight[] {
+  if (slug === "rice-cookers") {
+    const cookingPotTerms = [
+      "ご飯釜",
+      "ごはん釜",
+      "ご飯鍋",
+      "ごはん鍋",
+      "炊飯土鍋",
+      "炊飯鍋",
+    ];
+    const electricTerms = ["IH炊飯器", "IHジャー", "炊飯ジャー"];
+    const isCookingPot = (product: Product) =>
+      includesAny(product.title, cookingPotTerms) &&
+      !includesAny(product.title, electricTerms);
+
+    return selectUniqueHighlights([
+      {
+        label: "電気炊飯器・炊飯ジャーから比較",
+        candidates: products.filter((product) => !isCookingPot(product)),
+      },
+      {
+        label: "3合の炊飯鍋から比較",
+        candidates: products
+          .filter(
+            (product) => isCookingPot(product) && product.title.includes("3合"),
+          ),
+      },
+      {
+        label: "5合の炊飯鍋から比較",
+        candidates: products
+          .filter(
+            (product) => isCookingPot(product) && product.title.includes("5合"),
+          ),
+      },
+    ]);
+  }
+
   if (slug === "japanese-gift-ideas") {
     return selectUniqueHighlights([
       {
@@ -259,6 +300,9 @@ function getProductHighlights(slug: string, products: Product[]): ProductHighlig
 }
 
 function highlightDescription(slug: string): string {
+  if (slug === "rice-cookers") {
+    return "電気炊飯器、3合表記のある炊飯鍋、5合表記のある炊飯鍋から候補を確認できます。";
+  }
   if (slug === "japanese-gift-ideas") {
     return "販売先レビュー、食べもの・飲みもの、タオル・日用品の異なる入口から候補を確認できます。";
   }
@@ -281,6 +325,25 @@ function highlightDescription(slug: string): string {
 }
 
 function comparisonCopy(slug: string, label: string): Pick<ProductComparisonChoice, "audience" | "reason"> {
+  if (slug === "rice-cookers") {
+    if (label.includes("電気炊飯器")) {
+      return {
+        audience: "電気炊飯器を容量や加熱方式から比べたい方",
+        reason: "商品名から電気炊飯器または炊飯ジャーと判断できる商品のうち、ページ内の既存順で最初の候補を選定しています。",
+      };
+    }
+    if (label.includes("3合")) {
+      return {
+        audience: "3合表記のある炊飯鍋を比べたい方",
+        reason: "商品名で炊飯鍋と3合の表記を確認できる商品のうち、ページ内の既存順で最初の候補を選定しています。",
+      };
+    }
+    return {
+      audience: "5合表記のある炊飯鍋を比べたい方",
+      reason: "商品名で炊飯鍋と5合の表記を確認できる商品のうち、ページ内の既存順で最初の候補を選定しています。",
+    };
+  }
+
   if (slug === "japanese-gift-ideas") {
     if (label.includes("食べもの・飲みもの")) {
       return {
@@ -397,6 +460,7 @@ export default async function FeaturePage({ params }: Props) {
   const relatedFeatures = getRelatedFeatures(feature);
   const highlights = getProductHighlights(feature.slug, products);
   const isRevenueFocus = REVENUE_FOCUS_FEATURES.has(feature.slug);
+  const usesProductComparison = PRODUCT_COMPARISON_FEATURES.has(feature.slug);
   const comparisonChoices = highlights.map(({ label, product }) => ({
     label,
     product,
@@ -446,7 +510,11 @@ export default async function FeaturePage({ params }: Props) {
           <p className="text-xs font-medium tracking-[0.3em] text-hinomaru">
             {feature.eyebrow}
           </p>
-          <h1 className="mt-3 max-w-4xl font-mincho text-3xl font-semibold leading-snug md:text-5xl">
+          <h1
+            className={`mt-3 max-w-4xl font-mincho text-3xl font-semibold leading-snug md:text-5xl ${
+              feature.slug === "rice-cookers" ? "text-balance" : ""
+            }`}
+          >
             {feature.title}
           </h1>
           {!isGiftLanding && (
@@ -488,6 +556,23 @@ export default async function FeaturePage({ params }: Props) {
                 </li>
               ))}
             </ol>
+            {feature.selectionGuide.officialLinks &&
+              feature.selectionGuide.officialLinks.length > 0 && (
+                <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-xs text-sumi-soft">
+                  <span>公式情報:</span>
+                  {feature.selectionGuide.officialLinks.map((link) => (
+                    <a
+                      key={link.href}
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-hinomaru hover:underline"
+                    >
+                      {link.label} ↗
+                    </a>
+                  ))}
+                </div>
+              )}
           </div>
         </section>
       )}
@@ -496,12 +581,16 @@ export default async function FeaturePage({ params }: Props) {
         {!isGiftLanding && highlights.length > 0 && (
           <div className="mb-14">
             <div className="border-b border-line pb-4">
-              <h2 className="font-mincho text-2xl font-semibold">比較の入口</h2>
+              <h2 className="font-mincho text-2xl font-semibold">
+                {feature.slug === "rice-cookers"
+                  ? "電気炊飯器・3合鍋・5合鍋から候補を比べる"
+                  : "比較の入口"}
+              </h2>
               <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
                 {highlightDescription(feature.slug)}
               </p>
             </div>
-            {isRevenueFocus ? (
+            {usesProductComparison ? (
               <ProductComparison choices={comparisonChoices} surface="feature" surfaceKey={slug} />
             ) : (
               <div className="mt-8 grid gap-5 sm:grid-cols-3">
