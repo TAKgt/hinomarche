@@ -152,6 +152,28 @@ function comparisonCopy(slug: string, label: string): Pick<ProductComparisonChoi
   };
 }
 
+function comparisonIntro(slug: string): { title: string; description: string } {
+  if (slug === "imabari") {
+    return {
+      title: "普段使い・ギフト・返礼品から候補を比べる",
+      description:
+        "普段使い、ギフト、ふるさと納税の返礼品から1件ずつ、ページ内の候補を比較します。",
+    };
+  }
+  if (slug === "tsubame-sanjo") {
+    return {
+      title: "水切りラック・包丁・調理小物から候補を比べる",
+      description:
+        "水切りラック、5,000円以下の包丁、1,000円以下の調理小物から1件ずつ、ページ内の候補を比較します。",
+    };
+  }
+  return {
+    title: "用途別の比較入口",
+    description:
+      "ページ内の商品を用途や価格帯、販売先レビュー件数から比較できます。",
+  };
+}
+
 export function generateStaticParams() {
   return REGIONS.map((region) => ({ slug: region.slug }));
 }
@@ -184,6 +206,7 @@ export default async function RegionPage({ params }: Props) {
   });
   const highlights = getProductHighlights(region.slug, products);
   const isRevenueFocus = REVENUE_FOCUS_REGIONS.has(region.slug);
+  const comparison = comparisonIntro(region.slug);
   const comparisonChoices = highlights.map(({ label, product }) => ({
     label,
     product,
@@ -341,19 +364,78 @@ export default async function RegionPage({ params }: Props) {
         </section>
       )}
 
+      {region.slug === "tsubame-sanjo" && (
+        <section className="border-b border-line">
+          <div className="mx-auto max-w-6xl px-5 py-10 md:py-12">
+            <h2 className="font-mincho text-2xl font-semibold md:text-3xl">
+              「燕三条」表記の商品を選ぶときの確認事項
+            </h2>
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-sumi-soft md:text-base">
+              燕三条地場産業振興センターは、燕の洋食器・金属加工と、
+              三条の刃物・包丁を地域産業として案内しています。
+              ヒノマルシェの掲載条件は取得時の商品名の表記です。
+              個別商品の製造地や生産国は販売ページで確認してください。
+            </p>
+            <div className="mt-7 grid gap-4 md:grid-cols-3">
+              <div className="border border-line bg-white/60 p-5">
+                <h3 className="font-mincho text-lg font-semibold">
+                  「燕三条」表記と製造地を分ける
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
+                  掲載対象は、商品名に「燕三条」「燕市」「三条市」の表記がある商品です。
+                  商品名の表記だけで製造地や認定を決めず、販売ページで確認します。
+                </p>
+              </div>
+              <div className="border border-line bg-white/60 p-5">
+                <h3 className="font-mincho text-lg font-semibold">
+                  水切りラックは設置寸法を確認
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
+                  置き場所を測り、幅・奥行き・高さ、伸縮範囲、
+                  排水方向を販売ページで確認します。
+                </p>
+              </div>
+              <div className="border border-line bg-white/60 p-5">
+                <h3 className="font-mincho text-lg font-semibold">
+                  包丁と調理小物は用途と仕様を確認
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
+                  包丁は種類と刃渡り、対応する食材、素材を確認します。
+                  調理小物は寸法と素材、手入れ方法を販売ページで確認します。
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 flex flex-col items-start gap-3 text-sm sm:flex-row sm:gap-6">
+              <a
+                href="https://www.tsjiba.or.jp/kankou/about/index.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="border-b border-hinomaru pb-1 font-medium text-hinomaru transition-colors hover:text-hinomaru-deep"
+              >
+                燕三条の産業・物産館（公式）↗
+              </a>
+              <a
+                href="https://www.tsjiba.or.jp/kankou/item/index.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="border-b border-hinomaru pb-1 font-medium text-hinomaru transition-colors hover:text-hinomaru-deep"
+              >
+                包丁の種類と使い方（公式）↗
+              </a>
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="mx-auto max-w-6xl px-5 py-12 md:py-16">
         {highlights.length > 0 && (
           <div className="mb-14">
             <div className="border-b border-line pb-4">
               <h2 className="font-mincho text-2xl font-semibold">
-                {region.slug === "imabari"
-                  ? "普段使い・ギフト・返礼品から候補を比べる"
-                  : "用途別の比較入口"}
+                {comparison.title}
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
-                {region.slug === "imabari"
-                  ? "普段使い、ギフト、ふるさと納税の返礼品から1件ずつ、ページ内の候補を比較します。"
-                  : "ページ内の商品を用途や価格帯、販売先レビュー件数から比較できます。"}
+                {comparison.description}
               </p>
             </div>
             {isRevenueFocus ? (
