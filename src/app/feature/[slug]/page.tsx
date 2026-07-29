@@ -491,6 +491,15 @@ export default async function FeaturePage({ params }: Props) {
   const highlights = getProductHighlights(feature.slug, products);
   const isRevenueFocus = REVENUE_FOCUS_FEATURES.has(feature.slug);
   const usesProductComparison = PRODUCT_COMPARISON_FEATURES.has(feature.slug);
+  const relatedRegionLink =
+    feature.slug === "japanese-kitchen-knives"
+      ? COMMERCIAL_TOPICS.find(
+          (topic) =>
+            topic.href === `/feature/${feature.slug}` &&
+            topic.secondaryHref &&
+            topic.secondaryLabel,
+        )
+      : undefined;
   const comparisonChoices = highlights.map(({ label, product }) => ({
     label,
     product,
@@ -603,6 +612,20 @@ export default async function FeaturePage({ params }: Props) {
                   ))}
                 </div>
               )}
+            {relatedRegionLink?.secondaryHref && relatedRegionLink.secondaryLabel && (
+              <nav
+                className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm"
+                aria-label="関連する産地・工芸"
+              >
+                <span className="text-sumi-soft">関連ページ:</span>
+                <Link
+                  href={relatedRegionLink.secondaryHref}
+                  className="font-medium text-hinomaru hover:underline"
+                >
+                  {relatedRegionLink.secondaryLabel} →
+                </Link>
+              </nav>
+            )}
           </div>
         </section>
       )}
