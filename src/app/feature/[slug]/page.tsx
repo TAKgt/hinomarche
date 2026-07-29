@@ -34,6 +34,7 @@ const REVENUE_FOCUS_FEATURES = new Set([
 const PRODUCT_COMPARISON_FEATURES = new Set([
   ...REVENUE_FOCUS_FEATURES,
   "rice-cookers",
+  "japanese-green-tea",
 ]);
 
 function includesAny(title: string, terms: string[]): boolean {
@@ -313,7 +314,7 @@ function highlightDescription(slug: string): string {
     return "内祝い・お礼、セット内容、自宅用の異なる基準から候補を確認できます。";
   }
   if (slug === "japanese-green-tea") {
-    return "ティーバッグ、粉末、茶葉の淹れ方別に候補を確認できます。";
+    return "ティーバッグ、粉末、茶葉の異なる形から候補を確認できます。";
   }
   if (slug === "regional-japanese-rice") {
     return "通常購入、無洗米、ふるさと納税の異なる条件から候補を確認できます。";
@@ -341,6 +342,25 @@ function comparisonCopy(slug: string, label: string): Pick<ProductComparisonChoi
     return {
       audience: "5合表記のある炊飯鍋を比べたい方",
       reason: "商品名で炊飯鍋と5合の表記を確認できる商品のうち、ページ内の既存順で最初の候補を選定しています。",
+    };
+  }
+
+  if (slug === "japanese-green-tea") {
+    if (label.includes("ティーバッグ")) {
+      return {
+        audience: "ティーバッグの個数や抽出方法を比べたい方",
+        reason: "商品名にティーバッグまたはティーパックの表記がある候補から、販売先レビュー件数、評価、AI日本度の順で確認しています。",
+      };
+    }
+    if (label.includes("粉末")) {
+      return {
+        audience: "粉末タイプの名称や内容量を比べたい方",
+        reason: "商品名に粉末またはパウダーの表記がある候補から、販売先レビュー件数、評価、AI日本度の順で確認しています。",
+      };
+    }
+    return {
+      audience: "急須などで淹れる茶葉タイプを比べたい方",
+      reason: "商品名に茶葉または煎茶の表記があり、ティーバッグ・粉末表記のない候補から、販売先レビュー件数、評価、AI日本度の順で確認しています。",
     };
   }
 
@@ -417,6 +437,16 @@ function comparisonCopy(slug: string, label: string): Pick<ProductComparisonChoi
     audience: "商品情報にある産地・企業の根拠を重視したい方",
     reason: "AI日本度と販売先レビュー件数を順に確認し、判定根拠を商品詳細で確認できる候補を選定しています。",
   };
+}
+
+function comparisonHeading(slug: string): string {
+  if (slug === "rice-cookers") {
+    return "電気炊飯器・3合鍋・5合鍋から候補を比べる";
+  }
+  if (slug === "japanese-green-tea") {
+    return "ティーバッグ・粉末・茶葉から候補を比べる";
+  }
+  return "比較の入口";
 }
 
 export function generateStaticParams() {
@@ -582,9 +612,7 @@ export default async function FeaturePage({ params }: Props) {
           <div className="mb-14">
             <div className="border-b border-line pb-4">
               <h2 className="font-mincho text-2xl font-semibold">
-                {feature.slug === "rice-cookers"
-                  ? "電気炊飯器・3合鍋・5合鍋から候補を比べる"
-                  : "比較の入口"}
+                {comparisonHeading(feature.slug)}
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
                 {highlightDescription(feature.slug)}

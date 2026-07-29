@@ -27,6 +27,15 @@ function comparisonOutboundLabel(
   if (surfaceKey === "rice-cookers") {
     return `${sourceLabel}で容量・仕様を見る`;
   }
+  if (surfaceKey === "japanese-green-tea") {
+    if (choiceLabel.includes("ティーバッグ")) {
+      return `${sourceLabel}で個数・抽出方法を見る`;
+    }
+    if (choiceLabel.includes("粉末")) {
+      return `${sourceLabel}で名称・内容量を見る`;
+    }
+    return `${sourceLabel}で産地表示・内容量を見る`;
+  }
   if (surfaceKey === "tsubame-sanjo") {
     if (choiceLabel.includes("水切りラック")) {
       return `${sourceLabel}で設置寸法・在庫を見る`;
