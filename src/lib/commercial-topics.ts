@@ -55,6 +55,16 @@ export const COMMERCIAL_TOPICS: CommercialTopic[] = [
     linkLabel: "5,000円以下のギフトを見る",
     categorySlugs: ["gift", "tableware", "sweets", "towel", "stationery", "drinks", "food"],
   },
+  {
+    slug: "rice-cookers",
+    eyebrow: "RICE COOKERS",
+    title: "炊飯器・炊飯ジャー",
+    description:
+      "電気炊飯器、3合表記のある炊飯鍋、5合表記のある炊飯鍋から候補を確認できます。",
+    href: "/feature/rice-cookers",
+    linkLabel: "炊飯器の候補を見る",
+    categorySlugs: ["electronics"],
+  },
 ];
 
 export function getCommercialTopicsForCategory(categorySlug: string): CommercialTopic[] {
