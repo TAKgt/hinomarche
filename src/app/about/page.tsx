@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "このサイトについて",
+  title: "掲載方針とAI日本度",
   description:
-    "ヒノマルシェの趣旨と、AI日本度判定のしくみ、免責事項について。",
+    "ヒノマルシェの商品掲載方針、AI日本度（AI推定）の判定根拠、価格情報の取得日時、訂正窓口について。",
 };
 
 export default function AboutPage() {
@@ -14,7 +14,7 @@ export default function AboutPage() {
         About
       </p>
       <h1 className="mt-2 font-mincho text-3xl md:text-4xl font-semibold">
-        このサイトについて
+        ヒノマルシェの掲載方針とAI日本度
       </h1>
 
       <section className="mt-10 space-y-4 leading-relaxed">
@@ -28,18 +28,18 @@ export default function AboutPage() {
         </p>
         <p>
           燕三条の金属加工、堺の刃物、有田焼や波佐見焼の器、今治のタオル——
-          日本各地には、世界に誇れるものづくりがあります。少し高くても長く使えるものを、
-          作り手の顔が見えるものを。そんな選び方の手助けができれば幸いです。
+          日本各地のものづくりを、産地や商品情報を手がかりに探せます。
+          AI日本度だけでなく、その判定根拠も確認できる形で掲載しています。
         </p>
       </section>
 
       <section className="mt-12 space-y-4 leading-relaxed">
         <h2 className="font-mincho text-xl font-semibold border-l-4 border-hinomaru pl-3">
-          「AI日本度判定」のしくみ
+          AI日本度は商品情報をもとにしたAI推定です
         </h2>
         <p>
-          掲載商品にはAI(大規模言語モデル)による「日本度」スコアを表示しています。
-          商品名・商品説明・メーカー情報を解析し、次の基準で0〜100点に推定したものです。
+          掲載商品には「AI日本度（AI推定）」を表示しています。AI(大規模言語モデル)が
+          商品名・商品説明・メーカー・ブランド情報を解析し、次の基準で0〜100点に推定したものです。
         </p>
         <ul className="space-y-3 border border-line bg-white/60 p-5 text-sm">
           <li className="flex gap-3">
@@ -62,7 +62,7 @@ export default function AboutPage() {
 
       <section className="mt-12 space-y-4 leading-relaxed">
         <h2 className="font-mincho text-xl font-semibold border-l-4 border-hinomaru pl-3">
-          注目順の考え方
+          注目順はAI日本度と市場性シグナルを組み合わせます
         </h2>
         <p>
           TOPページやカテゴリの「注目順」では、AI日本度の高さを前提に、モール内の検索順位、
@@ -73,7 +73,22 @@ export default function AboutPage() {
 
       <section className="mt-12 space-y-4 leading-relaxed">
         <h2 className="font-mincho text-xl font-semibold border-l-4 border-hinomaru pl-3">
-          運営情報
+          価格の取得日時とAI日本度の判定根拠を確認できます
+        </h2>
+        <p>
+          商品詳細や比較欄では、価格に取得日時を示しています。AI日本度にはAI推定であることと
+          判定根拠を添えています。販売先の価格・在庫・商品情報は変わることがあるため、購入前に
+          各販売ページで最新情報をご確認ください。
+        </p>
+        <p>
+          掲載内容に誤りがある場合は、お問い合わせフォームの「掲載内容の誤り」から
+          お知らせください。AI日本度判定に関するご指摘も受け付けています。
+        </p>
+      </section>
+
+      <section className="mt-12 space-y-4 leading-relaxed">
+        <h2 className="font-mincho text-xl font-semibold border-l-4 border-hinomaru pl-3">
+          免責・個人情報・掲載内容の訂正窓口
         </h2>
         <ul className="space-y-2 text-sm">
           <li>
