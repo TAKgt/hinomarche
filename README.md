@@ -161,9 +161,9 @@ products全体をページングし、最終確認日、AI判定鮮度、販売�
 改善後は同じ判定を再実行して自動的にindex対象へ戻ります。
 
 `022_product_editorial_evidence.sql`は人手確認した一次情報をAI判定と分離して保存するための
-未適用マイグレーションです。既存商品は更新せず、匿名権限からの直接参照を許可しません。
-適用前に`article-work/editorial-priority-2026-08-09/08-migration-review.md`とロールバックSQLを
-確認し、本番バックアップと明示承認を得てください。
+マイグレーションで、2026-08-09に本番適用済みです。既存商品は更新せず、匿名権限からの
+直接参照を許可しません。適用・権限検証とロールバック手順は
+`article-work/editorial-priority-2026-08-09/08-migration-review.md`を参照してください。
 
 ### 4. Vercelにデプロイ
 

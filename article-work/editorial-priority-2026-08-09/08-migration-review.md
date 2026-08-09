@@ -1,7 +1,7 @@
-# 022 商品編集根拠マイグレーション 適用前レビュー
+# 022 商品編集根拠マイグレーション 適用記録
 
 - 作成日: 2026-08-09
-- 状態: SQL作成・PostgreSQL 17一時DBで適用／機能／ロールバック検証済み、本番未適用
+- 状態: PostgreSQL 17一時DB検証・本番適用・適用後検証済み
 - 対象: `supabase/migrations/022_product_editorial_evidence.sql`
 - ロールバック: `supabase/rollbacks/022_product_editorial_evidence.rollback.sql`
 
@@ -78,4 +78,14 @@ from public.product_evidence;
 - ロールバック後、022が追加したテーブル、RPC、トリガー関数が削除され、既存の`products`と`judgments`が残ることを確認した。
 - ロールバック後に022を再適用し、同じ統合テストが再度通ることを確認した。
 
-Supabase管理環境との差は残るため、本番適用時は上記の適用前チェックを省略しない。
+今後、別環境へ適用する場合も上記の適用前チェックを省略しない。
+
+## 本番適用記録
+
+- 適用日: 2026-08-09
+- Supabase Free Planには管理バックアップがないため、適用前に`products` 3,460件と`judgments` 1,335件をGit管理外の`.backups/product-evidence/20260809T091219564Z/`へ保存した。
+- バックアップの保存件数、ファイル容量、SHA-256、適用直前の本番件数が一致することを確認した。ディレクトリ権限は700、各JSONは600。
+- コミット済みSQLとのGit blob一致と、019・020・021が本番適用済みで022が未適用であることを確認してから、SQL Editorの`postgres`ロールでトランザクション全体を実行した。
+- 適用後も`products` 3,460件、`judgments` 1,335件で不変。`product_evidence`は0件。
+- `anon`によるテーブル直接参照は拒否され、`get_public_product_evidence` RPCは匿名実行で0件を正常返却した。
+- 適用後検証がすべて通ったため、ロールバックは実行していない。
