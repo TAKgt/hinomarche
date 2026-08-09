@@ -24,13 +24,13 @@ export const COMMERCIAL_TOPICS: CommercialTopic[] = [
   {
     slug: "knives-tsubame",
     eyebrow: "KITCHEN & CRAFT",
-    title: "包丁・燕三条",
+    title: "包丁・燕三条のキッチン用品",
     description:
       "三徳包丁などを用途・予算・販売先レビュー・商品情報にある産地の根拠から比較できます。",
     href: "/feature/japanese-kitchen-knives",
     linkLabel: "包丁の候補を見る",
     secondaryHref: "/region/tsubame-sanjo",
-    secondaryLabel: "燕三条の道具を見る",
+    secondaryLabel: "燕三条のキッチン用品を見る",
     categorySlugs: ["kitchen", "tableware"],
   },
   {

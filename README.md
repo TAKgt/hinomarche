@@ -139,6 +139,8 @@ AI判定ポリシーの変更時は、課金の発生しない回帰テストを
 npm run test:judge
 npm run test:freshness
 npm run test:index-quality
+npm run test:editorial-priority
+npm run test:editorial-evidence
 ```
 
 素材産地の明記がない場合は素材チェックを不明に戻し、入力にない事実や断定語を含む根拠を
@@ -148,6 +150,7 @@ npm run test:index-quality
 
 ```bash
 npm run audit:index-quality
+npm run audit:editorial-priority
 ```
 
 products全体をページングし、最終確認日、AI判定鮮度、販売元の商品参照、情報整合性、
@@ -156,6 +159,11 @@ products全体をページングし、最終確認日、AI判定鮮度、販売�
 商品ID・商品名・URLは表示しません。technical品質未達の商品URLは削除せず、
 商品詳細を`noindex,follow`にしてsitemapから除外します。
 改善後は同じ判定を再実行して自動的にindex対象へ戻ります。
+
+`022_product_editorial_evidence.sql`は人手確認した一次情報をAI判定と分離して保存するための
+マイグレーションで、2026-08-09に本番適用済みです。既存商品は更新せず、匿名権限からの
+直接参照を許可しません。適用・権限検証とロールバック手順は
+`article-work/editorial-priority-2026-08-09/08-migration-review.md`を参照してください。
 
 ### 4. Vercelにデプロイ
 
