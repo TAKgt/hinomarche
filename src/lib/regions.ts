@@ -33,9 +33,9 @@ export const REGIONS: RegionDefinition[] = [
     titleTerms: ["燕三条", "燕市", "三条市"],
     minScore: 80,
     selectionGuide: {
-      title: "燕三条のキッチン用品を比べる3つの視点",
+      title: "包丁・水切りラック・調理小物は何を比べるか",
       description:
-        "産地名だけでなく、置き場所や普段の調理に合う仕様まで確認すると候補を絞りやすくなります。",
+        "商品名に燕三条の表記があっても、確認する条件は商品種別で異なります。置き場所や普段の調理に合う仕様から候補を絞ります。",
       points: [
         {
           title: "水切りは設置寸法を優先",

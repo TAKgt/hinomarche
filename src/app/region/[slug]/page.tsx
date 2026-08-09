@@ -162,7 +162,7 @@ function comparisonIntro(slug: string): { title: string; description: string } {
   }
   if (slug === "tsubame-sanjo") {
     return {
-      title: "水切りラック・包丁・調理小物から候補を比べる",
+      title: "水切りラック・包丁・調理小物を条件別に比べる",
       description:
         "水切りラック、5,000円以下の包丁、1,000円以下の調理小物から1件ずつ、ページ内の候補を比較します。",
     };
@@ -412,7 +412,7 @@ export default async function RegionPage({ params }: Props) {
                 rel="noopener noreferrer"
                 className="border-b border-hinomaru pb-1 font-medium text-hinomaru transition-colors hover:text-hinomaru-deep"
               >
-                燕三条の産業・物産館（公式）↗
+                燕三条地場産業振興センター「物産館について」↗
               </a>
               <a
                 href="https://www.tsjiba.or.jp/kankou/item/index.html"
@@ -420,9 +420,49 @@ export default async function RegionPage({ params }: Props) {
                 rel="noopener noreferrer"
                 className="border-b border-hinomaru pb-1 font-medium text-hinomaru transition-colors hover:text-hinomaru-deep"
               >
-                包丁の種類と使い方（公式）↗
+                燕三条地場産業振興センター「包丁の種類」↗
               </a>
             </div>
+          </div>
+        </section>
+      )}
+
+      {region.slug === "tsubame-sanjo" && (
+        <section className="border-b border-line bg-washi-deep/35">
+          <div className="mx-auto max-w-6xl px-5 py-10 md:py-12">
+            <h2 className="font-mincho text-2xl font-semibold md:text-3xl">
+              このページの掲載条件と確認方法
+            </h2>
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-sumi-soft md:text-base">
+              商品名に地域名があるだけで、個別商品の製造地や認定を決めることはできません。
+              ヒノマルシェでは、掲載条件、候補の選び方、公式情報で確認した内容を分けて表示します。
+            </p>
+            <dl className="mt-7 grid gap-4 md:grid-cols-3">
+              <div className="border border-line bg-white/60 p-5">
+                <dt className="font-mincho text-lg font-semibold">掲載する商品</dt>
+                <dd className="mt-2 text-sm leading-relaxed text-sumi-soft">
+                  取得時の商品名に「燕三条」「燕市」「三条市」のいずれかがあり、
+                  AI日本度80%以上で公開中の商品を表示します。価格には取得日を併記します。
+                </dd>
+              </div>
+              <div className="border border-line bg-white/60 p-5">
+                <dt className="font-mincho text-lg font-semibold">3候補の選び方</dt>
+                <dd className="mt-2 text-sm leading-relaxed text-sumi-soft">
+                  水切りラック、5,000円以下の包丁、1,000円以下の調理小物に分け、
+                  商品名と取得価格で条件を絞り、販売先レビュー件数とAI日本度を確認して候補を選びます。
+                </dd>
+              </div>
+              <div className="border border-line bg-white/60 p-5">
+                <dt className="font-mincho text-lg font-semibold">人が確認する情報とAIの範囲</dt>
+                <dd className="mt-2 text-sm leading-relaxed text-sumi-soft">
+                  産業と包丁の種類は運営者が公式情報を確認しました。商品抽出とAI日本度には
+                  自動処理を使っています。AI日本度は製造地や原産地を保証しません。
+                </dd>
+              </div>
+            </dl>
+            <p className="mt-5 text-xs leading-relaxed text-sumi-soft">
+              公式情報の確認日: <time dateTime="2026-08-09">2026年8月9日</time>
+            </p>
           </div>
         </section>
       )}

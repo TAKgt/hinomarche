@@ -152,6 +152,10 @@ supabase/
   score, tier('high'|'mid'|'low'), evidence_type, evidence_text,
   origin_check/company_check/material_check('yes'|'unknown'|'no')。019適用後は判定時の
   `input_hash`と公開前整合性検査の状態・理由コードも保存する
+- `product_evidence`: 022適用後に追加する商品別の編集根拠。AI判定とは分離し、公式HTTPS URL、
+  必要最小限の原文、取得日、人手確認日、商品入力ハッシュを保存する。匿名権限からの直接参照は
+  禁止し、公開RPCも現在の商品ハッシュ・公開状態・最新の整合性検査を再確認する。商品内容や
+  判定状態が変わった根拠は自動的に非公開へ戻す。**022は2026-08-09時点で未適用**
 - `products_with_judgment`: 最新判定をJOINしたビュー。**サイト表示は必ずこのビューを読む**
 - 商品詳細はGoogleのProduct snippet向け構造化データとBreadcrumbListを出力。AI日本度をレビュ評価として送信しない
 - 商品詳細のindex品質ゲートは、最終確認30日以内、AI判定180日以内、販売元の商品参照、
@@ -442,6 +446,8 @@ supabase/
 - `npm run audit:index-quality` はproducts全体を1000件単位で読み取り、current/pending/blocked、
   URL表示、404相当、technical index可否、editorial達成状況を集計する。
   商品ID・商品名・URLは出力せず、総数・除外数・理由別件数だけを表示する
+- `npm run audit:editorial-priority` はtechnical品質を満たす商品から4テーマ各5件の編集候補を
+  読み取り専用で集計する。商品ID・商品名・URLは出力せず、候補は人手確認済みと扱わない
 
 ## 8. 環境変数(.env.local / Vercelに同じものを設定)
 
