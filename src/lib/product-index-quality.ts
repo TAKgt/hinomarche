@@ -77,7 +77,6 @@ export function isExpectedMerchantUrl(
       return hostname === "amazon.co.jp" || hostname.endsWith(".amazon.co.jp");
     }
     return (
-      hostname === "af.moshimo.com" ||
       hostname === "rakuten.co.jp" ||
       hostname.endsWith(".rakuten.co.jp")
     );

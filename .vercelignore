@@ -1,0 +1,7 @@
+.git/
+.next/
+.backups/
+.env*
+article-work/
+node_modules/
+*.tsbuildinfo

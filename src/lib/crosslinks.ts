@@ -1,4 +1,4 @@
-import { wrapMoshimoRakuten } from "./rakuten";
+import { buildRakutenAffiliateUrl } from "./rakuten";
 
 /**
  * 相互送客リンク: 楽天商品にはAmazon検索、Amazon商品には楽天検索へのリンクを出す。
@@ -24,8 +24,10 @@ export function amazonSearchUrl(title: string): string {
   return `https://www.amazon.co.jp/s?k=${q}${tag ? `&tag=${encodeURIComponent(tag)}` : ""}`;
 }
 
-/** 楽天市場の検索結果ページ(もしもリンクでラップ) */
+/** 楽天市場の検索結果ページ(楽天アフィリエイト直リンク) */
 export function rakutenSearchUrl(title: string): string {
   const q = encodeURIComponent(searchQueryFromTitle(title));
-  return wrapMoshimoRakuten(`https://search.rakuten.co.jp/search/mall/${q}/`);
+  return buildRakutenAffiliateUrl(
+    `https://search.rakuten.co.jp/search/mall/${q}/`,
+  );
 }

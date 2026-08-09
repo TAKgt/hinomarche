@@ -92,7 +92,7 @@ export default async function RootLayout({
             </p>
             <p className="text-sm leading-relaxed text-washi/80 max-w-3xl">
               Amazonのアソシエイトとして、ヒノマルシェは適格販売により収入を得ています。
-              当サイトは楽天アフィリエイト(もしもアフィリエイト経由)にも参加しています。
+              当サイトは楽天アフィリエイトにも参加しています。
             </p>
             <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-washi/60 pt-1">
               <Link href="/about" className="hover:text-washi transition-colors">

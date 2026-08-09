@@ -1,6 +1,6 @@
 # ヒノマルシェ 引き継ぎ書(完全版)
 
-最終更新: 2026-07-25 / 前任: Claude Code / 更新: Codex
+最終更新: 2026-08-09 / 前任: Claude Code / 更新: Codex
 このドキュメントは、プロジェクトの仕様・現状・制約・残作業のすべてを引き継ぐためのもの。
 **コードを書く前に必ず「絶対に守るルール」と「ハマりどころ」を読むこと。**
 
@@ -12,7 +12,7 @@
 - **ドメイン**: hinomarche.com(取得済み・未接続)
 - **目的**: 日本とのかかわりが深い商品を中心に集めたアフィリエイトサイト。
   AI(Claude)が商品ごとの「**AI日本度**」(0〜100)を判定根拠つきで表示するのが独自価値
-- **収益**: Amazonアソシエイト + 楽天アフィリエイト(もしもアフィリエイト経由)
+- **収益**: Amazonアソシエイト + 楽天アフィリエイト直
 - **キャッチコピー**: 「日本製品、買って応援。」
 - **運営側の意図(サイトには書かない)**: 「日本度は高いが高価」vs「日本度は低いが安い」の
   2軸でユーザーが選ぶサイト。低スコア商品もスコア明示で掲載する
@@ -85,7 +85,7 @@ src/
     types.ts                型定義(Product, Judgment, JudgmentChecks, Tier, tierOf)
     db.ts                   データ層。env未設定時はデモモード(src/data/demo-products.json)
                             SHOW_LOW_TIER=false で低スコア商品を非表示にできるトグルあり
-    rakuten.ts              楽天API(2026年新仕様)+もしもリンク生成
+    rakuten.ts              楽天API(2026年新仕様)+楽天アフィリエイト直リンク
     amazon.ts               Amazon Creators API(2026年新仕様、OAuth2)
     judge.ts                AI判定(スコア+根拠+3要素チェックをJSONスキーマ強制で取得)
     ingest.ts               収集パイプライン本体(cron/ローカル共用)
@@ -103,7 +103,7 @@ scripts/
   judge-backlog.ts          商品再検索なしで判定待ちを追加消化
   rejudge.ts                チェック未付与の商品だけ再判定(判定スキーマ変更時に使う)
   rejudge-absolute-language.ts 承認制で断定語候補だけを再判定（既定は読み取り専用）
-  migrate-moshimo-links.ts  承認制で楽天商品のもしもa_idだけを移行（既定は読み取り専用）
+  migrate-rakuten-direct-links.ts  既存楽天リンクを直リンクへ移行（承認制・既定は読み取り専用）
 supabase/
   schema.sql                初期スキーマ(新規プロジェクト用。マイグレーション適用済みの完全版)
   migrations/002_add_checks.sql       3要素チェック列追加(適用済み)
@@ -252,8 +252,27 @@ supabase/
   VercelのProduction/Preview設定・DBリンクを更新した。全2,928件が専用ID、旧/他ID0件、形式不正0件、
   バックアップとの差分はa_id以外0件。商品状態ハッシュは移行前後一致、最新shadowは2026-07-17・937件を
   維持した。本番`/go`も302で`af.moshimo.com`の専用IDへ転送し、検証クリック1件の匿名計測を確認済み。
-  `--execute`は今後も承認トークンと期待件数を必須とし、全URLをローカルの`.backups/moshimo/`へ
-  JSONバックアップしてからa_id部分だけを更新する。
+  当時の`--execute`は承認トークンと期待件数を必須とし、全URLをローカルの
+  `.backups/moshimo/`へJSONバックアップしてからa_id部分だけを更新した。
+- 2026-07-30にもしもアフィリエイトから外れたため、楽天アフィリエイト直へ切り替える方針になった。
+  コードは楽天公式APIへ`affiliateId`を渡し、返された`affiliateUrl`を保存する方式へ変更。
+  `npm run migrate:rakuten-direct`の読み取り専用プレビューで楽天商品3,330件（公開930件）、
+  もしもリンク3,330件、形式不正0件を確認。ユーザー承認後、全URLを
+  `.backups/rakuten-affiliate/hinomarche-rakuten-links-1785412753567.json`へ保存し、
+  `affiliate_url`だけを更新した。移行後は直リンク3,330件、未移行0件、形式不正0件で、
+  公開商品数930件を維持。バックアップは権限600で保存する。
+- VercelのProduction/Previewへ`RAKUTEN_AFFILIATE_ID`をSensitive設定し、デプロイ
+  `dpl_5ZyMohX1DstbsM3eidGFN6ZzNVdt`がREADY、`https://www.hinomarche.com`へalias済み。
+  公開TOP・免責・プライバシーは200で「もしもアフィリエイト」表記0、代表楽天CTAは302で
+  `hb.afl.rakuten.co.jp`の該当IDへ転送。sitemapは200、未認証Cron・管理画面は401。
+  検証後、Vercelの旧`MOSHIMO_A_ID`をProduction/Previewから削除した。
+- 2026-08-09にユーザーが楽天アフィリエイトのサイト情報画面で、ヒノマルシェ
+  (`https://www.hinomarche.com/`)の登録を確認した。同日の読み取り監査では楽天商品3,460件の
+  `affiliate_url`がすべて`hb.afl.rakuten.co.jp`で、もしもリンク0件・形式不正0件。
+  楽天API返却の`rafcid`形式も移行済みと判定し、再移行候補へ数えないよう移行スクリプトを修正した。
+- lint、`tsc --noEmit`、判定6件・鮮度11件・index品質15件・販促7件の計39テスト、
+  Next.js本番buildは成功。Homebrew Nodeは`libsimdjson.30.dylib`欠落のため、
+  依存関係を変更せずCodex同梱Nodeを使用した。
 
 ### AI日本度の標本監査(2026-07-16)
 
@@ -371,9 +390,12 @@ supabase/
   商品別ポイント情報は終了まで24時間以内になるとAPIから返らない場合がある。
   ショップ全体・楽天市場全体のキャンペーンは対象外
 
-### 楽天の報酬リンク = もしもアフィリエイト経由
-- 形式: `https://af.moshimo.com/af/c/click?a_id=<MOSHIMO_A_ID>&p_id=54&pc_id=54&pl_id=616&url=<encodeURIComponent(商品URL)>`
-- 楽天アフィリエイト直は使わない(もしもは現金振込+W報酬のため)
+### 楽天の報酬リンク = 楽天アフィリエイト直
+- 楽天ウェブサービスの`affiliateId`入力パラメータへ`RAKUTEN_AFFILIATE_ID`を渡す。
+- 商品リンクはAPIが返す`affiliateUrl`を保存する。未返却時は通常の商品URLへフォールバックせず、
+  その取り込みを失敗させて成果計測漏れを防ぐ。
+- Amazon商品から楽天検索へ送る動的リンクと既存DB移行は、
+  `https://hb.afl.rakuten.co.jp/hgc/<affiliateId>/?pc=<商品等のURL>&m=<同URL>`形式を使う。
 
 ### Amazon(旧PA-APIは2026-05-15廃止 → Creators API)
 - トークン: `POST https://api.amazon.co.jp/auth/o2/token`(日本=認証情報バージョン3.3)、
@@ -427,7 +449,7 @@ supabase/
 |---|---|
 | SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY | Supabase接続(service_roleはサーバー専用) |
 | RAKUTEN_APP_ID / RAKUTEN_ACCESS_KEY | 楽天新API(アプリケーションID=UUID / アクセスキー=pk_...) |
-| MOSHIMO_A_ID | もしもの楽天用a_id(数字) |
+| RAKUTEN_AFFILIATE_ID | 楽天ウェブサービス用アフィリエイトID |
 | AMAZON_CREDENTIAL_ID / AMAZON_CREDENTIAL_SECRET | Creators API認証情報 |
 | AMAZON_PARTNER_TAG | トラッキングID = **hinomarche-22**(旧yamatoll-22は使わない) |
 | ANTHROPIC_API_KEY | AI判定用 |
@@ -484,7 +506,7 @@ supabase/
 
 - 主ボタン: 掲載元モールの商品ページ(affiliate_url)
 - 副ボタン: 他モールの**商品名検索結果**へ(crosslinks.ts)。
-  楽天商品→`amazon.co.jp/s?k=<クエリ>&tag=hinomarche-22`、Amazon商品→楽天検索(もしもラップ)
+  楽天商品→`amazon.co.jp/s?k=<クエリ>&tag=hinomarche-22`、Amazon商品→楽天検索(楽天直リンク)
   - クエリは商品名から【販促文言】を除去して先頭5語
   - 「同一商品とは限りません」の注記必須(誤認防止)
   - Amazon検索リンクの成約は売上実績になり、API資格条件の獲得導線を兼ねる

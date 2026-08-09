@@ -28,7 +28,7 @@ function product(overrides: Partial<Product> = {}): Product {
     contentUpdatedAt: "2026-07-20T00:00:00.000Z",
     priceUpdatedAt: "2026-07-24T00:00:00.000Z",
     affiliateUrl:
-      "https://af.moshimo.com/af/c/click?a_id=example&p_id=54",
+      "https://hb.afl.rakuten.co.jp/hgc/example/?pc=https%3A%2F%2Fitem.rakuten.co.jp",
     categorySlug: "kitchen",
     reviewCount: 20,
     reviewAverage: 4.5,

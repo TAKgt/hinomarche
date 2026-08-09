@@ -25,9 +25,7 @@ function isAllowedOutboundUrl(value: string, merchant: Merchant): boolean {
     }
     return (
       host === "rakuten.co.jp" ||
-      host.endsWith(".rakuten.co.jp") ||
-      host === "moshimo.com" ||
-      host.endsWith(".moshimo.com")
+      host.endsWith(".rakuten.co.jp")
     );
   } catch {
     return false;
@@ -65,12 +63,26 @@ export async function GET(
       : primaryMerchant === "rakuten"
         ? "amazon"
         : "rakuten";
-  const outboundUrl =
-    destination === "primary"
-      ? product.affiliateUrl
-      : product.source === "rakuten"
-        ? amazonSearchUrl(product.title)
-        : rakutenSearchUrl(product.title);
+  let outboundUrl: string;
+  try {
+    outboundUrl =
+      destination === "primary"
+        ? product.affiliateUrl
+        : product.source === "rakuten"
+          ? amazonSearchUrl(product.title)
+          : rakutenSearchUrl(product.title);
+  } catch (error) {
+    console.error("Failed to build an outbound product URL", {
+      productId: id,
+      destination,
+      merchant,
+      error: error instanceof Error ? error.message : "unknown error",
+    });
+    return Response.json(
+      { error: "Affiliate link is not configured" },
+      { status: 503 },
+    );
+  }
 
   if (!isAllowedOutboundUrl(outboundUrl, merchant)) {
     console.error("Blocked an invalid outbound product URL", {

@@ -7,25 +7,70 @@ import type { RawProduct } from "./types";
  * - Refererヘッダー必須(アプリ登録時の「許可されたWebサイト」と一致させる)
  * 旧エンドポイント(app.rakuten.co.jp)は2026-05-14に停止済み。
  *
- * アフィリエイトリンクは「もしもアフィリエイト」の楽天市場プロモーション形式で
- * 商品URLをラップして生成する(楽天アフィリエイト直は使わない)。
+ * affiliateIdをAPIへ渡し、楽天アフィリエイト公式のaffiliateUrlを保存する。
  */
 
 const ENDPOINT =
   "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20260701";
 
-/** もしもアフィリエイトの楽天市場用リンクにラップする */
-export function wrapMoshimoRakuten(itemUrl: string): string {
-  const aId = process.env.MOSHIMO_A_ID;
-  if (!aId) return itemUrl;
-  const pId = process.env.MOSHIMO_RAKUTEN_P_ID ?? "54";
-  const pcId = process.env.MOSHIMO_RAKUTEN_PC_ID ?? "54";
-  const plId = process.env.MOSHIMO_RAKUTEN_PL_ID ?? "616";
-  return (
-    `https://af.moshimo.com/af/c/click?a_id=${aId}` +
-    `&p_id=${pId}&pc_id=${pcId}&pl_id=${plId}` +
-    `&url=${encodeURIComponent(itemUrl)}`
+function validRakutenAffiliateId(value: string): boolean {
+  return /^[A-Za-z0-9._-]{1,128}$/.test(value);
+}
+
+function isRakutenDestinationUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" &&
+      url.hostname !== "hb.afl.rakuten.co.jp" &&
+      (url.hostname === "rakuten.co.jp" ||
+        url.hostname.endsWith(".rakuten.co.jp"))
+    );
+  } catch {
+    return false;
+  }
+}
+
+function originalRakutenItemUrl(itemUrl: unknown, affiliateUrl: string): string {
+  if (
+    typeof itemUrl === "string" &&
+    itemUrl !== affiliateUrl &&
+    isRakutenDestinationUrl(itemUrl)
+  ) {
+    return itemUrl;
+  }
+
+  const destination = new URL(affiliateUrl).searchParams.get("pc");
+  if (!destination || !isRakutenDestinationUrl(destination)) {
+    throw new Error("楽天APIのaffiliateUrlから元の商品URLを確認できません");
+  }
+  return destination;
+}
+
+/**
+ * 楽天市場内の任意URLを、楽天ウェブサービス用アフィリエイトIDの直リンクにする。
+ * 商品リンクは原則としてAPIが返したaffiliateUrlを使い、この関数は検索導線と
+ * 既存DBの安全な移行にだけ使用する。
+ */
+export function buildRakutenAffiliateUrl(
+  destinationUrl: string,
+  affiliateId = process.env.RAKUTEN_AFFILIATE_ID,
+): string {
+  if (!affiliateId || !validRakutenAffiliateId(affiliateId)) {
+    throw new Error("RAKUTEN_AFFILIATE_IDが未設定または不正です");
+  }
+
+  const destination = new URL(destinationUrl);
+  if (!isRakutenDestinationUrl(destination.toString())) {
+    throw new Error("楽天市場のHTTPS URLではありません");
+  }
+
+  const affiliateUrl = new URL(
+    `https://hb.afl.rakuten.co.jp/hgc/${encodeURIComponent(affiliateId)}/`,
   );
+  affiliateUrl.searchParams.set("pc", destination.toString());
+  affiliateUrl.searchParams.set("m", destination.toString());
+  return affiliateUrl.toString();
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -50,6 +95,10 @@ export function rakutenItemToRawProduct(
   categorySlug: string,
   searchRank: number,
 ): RawProduct {
+  if (typeof item.affiliateUrl !== "string" || item.affiliateUrl.length === 0) {
+    throw new Error("楽天APIがaffiliateUrlを返しませんでした");
+  }
+  const itemUrl = originalRakutenItemUrl(item.itemUrl, item.affiliateUrl);
   const imageUrl: string | null =
     item.mediumImageUrls?.[0]?.replace("?_ex=128x128", "?_ex=400x400") ?? null;
   return {
@@ -61,8 +110,8 @@ export function rakutenItemToRawProduct(
     brand: null,
     imageUrl,
     price: item.itemPrice ?? null,
-    affiliateUrl: wrapMoshimoRakuten(item.itemUrl),
-    itemUrl: item.itemUrl,
+    affiliateUrl: item.affiliateUrl,
+    itemUrl,
     categorySlug,
     reviewCount: item.reviewCount ?? null,
     reviewAverage: item.reviewAverage ?? null,
@@ -80,26 +129,33 @@ export function rakutenItemToRawProduct(
 export async function searchRakuten(
   keyword: string,
   categorySlug: string,
-  hits = 30
+  hits = 30,
 ): Promise<RawProduct[]> {
   const appId = process.env.RAKUTEN_APP_ID;
   const accessKey = process.env.RAKUTEN_ACCESS_KEY;
-  if (!appId || !accessKey) {
+  const affiliateId = process.env.RAKUTEN_AFFILIATE_ID;
+  if (
+    !appId ||
+    !accessKey ||
+    !affiliateId ||
+    !validRakutenAffiliateId(affiliateId)
+  ) {
     throw new Error(
-      "RAKUTEN_APP_ID(アプリケーションID) と RAKUTEN_ACCESS_KEY(アクセスキー) の両方が必要です"
+      "RAKUTEN_APP_ID、RAKUTEN_ACCESS_KEY、RAKUTEN_AFFILIATE_IDが必要です",
     );
   }
 
   const params = new URLSearchParams({
     applicationId: appId,
     accessKey,
+    affiliateId,
     keyword,
     hits: String(Math.min(hits, 30)),
     sort: "standard",
     format: "json",
     formatVersion: "2",
     elements:
-      "itemCode,itemName,itemCaption,itemUrl,itemPrice,mediumImageUrls,shopName,reviewCount,reviewAverage,affiliateRate,postageFlag,startTime,endTime,pointRate,pointRateStartTime,pointRateEndTime",
+      "itemCode,itemName,itemCaption,itemUrl,affiliateUrl,itemPrice,mediumImageUrls,shopName,reviewCount,reviewAverage,affiliateRate,postageFlag,startTime,endTime,pointRate,pointRateStartTime,pointRateEndTime",
   });
 
   // 楽天APIの「許可されたWebサイト」制限に対応: 登録ドメインをRefererとして名乗る。
@@ -114,7 +170,9 @@ export async function searchRakuten(
   const json = await res.json();
 
   // formatVersion=2なら商品オブジェクトの配列、非対応時は {Item: {...}} でラップされる
-  const items = (json.Items ?? json.items ?? []).map((it: any) => it.Item ?? it.item ?? it);
+  const items = (json.Items ?? json.items ?? []).map(
+    (it: any) => it.Item ?? it.item ?? it,
+  );
 
   return items.map((item: any, index: number): RawProduct =>
     rakutenItemToRawProduct(item, categorySlug, index + 1),

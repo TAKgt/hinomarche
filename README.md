@@ -46,8 +46,8 @@ cp .env.example .env.local
 | キー | 入手先 |
 |---|---|
 | `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` | supabase.com → Project Settings → API。公開読み取りはanon、収集・書き込みはservice_role |
-| `RAKUTEN_APP_ID` | webservice.rakuten.co.jp → アプリID発行(楽天会員なら即時) |
-| `MOSHIMO_A_ID` | もしも管理画面 → 楽天市場プロモーション → どこでもリンクのa_id |
+| `RAKUTEN_APP_ID` / `RAKUTEN_ACCESS_KEY` | webservice.rakuten.co.jp → アプリ情報 |
+| `RAKUTEN_AFFILIATE_ID` | 楽天ウェブサービス → アフィリエイトIDの確認。楽天公式APIが返す直リンクに使用 |
 | `AMAZON_CREDENTIAL_ID` / `AMAZON_CREDENTIAL_SECRET` / `AMAZON_PARTNER_TAG` | アソシエイト管理画面 → ツール → Creators API(旧PA-APIは2026年5月廃止) |
 | `ANTHROPIC_API_KEY` | platform.claude.com → API Keys |
 | `CRON_SECRET` | ランダムな長い文字列を自分で生成(例: `openssl rand -hex 32`) |
@@ -107,7 +107,8 @@ npm run judge:backlog
 `INGEST_CREATED_AFTER`(ISO 8601)を一時指定します。既存の判定待ち商品は変更しません。
 
 カテゴリの検索キーワードで楽天・Amazonを検索 → 新商品をAI判定 → 判定済み商品を自動公開(低スコアも公開)。
-楽天商品は同じ取得時に、送料込み・送料無料対象、セール期間、商品別ポイント倍率と期間も更新します。
+楽天商品は `RAKUTEN_AFFILIATE_ID` をAPIへ渡し、楽天公式のアフィリエイトURLを保存します。
+同じ取得時に、送料込み・送料無料対象、セール期間、商品別ポイント倍率と期間も更新します。
 1回の実行で判定するのは、ローカルは新規30件、Vercelは新規5件まで
 (`INGEST_MAX_NEW`で変更可)。公開数が `INGEST_MIN_CATEGORY_PRODUCTS`(既定12件)未満の
 カテゴリがある間は、公開数の少ない棚を優先します。判定待ち候補が目標数まで揃っている
@@ -121,6 +122,16 @@ npm run judge:backlog
 ローカルで特定カテゴリだけ収集する場合は、実行時に
 `INGEST_CATEGORY_SLUGS=smartphone,computer`のように指定できます。
 `npm run dev` で実データが表示されるようになります。
+
+既存DBの楽天リンクを楽天アフィリエイト直へ切り替える場合は、まず読み取り専用プレビューを実行します。
+
+```bash
+npm run migrate:rakuten-direct
+```
+
+書き込みは、プレビューで確認した総件数・公開件数・変更件数と承認トークンをすべて指定した場合だけ
+実行されます。実行前に全URLを `.backups/rakuten-affiliate/` へ保存し、商品内容・判定・
+公開状態・ランキングは変更しません。
 
 AI判定ポリシーの変更時は、課金の発生しない回帰テストを先に実行します。
 
@@ -201,12 +212,13 @@ src/
   components/           ProductCard, ScoreRing(日の丸スコアゲージ)
   lib/
     db.ts               データ層(Supabase / デモモード自動切替)
-    rakuten.ts          楽天市場API + もしもリンク生成
+    rakuten.ts          楽天市場API + 楽天アフィリエイト直リンク
     amazon.ts           Amazon Creators API(2026年仕様、OAuth2)
     judge.ts            Claude Haiku 日本関連度判定(構造化出力)
     ingest.ts           収集パイプライン
   data/demo-products.json  デモ商品
 scripts/ingest.ts       ローカル収集: npm run ingest
+scripts/migrate-rakuten-direct-links.ts 既存楽天リンクの承認制移行
 supabase/schema.sql     DBスキーマ(SQL Editorで実行)
 vercel.json             日次Cron設定
 ```
