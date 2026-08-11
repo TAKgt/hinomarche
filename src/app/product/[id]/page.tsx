@@ -14,11 +14,13 @@ import {
 } from "@/lib/product-metrics";
 import { ProductCard } from "@/components/ProductCard";
 import { JsonLd } from "@/components/JsonLd";
+import { OfficialPriceComparisonSection } from "@/components/OfficialPriceComparison";
 import { productStructuredData } from "@/lib/structured-data";
 import { TIER_LABEL, type ProductPageData } from "@/lib/types";
 import { displayProductTitle } from "@/lib/product-title";
 import { getFeaturesForProduct } from "@/lib/features";
 import { getRegionsForProduct } from "@/lib/regions";
+import { getOfficialPriceComparison } from "@/lib/official-price-comparisons";
 import {
   buildProductPageMetadata,
   requireProductPage,
@@ -74,6 +76,10 @@ export default async function ProductPage({ params }: Props) {
   const displayTitle = displayProductTitle(product.title);
   const matchingFeatures = getFeaturesForProduct(product);
   const matchingRegions = getRegionsForProduct(product);
+  const officialPriceComparison = getOfficialPriceComparison(
+    product.id,
+    product.judgmentInputHash,
+  );
 
   const isRakuten = product.source === "rakuten";
   const buttonLabel = isRakuten ? "楽天市場で見る" : "Amazonで見る";
@@ -245,6 +251,10 @@ export default async function ProductPage({ params }: Props) {
           )}
         </div>
       </div>
+
+      {officialPriceComparison && (
+        <OfficialPriceComparisonSection comparison={officialPriceComparison} />
+      )}
 
       {(matchingFeatures.length > 0 || matchingRegions.length > 0) && (
         <section className="mt-14 border-y border-line py-8">
