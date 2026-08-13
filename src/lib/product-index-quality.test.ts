@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import robots from "../app/robots";
+import { dynamic as sitemapDynamicMode } from "../app/sitemap";
 import {
   assessProductEditorialQuality,
   assessProductIndexQuality,
@@ -110,6 +111,10 @@ test("sitemap: 商品ページと同じ品質判定で未達商品を除外す�
     ),
     true,
   );
+});
+
+test("sitemap: 時間経過で品質判定が変わるため静的キャッシュしない", () => {
+  assert.equal(sitemapDynamicMode, "force-dynamic");
 });
 
 test("販売元参照と一次情報出典を別々に評価する", () => {
