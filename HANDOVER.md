@@ -71,7 +71,7 @@ src/
     deals/page.tsx          直近48時間に取得したセール・送料無料・商品別ポイントアップ一覧
     go/[id]/route.ts        販売サイトへの安全なリダイレクト+匿名クリック集計
     not-found.tsx           404
-    sitemap.ts / robots.ts / icon.svg / opengraph-image.tsx  SEO・メタ系(sitemapは1時間再生成)
+    sitemap.ts / robots.ts / icon.svg / opengraph-image.tsx  SEO・メタ系(sitemapはリクエスト時生成)
     api/cron/ingest/route.ts Vercel商品収集Cron入口(Authorization: Bearer CRON_SECRET必須)
     api/cron/ranking/route.ts VercelランキングCron入口(同認証、収集と独立)
   components/
@@ -162,7 +162,7 @@ supabase/
   情報整合性、販売状態をtechnical基準として同じ関数で判定する。一次情報URL・原文抜粋・
   取得日・人手確認・独自比較情報はeditorial基準として別集計し、販売元リンクと混同しない。
   technical未達ページはURLと公開状態を維持したまま`noindex,follow`とし、
-  sitemapからだけ除外する。改善後は1時間以内の再生成で自動復帰する
+  sitemapからだけ除外する。改善後は商品詳細メタが1時間以内、sitemapが次回アクセス時に自動復帰する
 - カテゴリ一覧は23カテゴリ固有のtitle/description/導入文を持ち、BreadcrumbListとItemListを出力。
   並び替え・日本度絞り込みURLはcanonicalをカテゴリ基本URLへ向け、`noindex, follow`で重複登録を避ける
 - 表示用商品名は先頭の期限付き販促文を除き、64文字以内に整形。DBの原文と販売先リンクは変更しない
