@@ -26,6 +26,23 @@ export function isSameOriginBrowserRequest(request: Request): boolean {
   return !BOT_PATTERN.test(request.headers.get("user-agent") ?? "");
 }
 
-export function shouldRecordPublicMetric(request: Request): boolean {
-  return process.env.NODE_ENV === "production" && isSameOriginBrowserRequest(request);
+export function isLoopbackRequestHost(host: string | null): boolean {
+  if (!host) return false;
+  try {
+    const hostname = new URL(`http://${host}`).hostname.toLowerCase();
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+  } catch {
+    return false;
+  }
+}
+
+export function shouldRecordPublicMetric(
+  request: Request,
+  nodeEnv = process.env.NODE_ENV,
+): boolean {
+  return (
+    nodeEnv === "production" &&
+    !isLoopbackRequestHost(request.headers.get("host")) &&
+    isSameOriginBrowserRequest(request)
+  );
 }

@@ -105,6 +105,9 @@ test("sitemap: 商品ページと同じ品質判定で未達商品を除外す�
     entries.map((entry) => entry.url),
     [`https://www.hinomarche.com/product/${eligible.id}`],
   );
+  assert.deepEqual(entries[0]?.lastModified, new Date(eligible.fetchedAt!));
+  assert.equal("changeFrequency" in entries[0]!, false);
+  assert.equal("priority" in entries[0]!, false);
   assert.equal(
     assessProductIndexQuality(stale, now).reasons.includes(
       "last_confirmation_stale",

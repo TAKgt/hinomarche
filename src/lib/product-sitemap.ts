@@ -19,8 +19,6 @@ export function productSitemapEntries(
         lastModified: lastConfirmedAt
           ? new Date(lastConfirmedAt)
           : undefined,
-        changeFrequency: "weekly" as const,
-        priority: 0.6,
       };
     });
 }

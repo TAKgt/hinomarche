@@ -42,6 +42,15 @@ export interface ProductEvidenceValidationContext {
   latestJudgmentConsistencyPassed: boolean;
 }
 
+export interface ProductEvidenceAuditSummary {
+  total: number;
+  public: number;
+  humanSourceChecked: number;
+  publicHumanSourceChecked: number;
+  productsCovered: number;
+  publicProductsCovered: number;
+}
+
 export type ProductEvidenceValidationIssue =
   | "claim_text_invalid"
   | "source_excerpt_invalid"
@@ -211,4 +220,69 @@ export function toProductEditorialEvidence(
     hasIndependentComparison:
       primarySource && input.hasIndependentComparison,
   };
+}
+
+/**
+ * 管理権限の読み取り監査向け。個別の商品・URL・本文は返さず、件数だけを集計する。
+ */
+export function summarizeProductEvidence(
+  records: readonly ProductEvidenceInput[],
+): ProductEvidenceAuditSummary {
+  const productIds = new Set<string>();
+  const publicProductIds = new Set<string>();
+  let publicCount = 0;
+  let humanSourceChecked = 0;
+  let publicHumanSourceChecked = 0;
+
+  for (const record of records) {
+    productIds.add(record.productId);
+    if (record.reviewStatus === "human_source_checked") {
+      humanSourceChecked++;
+    }
+    if (!record.isPublic) continue;
+    publicCount++;
+    publicProductIds.add(record.productId);
+    if (record.reviewStatus === "human_source_checked") {
+      publicHumanSourceChecked++;
+    }
+  }
+
+  return {
+    total: records.length,
+    public: publicCount,
+    humanSourceChecked,
+    publicHumanSourceChecked,
+    productsCovered: productIds.size,
+    publicProductsCovered: publicProductIds.size,
+  };
+}
+
+/**
+ * 公開可能な一次情報だけを、商品単位の編集品質入力へまとめる。
+ * 複数の主張がある商品では、各必須要素を欠落させないよう安全側で結合する。
+ */
+export function publicEditorialEvidenceByProduct(
+  records: readonly ProductEvidenceInput[],
+): ReadonlyMap<string, ProductEditorialEvidence> {
+  const result = new Map<string, ProductEditorialEvidence>();
+
+  for (const record of records) {
+    if (!record.isPublic) continue;
+    const evidence = toProductEditorialEvidence(record);
+    if (!evidence.primarySourceUrl) continue;
+    const current = result.get(record.productId);
+    result.set(record.productId, {
+      primarySourceUrl:
+        current?.primarySourceUrl ?? evidence.primarySourceUrl,
+      sourceExcerpt: current?.sourceExcerpt ?? evidence.sourceExcerpt,
+      retrievedAt: current?.retrievedAt ?? evidence.retrievedAt,
+      humanVerifiedAt:
+        current?.humanVerifiedAt ?? evidence.humanVerifiedAt,
+      hasIndependentComparison:
+        (current?.hasIndependentComparison ?? false) ||
+        evidence.hasIndependentComparison,
+    });
+  }
+
+  return result;
 }

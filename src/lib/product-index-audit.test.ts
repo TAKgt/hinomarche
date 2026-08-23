@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { summarizeProductPopulation } from "./product-index-audit";
+import {
+  summarizeProductPopulation,
+  summarizePublishedProductAudit,
+} from "./product-index-audit";
 import type { ProductPageData } from "./types";
 
 const now = new Date("2026-07-25T12:00:00.000Z");
@@ -97,4 +100,45 @@ test("全商品監査でcurrent・pending・blocked・URL・sitemapを別集計�
   });
   assert.equal(beforeUrlMigration.publicUrl200, 1);
   assert.equal(beforeUrlMigration.notFoundEquivalent, 2);
+});
+
+test("公開商品だけの除外理由とカテゴリ別鮮度を集計する", () => {
+  const fresh = record();
+  const stale = record({
+    id: "22222222-2222-4222-8222-222222222222",
+    categorySlug: "home",
+    fetchedAt: "2026-06-01T00:00:00.000Z",
+  });
+  const pending = record({
+    id: "33333333-3333-4333-8333-333333333333",
+    categorySlug: "home",
+    isPublished: false,
+    judgmentStatus: "pending",
+    score: null,
+    tier: null,
+    evidenceType: null,
+    evidenceText: null,
+    judgedAt: null,
+    judgmentInputHashAtJudgment: null,
+    consistencyStatus: null,
+    checks: null,
+  });
+
+  const summary = summarizePublishedProductAudit([fresh, stale, pending], now);
+  assert.equal(summary.productsTotal, 2);
+  assert.equal(summary.technicalEligible, 1);
+  assert.equal(summary.technicalExcluded, 1);
+  assert.equal(summary.technicalReasonCounts.last_confirmation_stale, 1);
+  assert.deepEqual(summary.byCategory.home, {
+    published: 1,
+    technicalEligible: 0,
+    technicalExcluded: 1,
+    lastConfirmationStale: 1,
+  });
+  assert.deepEqual(summary.byCategory.kitchen, {
+    published: 1,
+    technicalEligible: 1,
+    technicalExcluded: 0,
+    lastConfirmationStale: 0,
+  });
 });

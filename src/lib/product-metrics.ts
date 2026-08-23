@@ -58,3 +58,51 @@ export function productPlacementQuery(placement: ProductPlacement): string {
   if (placement.surfaceKey) params.set("context", placement.surfaceKey);
   return params.toString();
 }
+
+export function productPlacementFragment(placement: ProductPlacement): string {
+  return `#${productPlacementQuery(placement)}`;
+}
+
+const PRODUCT_PLACEMENT_KEYS = ["surface", "context", "position"] as const;
+
+function hasProductPlacementParams(params: URLSearchParams): boolean {
+  return PRODUCT_PLACEMENT_KEYS.some((key) => params.has(key));
+}
+
+export function resolveProductPlacementLocation({
+  pathname,
+  search,
+  hash,
+}: {
+  pathname: string;
+  search: string;
+  hash: string;
+}): {
+  placement: ProductPlacement | null;
+  cleanHref: string | null;
+} {
+  const queryParams = new URLSearchParams(search);
+  const hashParams = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
+  const queryHasPlacement = hasProductPlacementParams(queryParams);
+  const hashHasPlacement = hasProductPlacementParams(hashParams);
+  const parsedPlacement =
+    (hashHasPlacement ? parseProductPlacement(hashParams) : null) ??
+    (queryHasPlacement ? parseProductPlacement(queryParams) : null);
+  const placement =
+    parsedPlacement && isImpressionPlacement(parsedPlacement)
+      ? parsedPlacement
+      : null;
+
+  if (!queryHasPlacement && !hashHasPlacement) {
+    return { placement, cleanHref: null };
+  }
+
+  for (const key of PRODUCT_PLACEMENT_KEYS) queryParams.delete(key);
+  const cleanQuery = queryParams.toString();
+  const cleanHash = hashHasPlacement ? "" : hash;
+
+  return {
+    placement,
+    cleanHref: `${pathname}${cleanQuery ? `?${cleanQuery}` : ""}${cleanHash}`,
+  };
+}

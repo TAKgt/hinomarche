@@ -1,6 +1,7 @@
 import type { Product } from "./types";
 import { siteOrigin } from "./site-url";
 import { displayProductTitle } from "./product-title";
+import { buildProductMetaDescription } from "./product-metadata";
 
 export function productStructuredData(product: Product, categoryName: string) {
   const origin = siteOrigin();
@@ -12,8 +13,7 @@ export function productStructuredData(product: Product, categoryName: string) {
     "@id": `${productUrl}#product`,
     url: productUrl,
     name: displayTitle,
-    description: `${displayTitle}。AI日本度判定 ${product.score}%。${product.evidenceText}`,
-    sku: `${product.source}-${product.sourceItemId}`,
+    description: buildProductMetaDescription(product),
   };
 
   if (product.imageUrl) productData.image = [product.imageUrl];

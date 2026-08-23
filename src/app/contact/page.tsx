@@ -4,6 +4,13 @@ import { ContactForm } from "./ContactForm";
 export const metadata: Metadata = {
   title: "お問い合わせ",
   description: "ヒノマルシェへのお問い合わせ方法のご案内です。",
+  alternates: { canonical: "/contact" },
+  openGraph: {
+    title: "お問い合わせ",
+    description: "ヒノマルシェへのお問い合わせ方法のご案内です。",
+    url: "/contact",
+    type: "website",
+  },
 };
 
 export default function ContactPage() {

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   isSafeEditorialSourceUrl,
+  publicEditorialEvidenceByProduct,
+  summarizeProductEvidence,
   toProductEditorialEvidence,
   validateProductEvidenceInput,
   type ProductEvidenceInput,
@@ -120,4 +122,39 @@ test("公式一次情報と独自比較が揃った場合だけeditorial入力�
     humanVerifiedAt: "2026-08-09T02:00:00.000Z",
     hasIndependentComparison: true,
   });
+});
+
+test("監査では個別値を出さず件数と公開根拠を商品単位にまとめる", () => {
+  const publicRecord = evidence({
+    isPublic: true,
+    hasIndependentComparison: true,
+  });
+  const privateRecord = evidence({
+    productId: "22222222-2222-4222-8222-222222222222",
+    reviewStatus: "ai_inferred",
+    humanCheckedAt: null,
+    sourceUrl: null,
+    sourceName: null,
+    sourceExcerpt: null,
+    retrievedAt: null,
+    isPublic: false,
+  });
+
+  assert.deepEqual(summarizeProductEvidence([publicRecord, privateRecord]), {
+    total: 2,
+    public: 1,
+    humanSourceChecked: 1,
+    publicHumanSourceChecked: 1,
+    productsCovered: 2,
+    publicProductsCovered: 1,
+  });
+  const byProduct = publicEditorialEvidenceByProduct([
+    publicRecord,
+    privateRecord,
+  ]);
+  assert.equal(byProduct.size, 1);
+  assert.equal(
+    byProduct.get(publicRecord.productId)?.hasIndependentComparison,
+    true,
+  );
 });

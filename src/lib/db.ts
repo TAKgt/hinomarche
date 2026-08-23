@@ -26,6 +26,7 @@ import {
   planProductRefresh,
   refreshedProductFields,
 } from "./product-freshness";
+import type { ProductEvidenceInput } from "./product-editorial-evidence";
 import { CATEGORY_PAGE_SIZE } from "./category-pagination";
 import { readAllPages } from "./read-all-pages";
 import { hasActivePromotion } from "./product-promotions";
@@ -916,6 +917,72 @@ export async function getProductIndexAuditRecords(): Promise<ProductPageData[]> 
         : {}),
     });
   });
+}
+
+function isMissingProductEvidenceTable(error: {
+  code?: string;
+  message?: string;
+}): boolean {
+  return (
+    error.code === "42P01" ||
+    error.code === "PGRST204" ||
+    error.code === "PGRST205" ||
+    /product_evidence/i.test(error.message ?? "")
+  );
+}
+
+/**
+ * 一次情報台帳の管理権限・読み取り専用監査。
+ * 呼び出し側では個別レコードを出力せず、件数と商品単位の品質判定だけに使う。
+ * 022未適用環境はnullを返し、空テーブルと区別する。
+ */
+export async function getProductEvidenceAuditRecords(): Promise<
+  ProductEvidenceInput[] | null
+> {
+  if (isDemoMode()) return [];
+
+  try {
+    const rows = await readAllPages<any>(async (from, to) => {
+      const { data, error } = await adminSupabase()
+        .from("product_evidence")
+        .select(
+          "id,product_id,claim_type,claim_text,source_excerpt,source_url,source_name,source_kind,retrieved_at,review_status,human_checked_at,product_input_hash,evidence_hash,has_independent_comparison,is_public",
+        )
+        .order("id", { ascending: true })
+        .range(from, to);
+      if (error) throw error;
+      return data;
+    });
+
+    return rows.map((row) => ({
+      productId: row.product_id,
+      claimType: row.claim_type,
+      claimText: row.claim_text,
+      sourceExcerpt: row.source_excerpt ?? null,
+      sourceUrl: row.source_url ?? null,
+      sourceName: row.source_name ?? null,
+      sourceKind: row.source_kind,
+      retrievedAt: row.retrieved_at ?? null,
+      reviewStatus: row.review_status,
+      humanCheckedAt: row.human_checked_at ?? null,
+      productInputHash: row.product_input_hash,
+      evidenceHash: row.evidence_hash,
+      hasIndependentComparison:
+        row.has_independent_comparison === true,
+      isPublic: row.is_public === true,
+    }));
+  } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      isMissingProductEvidenceTable(
+        error as { code?: string; message?: string },
+      )
+    ) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 export async function getRelatedProducts(product: Product, limit = 4): Promise<Product[]> {

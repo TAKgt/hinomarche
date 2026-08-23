@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { listingFilterLinkRel } from "@/lib/category-pagination";
 import {
   PRICE_FILTERS,
   REVIEW_FILTERS,
@@ -72,6 +73,7 @@ export function ProductFilters({
         {hasFilters && (
           <Link
             href={resetHref}
+            rel={listingFilterLinkRel(resetHref)}
             className="flex h-11 items-center justify-center border border-line px-4 text-sm text-sumi-soft transition-colors hover:border-sumi hover:text-sumi"
           >
             条件を解除

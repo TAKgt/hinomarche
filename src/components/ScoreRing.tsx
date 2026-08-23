@@ -37,7 +37,7 @@ export function ScoreRing({
         boxShadow: `0 2px 8px ${band.fill}55`,
       }}
       role="img"
-      aria-label={`AI日本度判定 ${score}パーセント`}
+      aria-label={`AI日本度（AI推定）判定 ${score}パーセント`}
     >
       <span className="flex flex-col items-center justify-center leading-none">
         <span

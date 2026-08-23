@@ -18,6 +18,7 @@ import { OfficialPriceComparisonSection } from "@/components/OfficialPriceCompar
 import { productStructuredData } from "@/lib/structured-data";
 import { TIER_LABEL, type ProductPageData } from "@/lib/types";
 import { displayProductTitle } from "@/lib/product-title";
+import { buildProductMerchantDescriptionExcerpt } from "@/lib/product-metadata";
 import { getFeaturesForProduct } from "@/lib/features";
 import { getRegionsForProduct } from "@/lib/regions";
 import { getOfficialPriceComparison } from "@/lib/official-price-comparisons";
@@ -74,6 +75,8 @@ export default async function ProductPage({ params }: Props) {
     categories.find((category) => category.slug === product.categorySlug)
       ?.name ?? "商品カテゴリ";
   const displayTitle = displayProductTitle(product.title);
+  const merchantDescriptionExcerpt =
+    buildProductMerchantDescriptionExcerpt(product.description);
   const matchingFeatures = getFeaturesForProduct(product);
   const matchingRegions = getRegionsForProduct(product);
   const officialPriceComparison = getOfficialPriceComparison(
@@ -141,10 +144,17 @@ export default async function ProductPage({ params }: Props) {
               alt={displayTitle}
               width={800}
               height={800}
+              data-product-hero=""
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
               className="size-full object-contain"
             />
           ) : (
-            <span className="tategaki font-mincho text-2xl text-sumi-soft/60 max-h-[80%] overflow-hidden">
+            <span
+              data-product-hero-placeholder=""
+              className="tategaki font-mincho text-2xl text-sumi-soft/60 max-h-[80%] overflow-hidden"
+            >
               {displayTitle.slice(0, 14)}
             </span>
           )}
@@ -288,14 +298,24 @@ export default async function ProductPage({ params }: Props) {
         </section>
       )}
 
-      {/* 説明文 */}
-      {product.description && (
-        <section className="mt-14 max-w-3xl">
+      {/* 販売元説明の抜粋 */}
+      {merchantDescriptionExcerpt && (
+        <section
+          data-product-merchant-summary=""
+          data-nosnippet=""
+          className="mt-14 max-w-3xl"
+        >
           <h2 className="font-mincho text-xl font-semibold border-l-4 border-hinomaru pl-3">
-            商品について
+            販売元の商品情報（抜粋）
           </h2>
-          <p className="mt-4 text-sm leading-relaxed text-sumi-soft whitespace-pre-line">
-            {product.description}
+          <p
+            data-product-merchant-summary-text=""
+            className="mt-4 text-sm leading-relaxed text-sumi-soft"
+          >
+            {merchantDescriptionExcerpt}
+          </p>
+          <p className="mt-3 text-xs leading-relaxed text-sumi-soft">
+            販売元掲載文の先頭を読みやすい長さで表示しています。仕様・内容量・注意事項などの最新情報は販売ページでご確認ください。
           </p>
         </section>
       )}

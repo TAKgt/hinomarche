@@ -5,6 +5,14 @@ export const metadata: Metadata = {
   title: "掲載方針とAI日本度",
   description:
     "ヒノマルシェの商品掲載方針、AI日本度（AI推定）の判定根拠、価格情報の取得日時、訂正窓口について。",
+  alternates: { canonical: "/about" },
+  openGraph: {
+    title: "掲載方針とAI日本度",
+    description:
+      "ヒノマルシェの商品掲載方針、AI日本度（AI推定）の判定根拠、価格情報の取得日時、訂正窓口について。",
+    url: "/about",
+    type: "website",
+  },
 };
 
 export default function AboutPage() {

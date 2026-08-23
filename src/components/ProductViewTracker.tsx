@@ -1,10 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import {
-  isImpressionPlacement,
-  parseProductPlacement,
-} from "@/lib/product-metrics";
+import { resolveProductPlacementLocation } from "@/lib/product-metrics";
 
 export function ProductViewTracker({
   productId,
@@ -12,15 +9,13 @@ export function ProductViewTracker({
   productId: string;
 }) {
   useEffect(() => {
-    const parsedPlacement = parseProductPlacement(
-      new URLSearchParams(window.location.search),
-    );
-    const placement =
-      parsedPlacement && isImpressionPlacement(parsedPlacement)
-        ? parsedPlacement
-        : null;
+    const { placement, cleanHref } = resolveProductPlacementLocation({
+      pathname: window.location.pathname,
+      search: window.location.search,
+      hash: window.location.hash,
+    });
 
-    fetch("/api/metrics/product-view", {
+    const metricRequest = fetch("/api/metrics/product-view", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -31,7 +26,13 @@ export function ProductViewTracker({
       }),
       credentials: "same-origin",
       keepalive: true,
-    }).catch(() => {
+    });
+
+    if (cleanHref) {
+      window.history.replaceState(window.history.state, "", cleanHref);
+    }
+
+    metricRequest.catch(() => {
       // 計測失敗で商品閲覧を妨げない。
     });
   }, [productId]);

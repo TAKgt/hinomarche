@@ -5,6 +5,7 @@ export type RegionDefinition = {
   name: string;
   eyebrow: string;
   title: string;
+  titleChunks?: string[];
   description: string;
   titleTerms: string[];
   minScore: number;
@@ -28,6 +29,12 @@ export const REGIONS: RegionDefinition[] = [
     name: "燕三条",
     eyebrow: "NIIGATA",
     title: "燕三条のキッチン用品｜包丁・水切りラック・調理器具",
+    titleChunks: [
+      "燕三条のキッチン用品",
+      "｜包丁",
+      "・水切りラック",
+      "・調理器具",
+    ],
     description:
       "商品名に「燕三条」「燕市」「三条市」の表記がある包丁、水切りラック、調理小物を、AI日本度の根拠と販売先レビュー、価格から比較できます。",
     titleTerms: ["燕三条", "燕市", "三条市"],

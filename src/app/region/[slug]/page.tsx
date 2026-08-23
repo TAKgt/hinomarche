@@ -257,7 +257,13 @@ export default async function RegionPage({ params }: Props) {
             {region.eyebrow} / CRAFT &amp; ORIGIN
           </p>
           <h1 className="mt-3 max-w-4xl font-mincho text-3xl font-semibold leading-snug md:text-5xl">
-            {region.title}
+            {region.titleChunks
+              ? region.titleChunks.map((chunk) => (
+                  <span key={chunk} className="inline-block">
+                    {chunk}
+                  </span>
+                ))
+              : region.title}
           </h1>
           <p className="mt-5 max-w-3xl leading-relaxed text-sumi-soft">
             {region.description}

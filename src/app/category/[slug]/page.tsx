@@ -10,6 +10,7 @@ import { displayProductTitle } from "@/lib/product-title";
 import { siteOrigin } from "@/lib/site-url";
 import { getFeaturesForCategory } from "@/lib/features";
 import { getCommercialTopicsForCategory } from "@/lib/commercial-topics";
+import { splitCategoryPurposeFeatures } from "@/lib/category-purpose-navigation";
 import { ProductFilters } from "@/components/ProductFilters";
 import {
   parsePriceFilter,
@@ -19,6 +20,7 @@ import {
   buildCategoryQuery,
   categoryListingSeo,
   firstQueryValue,
+  listingFilterLinkRel,
   parseCategoryPage,
 } from "@/lib/category-pagination";
 
@@ -92,6 +94,21 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   });
   if (requestedPage > productPage.totalPages) notFound();
   const { products, totalCount, currentPage, totalPages, pageSize } = productPage;
+  const resetHref = `/category/${slug}${buildCategoryQuery({ sort, tier })}`;
+  const previousHref = `/category/${slug}${buildCategoryQuery({
+    sort,
+    tier,
+    priceFilter,
+    reviewFilter,
+    page: currentPage - 1,
+  })}`;
+  const nextHref = `/category/${slug}${buildCategoryQuery({
+    sort,
+    tier,
+    priceFilter,
+    reviewFilter,
+    page: currentPage + 1,
+  })}`;
   const content = getCategoryContent(slug, category.name);
   const relatedFeatures = getFeaturesForCategory(slug);
   const commercialTopics = getCommercialTopicsForCategory(slug);
@@ -99,6 +116,11 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const remainingRelatedFeatures = relatedFeatures.filter(
     (feature) => !commercialFeatureHrefs.has(`/feature/${feature.slug}`),
   );
+  const { purposeFeatures, supplementalFeatures } =
+    splitCategoryPurposeFeatures(
+      commercialTopics.length > 0,
+      remainingRelatedFeatures,
+    );
   const origin = siteOrigin();
   const pageUrl = `${origin}/category/${slug}`;
   const structuredData = [
@@ -143,7 +165,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           <p className="text-xs tracking-[0.35em] text-hinomaru font-medium uppercase">
             Category
           </p>
-          <h1 className="mt-2 font-mincho text-3xl md:text-4xl font-semibold">
+          <h1 className="mt-2 text-balance [word-break:auto-phrase] font-mincho text-3xl font-semibold md:text-4xl">
             {category.name}
           </h1>
           <p className="mt-3 text-sm text-sumi-soft max-w-2xl leading-relaxed">
@@ -180,11 +202,46 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         </nav>
       )}
 
-      {remainingRelatedFeatures.length > 0 && (
+      {purposeFeatures.length > 0 && (
+        <nav
+          className="mt-8 border-y border-line py-6"
+          aria-labelledby="category-purpose-heading"
+        >
+          <p className="text-xs font-medium tracking-[0.25em] text-hinomaru">
+            START WITH A PURPOSE
+          </p>
+          <h2
+            id="category-purpose-heading"
+            className="mt-2 font-mincho text-xl font-semibold"
+          >
+            商品タイプから候補を絞る
+          </h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {purposeFeatures.map((feature) => (
+              <div key={feature.slug} className="border border-line bg-white/50 p-4">
+                <h3 className="font-mincho text-lg font-semibold">
+                  {feature.shortTitle}
+                </h3>
+                <p className="mt-2 text-xs leading-relaxed text-sumi-soft">
+                  {feature.description}
+                </p>
+                <Link
+                  href={`/feature/${feature.slug}`}
+                  className="mt-3 inline-block text-sm font-medium text-hinomaru hover:underline"
+                >
+                  {feature.shortTitle}の候補を見る →
+                </Link>
+              </div>
+            ))}
+          </div>
+        </nav>
+      )}
+
+      {supplementalFeatures.length > 0 && (
         <nav className="mt-8" aria-label={`${category.name}の関連特集`}>
           <p className="text-xs font-medium tracking-[0.25em] text-hinomaru">RELATED FEATURES</p>
           <div className="mt-3 grid border-l border-t border-line sm:grid-cols-2">
-            {remainingRelatedFeatures.map((feature) => (
+            {supplementalFeatures.map((feature) => (
               <Link
                 key={feature.slug}
                 href={`/feature/${feature.slug}`}
@@ -203,24 +260,28 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             並び順
           </span>
           <div className="flex gap-2 overflow-x-auto -mx-5 px-5 md:mx-0 md:px-0 pb-1 md:pb-0">
-            {SORTS.map((s) => (
-              <Link
-                key={s.key}
-                href={`/category/${slug}${buildCategoryQuery({
-                  sort: s.key,
-                  tier,
-                  priceFilter,
-                  reviewFilter,
-                })}`}
-                className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-sm border transition-colors ${
-                  sort === s.key
-                    ? "bg-sumi text-washi border-sumi"
-                    : "border-line text-sumi-soft hover:border-sumi hover:text-sumi"
-                }`}
-              >
-                {s.label}
-              </Link>
-            ))}
+            {SORTS.map((s) => {
+              const href = `/category/${slug}${buildCategoryQuery({
+                sort: s.key,
+                tier,
+                priceFilter,
+                reviewFilter,
+              })}`;
+              return (
+                <Link
+                  key={s.key}
+                  href={href}
+                  rel={listingFilterLinkRel(href)}
+                  className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-sm border transition-colors ${
+                    sort === s.key
+                      ? "bg-sumi text-washi border-sumi"
+                      : "border-line text-sumi-soft hover:border-sumi hover:text-sumi"
+                  }`}
+                >
+                  {s.label}
+                </Link>
+              );
+            })}
           </div>
         </div>
         <div className="md:flex md:items-center md:gap-2">
@@ -228,24 +289,28 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             日本度
           </span>
           <div className="flex gap-2 overflow-x-auto -mx-5 px-5 md:mx-0 md:px-0 pb-1 md:pb-0">
-            {TIERS.map((t) => (
-              <Link
-                key={t.key ?? "all"}
-                href={`/category/${slug}${buildCategoryQuery({
-                  sort,
-                  tier: t.key,
-                  priceFilter,
-                  reviewFilter,
-                })}`}
-                className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-sm border transition-colors ${
-                  tier === t.key
-                    ? "bg-hinomaru text-white border-hinomaru"
-                    : "border-line text-sumi-soft hover:border-hinomaru hover:text-hinomaru"
-                }`}
-              >
-                {t.label}
-              </Link>
-            ))}
+            {TIERS.map((t) => {
+              const href = `/category/${slug}${buildCategoryQuery({
+                sort,
+                tier: t.key,
+                priceFilter,
+                reviewFilter,
+              })}`;
+              return (
+                <Link
+                  key={t.key ?? "all"}
+                  href={href}
+                  rel={listingFilterLinkRel(href)}
+                  className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-sm border transition-colors ${
+                    tier === t.key
+                      ? "bg-hinomaru text-white border-hinomaru"
+                      : "border-line text-sumi-soft hover:border-hinomaru hover:text-hinomaru"
+                  }`}
+                >
+                  {t.label}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -258,7 +323,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           ...(sort !== "featured" ? { sort } : {}),
           ...(tier ? { tier } : {}),
         }}
-        resetHref={`/category/${slug}${buildCategoryQuery({ sort, tier })}`}
+        resetHref={resetHref}
       />
 
       {products.length === 0 ? (
@@ -270,7 +335,8 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           </p>
           {(priceFilter || reviewFilter) && (
             <Link
-              href={`/category/${slug}${buildCategoryQuery({ sort, tier })}`}
+              href={resetHref}
+              rel={listingFilterLinkRel(resetHref)}
               className="mt-5 inline-block text-sm text-hinomaru hover:underline"
             >
               条件を解除する →
@@ -305,14 +371,8 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             >
               {currentPage > 1 ? (
                 <Link
-                  href={`/category/${slug}${buildCategoryQuery({
-                    sort,
-                    tier,
-                    priceFilter,
-                    reviewFilter,
-                    page: currentPage - 1,
-                  })}`}
-                  rel="prev"
+                  href={previousHref}
+                  rel={`prev${listingFilterLinkRel(previousHref) ? " nofollow" : ""}`}
                   className="inline-flex min-h-11 min-w-24 items-center justify-center border border-line px-4 py-2 text-sm text-sumi transition-colors hover:border-hinomaru hover:text-hinomaru focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hinomaru"
                 >
                   ← 前へ
@@ -330,14 +390,8 @@ export default async function CategoryPage({ params, searchParams }: Props) {
               </span>
               {currentPage < totalPages ? (
                 <Link
-                  href={`/category/${slug}${buildCategoryQuery({
-                    sort,
-                    tier,
-                    priceFilter,
-                    reviewFilter,
-                    page: currentPage + 1,
-                  })}`}
-                  rel="next"
+                  href={nextHref}
+                  rel={`next${listingFilterLinkRel(nextHref) ? " nofollow" : ""}`}
                   className="inline-flex min-h-11 min-w-24 items-center justify-center border border-line px-4 py-2 text-sm text-sumi transition-colors hover:border-hinomaru hover:text-hinomaru focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hinomaru"
                 >
                   次へ →

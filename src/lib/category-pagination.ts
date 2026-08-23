@@ -48,6 +48,23 @@ export function buildCategoryQuery({
   return query ? `?${query}` : "";
 }
 
+const FILTER_QUERY_KEYS = ["sort", "tier", "price", "reviews"] as const;
+
+/** 絞り込みURLだけをクロール対象から外し、カテゴリ本体と通常ページ送りは維持する。 */
+export function listingFilterLinkRel(href: string): "nofollow" | undefined {
+  const queryStart = href.indexOf("?");
+  if (queryStart === -1) return undefined;
+  const hashStart = href.indexOf("#", queryStart);
+  const query = href.slice(
+    queryStart + 1,
+    hashStart === -1 ? undefined : hashStart,
+  );
+  const params = new URLSearchParams(query);
+  return FILTER_QUERY_KEYS.some((key) => params.has(key))
+    ? "nofollow"
+    : undefined;
+}
+
 export function categoryListingSeo(
   slug: string,
   query: CategoryQuery,

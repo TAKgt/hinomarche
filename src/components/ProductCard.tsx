@@ -7,10 +7,12 @@ import { displayProductTitle } from "@/lib/product-title";
 import { ProductImpression } from "./ProductImpression";
 import { productCardImageUrl } from "@/lib/product-image";
 import {
+  productPlacementFragment,
   productPlacementQuery,
   type ProductPlacement,
   type ProductSurface,
 } from "@/lib/product-metrics";
+import { productCardImageLoading } from "@/lib/product-image-loading";
 
 export function ProductCard({
   product,
@@ -32,7 +34,8 @@ export function ProductCard({
     position: index + 1,
   };
   const outboundUrl = `/go/${product.id}?target=primary&${productPlacementQuery(placement)}`;
-  const detailUrl = `/product/${product.id}?${productPlacementQuery(placement)}`;
+  const detailUrl = `/product/${product.id}${productPlacementFragment(placement)}`;
+  const imageLoading = productCardImageLoading(surface, index);
   const hasReview =
     product.reviewAverage != null &&
     product.reviewAverage > 0 &&
@@ -53,7 +56,10 @@ export function ProductCard({
               alt={displayTitle}
               width={320}
               height={320}
-              loading="lazy"
+              data-product-card-image=""
+              data-product-surface={surface}
+              loading={imageLoading.loading}
+              fetchPriority={imageLoading.fetchPriority}
               decoding="async"
               className="size-full object-contain transition-transform duration-500 group-hover:scale-105"
             />
@@ -76,7 +82,7 @@ export function ProductCard({
           <div className="hidden shrink-0 pt-0.5 md:block">
             <ScoreRing score={product.score} size={52} />
             <p className="mt-1 text-center text-[10px] text-sumi-soft leading-tight">
-              AI日本度
+              AI日本度（AI推定）
             </p>
           </div>
           <div className="min-w-0">
@@ -102,6 +108,7 @@ export function ProductCard({
               </p>
             )}
             <p className="mt-2 line-clamp-3 border-t border-line/70 pt-2 text-[11px] leading-relaxed text-sumi-soft md:mt-1 md:line-clamp-2 md:border-0 md:pt-0 md:text-xs">
+              <span className="sr-only">AI判定根拠：</span>
               {product.evidenceText}
             </p>
           </div>

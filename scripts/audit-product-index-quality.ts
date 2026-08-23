@@ -10,6 +10,7 @@ config({ quiet: true });
 async function main() {
   const [
     {
+      getProductEvidenceAuditRecords,
       getProductIndexAuditRecords,
       isDemoMode,
       productFreshnessMigrationAvailable,
@@ -19,11 +20,13 @@ async function main() {
       PRODUCT_AI_JUDGMENT_MAX_AGE_DAYS,
       PRODUCT_FINAL_CONFIRMATION_MAX_AGE_DAYS,
     },
-    { summarizeProductPopulation },
+    { summarizeProductPopulation, summarizePublishedProductAudit },
+    { publicEditorialEvidenceByProduct, summarizeProductEvidence },
   ] = await Promise.all([
     import("../src/lib/db"),
     import("../src/lib/product-index-quality"),
     import("../src/lib/product-index-audit"),
+    import("../src/lib/product-editorial-evidence"),
   ]);
 
   if (isDemoMode()) {
@@ -31,16 +34,30 @@ async function main() {
   }
 
   const evaluatedAt = new Date();
-  const [products, migration019Applied, migration020Applied] =
-    await Promise.all([
-      getProductIndexAuditRecords(),
-      productFreshnessMigrationAvailable(),
-      safeProductPageMigrationAvailable(),
-    ]);
+  const [
+    products,
+    evidenceRecords,
+    migration019Applied,
+    migration020Applied,
+  ] = await Promise.all([
+    getProductIndexAuditRecords(),
+    getProductEvidenceAuditRecords(),
+    productFreshnessMigrationAvailable(),
+    safeProductPageMigrationAvailable(),
+  ]);
+  const editorialEvidenceByProductId = evidenceRecords
+    ? publicEditorialEvidenceByProduct(evidenceRecords)
+    : new Map();
   const summary = summarizeProductPopulation(products, evaluatedAt, {
     includeLowTier: process.env.SHOW_LOW_TIER !== "false",
     safePendingUrlsEnabled: migration020Applied,
+    editorialEvidenceByProductId,
   });
+  const publishedOnly = summarizePublishedProductAudit(
+    products,
+    evaluatedAt,
+    editorialEvidenceByProductId,
+  );
   const after020 = migration020Applied
     ? null
     : summarizeProductPopulation(products, evaluatedAt, {
@@ -54,7 +71,12 @@ async function main() {
         scope: "all-products-read-only",
         evaluatedAt: evaluatedAt.toISOString(),
         indexGateUsedByMetadataAndSitemap: "technicalEligible",
-        editorialEvidenceStorage: "not-configured",
+        editorialEvidenceStorage:
+          evidenceRecords === null ? "not-detected" : "detected",
+        productEvidence:
+          evidenceRecords === null
+            ? null
+            : summarizeProductEvidence(evidenceRecords),
         migrationStatus: {
           productJudgmentFreshness019: migration019Applied
             ? "detected"
@@ -69,6 +91,7 @@ async function main() {
           aiJudgmentMaxAgeDays: PRODUCT_AI_JUDGMENT_MAX_AGE_DAYS,
         },
         ...summary,
+        publishedOnly,
         after020Projection: after020
           ? {
               publicUrl200: after020.publicUrl200,
