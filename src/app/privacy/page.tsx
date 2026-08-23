@@ -4,6 +4,13 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "プライバシーポリシー",
   description: "ヒノマルシェのプライバシーポリシーです。",
+  alternates: { canonical: "/privacy" },
+  openGraph: {
+    title: "プライバシーポリシー",
+    description: "ヒノマルシェのプライバシーポリシーです。",
+    url: "/privacy",
+    type: "website",
+  },
 };
 
 const sections = [

@@ -3,7 +3,11 @@ import type { Product } from "@/lib/types";
 import { displayProductTitle } from "@/lib/product-title";
 import { productCardImageUrl } from "@/lib/product-image";
 import { formatDate, formatPrice, SOURCE_LABEL } from "@/lib/format";
-import { productPlacementQuery, type ProductSurface } from "@/lib/product-metrics";
+import {
+  productPlacementFragment,
+  productPlacementQuery,
+  type ProductSurface,
+} from "@/lib/product-metrics";
 import { ProductImpression } from "./ProductImpression";
 
 export type ProductComparisonChoice = {
@@ -72,7 +76,7 @@ export function ProductComparison({
         const title = displayProductTitle(product.title);
         const placement = { surface, surfaceKey, position: index + 1 } as const;
         const query = productPlacementQuery(placement);
-        const detailUrl = `/product/${product.id}?${query}`;
+        const detailUrl = `/product/${product.id}${productPlacementFragment(placement)}`;
         const outboundUrl = `/go/${product.id}?target=primary&${query}`;
         const sourceLabel = SOURCE_LABEL[product.source];
         const outboundLabel = comparisonOutboundLabel(sourceLabel, surfaceKey, label);

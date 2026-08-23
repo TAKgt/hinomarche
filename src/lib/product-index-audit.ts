@@ -58,6 +58,21 @@ export interface ProductPopulationAuditSummary {
   consistencyIssueCounts: Record<ProductInformationConsistencyReason, number>;
 }
 
+export interface PublishedCategoryAuditSummary {
+  published: number;
+  technicalEligible: number;
+  technicalExcluded: number;
+  lastConfirmationStale: number;
+}
+
+export interface PublishedProductAuditSummary {
+  productsTotal: number;
+  technicalEligible: number;
+  technicalExcluded: number;
+  technicalReasonCounts: Record<ProductIndexExclusionReason, number>;
+  byCategory: Record<string, PublishedCategoryAuditSummary>;
+}
+
 export function summarizeProductPopulation(
   records: ProductPageData[],
   now = new Date(),
@@ -163,4 +178,67 @@ export function summarizeProductPopulation(
   summary.primarySourceUnconfirmed =
     editorialReasonCounts.primary_source_url_missing;
   return summary;
+}
+
+/**
+ * 公開中の商品だけを対象に、除外理由とカテゴリ別の維持状況を集計する。
+ * 理由は重複し得るため、technicalExcludedとの合計一致は保証しない。
+ */
+export function summarizePublishedProductAudit(
+  records: readonly ProductPageData[],
+  now = new Date(),
+  editorialEvidenceByProductId: ReadonlyMap<
+    string,
+    ProductEditorialEvidence
+  > = new Map(),
+): PublishedProductAuditSummary {
+  const technicalReasonCounts = Object.fromEntries(
+    TECHNICAL_REASONS.map((reason) => [reason, 0]),
+  ) as Record<ProductIndexExclusionReason, number>;
+  const byCategory = new Map<string, PublishedCategoryAuditSummary>();
+  let productsTotal = 0;
+  let technicalEligible = 0;
+
+  for (const record of records) {
+    if (!record.isPublished) continue;
+    productsTotal++;
+    const category = byCategory.get(record.categorySlug) ?? {
+      published: 0,
+      technicalEligible: 0,
+      technicalExcluded: 0,
+      lastConfirmationStale: 0,
+    };
+    category.published++;
+
+    const assessment = assessProductIndexQuality(
+      record,
+      now,
+      editorialEvidenceByProductId.get(record.id),
+    );
+    if (assessment.technicalEligible) {
+      technicalEligible++;
+      category.technicalEligible++;
+    } else {
+      category.technicalExcluded++;
+      for (const reason of assessment.reasons) {
+        technicalReasonCounts[reason]++;
+      }
+    }
+    if (assessment.reasons.includes("last_confirmation_stale")) {
+      category.lastConfirmationStale++;
+    }
+    byCategory.set(record.categorySlug, category);
+  }
+
+  return {
+    productsTotal,
+    technicalEligible,
+    technicalExcluded: productsTotal - technicalEligible,
+    technicalReasonCounts,
+    byCategory: Object.fromEntries(
+      [...byCategory.entries()].sort(([left], [right]) =>
+        left.localeCompare(right),
+      ),
+    ),
+  };
 }

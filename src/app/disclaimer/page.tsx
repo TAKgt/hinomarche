@@ -4,6 +4,13 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "免責事項",
   description: "ヒノマルシェの免責事項です。",
+  alternates: { canonical: "/disclaimer" },
+  openGraph: {
+    title: "免責事項",
+    description: "ヒノマルシェの免責事項です。",
+    url: "/disclaimer",
+    type: "website",
+  },
 };
 
 const sections = [

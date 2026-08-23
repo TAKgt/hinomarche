@@ -160,6 +160,32 @@ products全体をページングし、最終確認日、AI判定鮮度、販売�
 商品詳細を`noindex,follow`にしてsitemapから除外します。
 改善後は同じ判定を再実行して自動的にindex対象へ戻ります。
 
+燕三条・調理器具を対象に、1カテゴリ・1検索語・最大30件で商品鮮度を確認するpilotは、
+まず既定の読み取り専用dry-runを実行します。
+
+```bash
+npm run pilot:index-refresh
+```
+
+既定動作はカテゴリ設定と匿名件数をDBから読むだけで、楽天商品API、DB書き込み、AI判定を
+実行しません。外部previewは、対象と上限を明示し、dry-runが返した承認トークンを指定した
+場合だけ楽天APIを1回読み取ります。DB書き込みとAI判定は0件です。
+
+```bash
+npm run pilot:index-refresh -- --external-preview \
+  --category=kitchen \
+  --keyword='燕三条 調理器具' \
+  --limit=30 \
+  --approval-token='<dry-runが返したpreview承認トークン>'
+```
+
+DB更新は外部previewとは別承認です。previewが返す匿名件数、fingerprint、実行承認トークンを
+すべて指定し、同じ結果を再取得できた場合だけ、現在公開中の既存商品を上限30件で更新します。
+新規・現在非公開・カテゴリ外の商品は更新せず、追加・削除、AI API、商品順、shadowランキングも
+変更しません。更新前バックアップとrollbackトークンはローカルの`.backups/index-refresh-pilot/`
+に権限600で保存します。実行引数とrollback手順は
+`article-work/access-growth-2026-08-23/01-index-refresh-pilot.md`を参照してください。
+
 `022_product_editorial_evidence.sql`は人手確認した一次情報をAI判定と分離して保存するための
 マイグレーションで、2026-08-09に本番適用済みです。既存商品は更新せず、匿名権限からの
 直接参照を許可しません。適用・権限検証とロールバック手順は

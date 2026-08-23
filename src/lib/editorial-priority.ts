@@ -58,7 +58,7 @@ function includesAny(text: string, terms: readonly string[]): boolean {
   return terms.some((term) => text.includes(term));
 }
 
-function matchesTheme(
+export function matchesEditorialPriorityTheme(
   product: ProductPageData,
   themeId: EditorialPriorityThemeId,
 ): boolean {
@@ -159,7 +159,9 @@ export function selectEditorialPriorityCandidates(
 
   for (const theme of EDITORIAL_PRIORITY_THEMES) {
     const matches = eligible
-      .filter((product) => matchesTheme(product, theme.id))
+      .filter((product) =>
+        matchesEditorialPriorityTheme(product, theme.id),
+      )
       .sort(compareCandidates);
     matchingEligibleByTheme[theme.id] = matches.length;
 

@@ -4,7 +4,7 @@ import {
   assessProductIndexQuality,
   buildProductMetadata,
 } from "./product-index-quality";
-import { displayProductTitle } from "./product-title";
+import { buildProductMetaTitle } from "./product-metadata";
 import type { Product, ProductPageData } from "./types";
 
 /** 品質未達は200+noindexを維持し、存在しない商品だけを従来どおり404にする。 */
@@ -119,7 +119,7 @@ export function buildProductPageMetadata(
     return buildProductMetadata(resolution.currentProduct, now);
   }
 
-  const title = displayProductTitle(product.title);
+  const title = buildProductMetaTitle(product);
   const description =
     "販売元の商品情報とAI日本度の判定内容を再確認しています。確認完了後に判定根拠を再表示します。";
   const canonical = `/product/${product.id}`;

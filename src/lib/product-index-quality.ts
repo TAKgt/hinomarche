@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import { detectJudgmentConsistencyIssues } from "./product-freshness";
+import {
+  buildProductMetaDescription,
+  buildProductMetaTitle,
+} from "./product-metadata";
 import { displayProductTitle } from "./product-title";
 import type {
   Judgment,
@@ -266,18 +270,19 @@ export function buildProductMetadata(
   now = new Date(),
 ): Metadata {
   const displayTitle = displayProductTitle(product.title);
-  const description = `${displayTitle} — AI日本度判定 ${product.score}%。${product.evidenceText}`;
+  const metaTitle = buildProductMetaTitle(product);
+  const description = buildProductMetaDescription(product);
   const quality = assessProductIndexQuality(product, now);
   const canonical = `/product/${product.id}`;
   return {
-    title: displayTitle,
+    title: metaTitle,
     description,
     alternates: { canonical },
     robots: quality.technicalEligible
       ? undefined
       : { index: false, follow: true },
     openGraph: {
-      title: displayTitle,
+      title: metaTitle,
       description,
       url: canonical,
       type: "website",

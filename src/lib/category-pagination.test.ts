@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   buildCategoryQuery,
   categoryListingSeo,
+  listingFilterLinkRel,
   parseCategoryPage,
 } from "./category-pagination";
 
@@ -73,4 +74,21 @@ test("60件単位のページ境界で全IDへ重複・欠落なく到達でき�
   assert.deepEqual(pages.map((page) => page.length), [60, 60, 17]);
   assert.equal(new Set(reached).size, ids.length);
   assert.deepEqual(reached, ids);
+});
+
+test("カテゴリ本体と通常ページ送りにはnofollowを付けない", () => {
+  assert.equal(listingFilterLinkRel("/category/kitchen"), undefined);
+  assert.equal(listingFilterLinkRel("/category/kitchen?page=2"), undefined);
+});
+
+test("sort・tier・price・reviewsを含むリンクはnofollowにする", () => {
+  for (const href of [
+    "/category/kitchen?sort=new",
+    "/category/kitchen?tier=high",
+    "/category/kitchen?price=under-3000",
+    "/category/kitchen?reviews=popular-100",
+    "/category/kitchen?page=2&sort=reviews",
+  ]) {
+    assert.equal(listingFilterLinkRel(href), "nofollow");
+  }
 });

@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { formatDate, formatPrice, SOURCE_LABEL } from "@/lib/format";
 import { productFeatureImageUrl } from "@/lib/product-image";
-import { productPlacementQuery } from "@/lib/product-metrics";
+import {
+  productPlacementFragment,
+  productPlacementQuery,
+} from "@/lib/product-metrics";
 import { displayProductTitle } from "@/lib/product-title";
 import type { Product } from "@/lib/types";
 import { ProductImpression } from "./ProductImpression";
@@ -17,7 +20,7 @@ export function GiftProductHero({
   const sourceLabel = SOURCE_LABEL[product.source];
   const placement = { surface: "feature", surfaceKey, position: 1 } as const;
   const query = productPlacementQuery(placement);
-  const detailUrl = `/product/${product.id}?${query}`;
+  const detailUrl = `/product/${product.id}${productPlacementFragment(placement)}`;
   const outboundUrl = `/go/${product.id}?target=primary&${query}`;
   const hasReview =
     product.reviewAverage != null &&
