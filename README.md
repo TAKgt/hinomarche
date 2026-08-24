@@ -160,6 +160,22 @@ products全体をページングし、最終確認日、AI判定鮮度、販売�
 商品詳細を`noindex,follow`にしてsitemapから除外します。
 改善後は同じ判定を再実行して自動的にindex対象へ戻ります。
 
+公開商品の再確認順を、鮮度期限・サイト内ファネル・4つの優先テーマから
+読み取り専用で計画する場合:
+
+```bash
+npm run plan:freshness-priority -- --focus-theme=tsubame_kitchen --limit=30
+npm run monitor:access-health
+```
+
+どちらも商品ID・商品名・URLを出力せず、外部商品API、DB書き込み、AI判定、
+商品順、shadowランキングを変更しません。サイト内計測が読めない場合は0件にせず
+`unavailable`と`null`で返します。Search Console・GA4・Core Web Vitalsは、この
+ローカルコマンドが取得したとは扱わず、既存権限で別途読み取り確認します。
+`plan:freshness-priority`は、期限直前の商品を保護しつつ、鮮度だけが原因でtechnical対象から
+外れた商品を優先テーマと観測済み需要から最大30件に絞るdry-runです。実際の再取得は
+下記pilotの別承認フローで行います。
+
 燕三条・調理器具を対象に、1カテゴリ・1検索語・最大30件で商品鮮度を確認するpilotは、
 まず既定の読み取り専用dry-runを実行します。
 

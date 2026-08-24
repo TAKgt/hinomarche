@@ -4,6 +4,8 @@ import {
   extractSitemapLocations,
   inspectRenderedSeoHtml,
   isCategoryPaginationPath,
+  PRIORITY_INTERNAL_LINK_REQUIREMENTS,
+  summarizePriorityInternalLinks,
 } from "./local-seo-audit";
 
 test("sitemapからURLを復元する", () => {
@@ -104,4 +106,24 @@ test("カテゴリの自己canonicalページ送りだけを追加巡回対象�
   assert.equal(isCategoryPaginationPath("/category/a?page=1"), false);
   assert.equal(isCategoryPaginationPath("/category/a?page=2&sort=new"), false);
   assert.equal(isCategoryPaginationPath("/search?page=2"), false);
+});
+
+test("優先テーマの相互導線を匿名件数で監査する", () => {
+  const complete = new Map<string, string[]>();
+  for (const requirement of PRIORITY_INTERNAL_LINK_REQUIREMENTS) {
+    const paths = complete.get(requirement.from) ?? [];
+    paths.push(requirement.to);
+    complete.set(requirement.from, paths);
+  }
+  assert.deepEqual(summarizePriorityInternalLinks(complete), {
+    required: PRIORITY_INTERNAL_LINK_REQUIREMENTS.length,
+    present: PRIORITY_INTERNAL_LINK_REQUIREMENTS.length,
+    missing: 0,
+  });
+
+  const incomplete = new Map(complete);
+  incomplete.set("/feature/imabari-towel-gifts", []);
+  const summary = summarizePriorityInternalLinks(incomplete);
+  assert.equal(summary.missing, 1);
+  assert.doesNotMatch(JSON.stringify(summary), /imabari|tsubame|feature/);
 });

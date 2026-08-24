@@ -9,6 +9,47 @@ function decodeMarkupValue(value: string): string {
 
 const PRODUCT_MERCHANT_SUMMARY_MAX_LENGTH = 600;
 
+export const PRIORITY_INTERNAL_LINK_REQUIREMENTS = [
+  { from: "/", to: "/region/tsubame-sanjo" },
+  { from: "/", to: "/feature/japanese-kitchen-knives" },
+  { from: "/", to: "/region/imabari" },
+  { from: "/", to: "/feature/imabari-towel-gifts" },
+  { from: "/", to: "/feature/japanese-green-tea" },
+  { from: "/", to: "/feature/rice-cookers" },
+  {
+    from: "/region/tsubame-sanjo",
+    to: "/feature/japanese-kitchen-knives",
+  },
+  {
+    from: "/feature/japanese-kitchen-knives",
+    to: "/region/tsubame-sanjo",
+  },
+  { from: "/region/imabari", to: "/feature/imabari-towel-gifts" },
+  { from: "/feature/imabari-towel-gifts", to: "/region/imabari" },
+] as const;
+
+export function summarizePriorityInternalLinks(
+  internalPathsByPage: ReadonlyMap<string, readonly string[]>,
+): { required: number; present: number; missing: number } {
+  let present = 0;
+  for (const requirement of PRIORITY_INTERNAL_LINK_REQUIREMENTS) {
+    const linkedPaths = internalPathsByPage.get(requirement.from) ?? [];
+    const found = linkedPaths.some((value) => {
+      try {
+        return new URL(value, "https://example.com").pathname === requirement.to;
+      } catch {
+        return false;
+      }
+    });
+    if (found) present++;
+  }
+  return {
+    required: PRIORITY_INTERNAL_LINK_REQUIREMENTS.length,
+    present,
+    missing: PRIORITY_INTERNAL_LINK_REQUIREMENTS.length - present,
+  };
+}
+
 function attribute(tag: string, name: string): string | null {
   const match = tag.match(
     new RegExp(`\\b${name}\\s*=\\s*(["'])(.*?)\\1`, "i"),

@@ -491,15 +491,12 @@ export default async function FeaturePage({ params }: Props) {
   const highlights = getProductHighlights(feature.slug, products);
   const isRevenueFocus = REVENUE_FOCUS_FEATURES.has(feature.slug);
   const usesProductComparison = PRODUCT_COMPARISON_FEATURES.has(feature.slug);
-  const relatedRegionLink =
-    feature.slug === "japanese-kitchen-knives"
-      ? COMMERCIAL_TOPICS.find(
-          (topic) =>
-            topic.href === `/feature/${feature.slug}` &&
-            topic.secondaryHref &&
-            topic.secondaryLabel,
-        )
-      : undefined;
+  const relatedRegionLink = COMMERCIAL_TOPICS.find(
+    (topic) =>
+      topic.href === `/feature/${feature.slug}` &&
+      topic.secondaryHref &&
+      topic.secondaryLabel,
+  );
   const comparisonChoices = highlights.map(({ label, product }) => ({
     label,
     product,

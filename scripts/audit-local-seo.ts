@@ -6,6 +6,7 @@ import {
   extractSitemapLocations,
   inspectRenderedSeoHtml,
   isCategoryPaginationPath,
+  summarizePriorityInternalLinks,
   type RenderedSeoInspection,
 } from "../src/lib/local-seo-audit";
 
@@ -224,6 +225,15 @@ async function main() {
     (path) => path !== "/" && (incoming.get(path) ?? 0) === 0,
   );
   const orphaned = orphanedPaths.length;
+  const priorityInternalLinks = summarizePriorityInternalLinks(
+    new Map(
+      results.flatMap((result) =>
+        result.inspection
+          ? [[result.path, result.inspection.internalPaths] as const]
+          : [],
+      ),
+    ),
+  );
   const productTrackingQueryLinks = results.reduce(
     (total, result) =>
       total + (result.inspection?.productTrackingQueryLinkCount ?? 0),
@@ -344,6 +354,7 @@ async function main() {
       orphaned,
       orphanedByPageKind: countByPageKind(orphanedPaths),
       homepageExempt: 1,
+      priorityThemes: priorityInternalLinks,
       productTrackingQueryLinks,
       filterLinksWithoutNofollow,
     },
@@ -383,6 +394,7 @@ async function main() {
     titleMissingPaths.length > 0 ||
     descriptionMissingPaths.length > 0 ||
     orphaned > 0 ||
+    priorityInternalLinks.missing > 0 ||
     productTrackingQueryLinks > 0 ||
     filterLinksWithoutNofollow > 0 ||
     jsonLdParseErrors > 0 ||
