@@ -34,6 +34,79 @@ body {
   font-family: var(--font-mincho);
 }
 
+/* Reading layouts are scoped to editorial pages; product grids keep their width. */
+.collection-header { padding-block: 1.75rem 2rem; }
+.collection-title {
+  margin-top: .75rem;
+  max-width: 52rem;
+  font-family: var(--font-mincho);
+  font-size: clamp(1.5rem, 3.5vw, 2.25rem);
+  font-weight: 600;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.collection-header > p { max-width: 46rem; line-height: 1.85; }
+.collection-jump-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem 1.5rem;
+  margin-top: 1.25rem;
+  font-size: .875rem;
+}
+.collection-jump-links a {
+  padding-block: .625rem;
+  color: var(--hinomaru);
+  text-decoration: underline;
+  text-underline-offset: .3em;
+}
+.collection-page a:focus-visible, .reading-page a:focus-visible {
+  outline: 2px solid var(--hinomaru);
+  outline-offset: 4px;
+}
+.collection-products { padding-block: 2rem 3rem; }
+.collection-products, .collection-guide, .collection-anchor { scroll-margin-top: 9rem; }
+.collection-products h2 { font-size: clamp(1.25rem, 2.5vw, 1.75rem); line-height: 1.6; }
+.collection-guide { border-top: 1px solid var(--line); padding-block: 2rem; }
+.reading-column { max-width: 50rem; margin-inline: auto; padding-inline: 1.25rem; }
+.reading-column h2 { font-size: 1.25rem; font-weight: 600; line-height: 1.65; }
+.guide-intro { margin-top: 1rem; color: var(--sumi-soft); line-height: 1.9; }
+.guide-points { margin-top: 1.5rem; list-style: none; }
+.guide-points > li, .guide-points > div {
+  display: grid;
+  gap: .5rem;
+  padding-block: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+.guide-points h3, .guide-points dt { font-size: 1rem; font-weight: 600; line-height: 1.75; }
+.guide-points p, .guide-points dd { color: var(--sumi-soft); font-size: .9375rem; line-height: 1.9; }
+.guide-sources { margin-top: 1.5rem; font-size: .8125rem; line-height: 1.8; }
+.guide-sources > p { color: var(--sumi-soft); }
+.guide-sources ul { display: grid; gap: .5rem; margin-top: .5rem; }
+.guide-sources a, .guide-related-link { color: var(--hinomaru); text-decoration: underline; text-underline-offset: .2em; overflow-wrap: anywhere; }
+.guide-related-link { display: inline-block; margin-top: 1.5rem; padding-block: .5rem; font-size: .875rem; }
+.collection-related { border-top: 1px solid var(--line); }
+.collection-topic-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding-block: .5rem;
+  color: var(--hinomaru);
+  text-decoration: underline;
+  text-underline-offset: .25em;
+  text-decoration-thickness: 1px;
+}
+.collection-topic-link:hover { text-decoration-thickness: 2px; }
+.collection-topic-link:focus-visible { outline: 2px solid var(--hinomaru); outline-offset: 4px; }
+.reading-page { line-height: 1.9; }
+.reading-page h1, .reading-page h2 { line-height: 1.6; }
+.reading-page section { line-height: 1.9; }
+@media (min-width: 640px) {
+  .collection-header { padding-block: 2rem 2.5rem; }
+  .collection-guide { padding-block: 2.5rem; }
+  .guide-points > li, .guide-points > div { grid-template-columns: minmax(0, 12rem) minmax(0, 1fr); gap: 1.5rem; }
+  .reading-column h2 { font-size: 1.5rem; }
+}
+
 /* 縦書きラベル(産地・カテゴリ表示のアクセント) */
 .tategaki {
   writing-mode: vertical-rl;

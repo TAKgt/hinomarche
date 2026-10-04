@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { SelectionGuide } from "@/components/SelectionGuide";
 import { JsonLd } from "@/components/JsonLd";
 import { ProductCard } from "@/components/ProductCard";
 import { GiftProductHero } from "@/components/GiftProductHero";
@@ -446,7 +447,14 @@ function comparisonHeading(slug: string): string {
   if (slug === "japanese-green-tea") {
     return "ティーバッグ・粉末・茶葉から候補を比べる";
   }
-  return "比較の入口";
+  const headings: Record<string, string> = {
+    "gifts-under-5000-yen": "5,000円以下のギフトを価格帯で比べる",
+    "imabari-towel-gifts": "今治タオルを贈る用途とセット内容で比べる",
+    "japanese-kitchen-knives": "包丁をレビュー件数・価格・AI日本度で比べる",
+    "iron-frying-pans": "フライパンを用途と手入れの表示で比べる",
+    "regional-japanese-rice": "お米を通常購入・無洗米・返礼品から比べる",
+  };
+  return headings[slug] ?? "用途に合う商品を比べる";
 }
 
 export function generateStaticParams() {
@@ -534,11 +542,11 @@ export default async function FeaturePage({ params }: Props) {
   ];
 
   return (
-    <div>
+    <div className="collection-page">
       <JsonLd data={structuredData} />
       <header className="border-b border-line">
-        <div className={`mx-auto max-w-6xl px-5 ${isGiftLanding ? "py-7 md:py-9" : "py-12 md:py-16"}`}>
-          <nav className={`${isGiftLanding ? "mb-5" : "mb-8"} text-xs text-sumi-soft`} aria-label="パンくず">
+        <div className="collection-header mx-auto max-w-6xl px-5">
+          <nav className="mb-5 text-xs text-sumi-soft" aria-label="パンくず">
             <Link href="/" className="hover:text-hinomaru">ホーム</Link>
             <span className="mx-2">/</span>
             <Link href="/feature" className="hover:text-hinomaru">特集</Link>
@@ -546,88 +554,31 @@ export default async function FeaturePage({ params }: Props) {
           <p className="text-xs font-medium tracking-[0.3em] text-hinomaru">
             {feature.eyebrow}
           </p>
-          <h1
-            className={`mt-3 max-w-4xl font-mincho text-3xl font-semibold leading-snug md:text-5xl ${
-              feature.slug === "rice-cookers" ? "text-balance" : ""
-            }`}
-          >
+          <h1 className="collection-title">
             {feature.title}
           </h1>
-          {!isGiftLanding && (
-            <>
-              <p className="mt-5 max-w-3xl leading-relaxed text-sumi-soft">
-                {feature.description}
-              </p>
-              <p className="mt-3 text-xs leading-relaxed text-sumi-soft">
-                ※ AI日本度は商品情報をもとにした推定です。正確な生産国・原産地は販売ページでご確認ください。
-              </p>
-            </>
-          )}
+          <p className="mt-4 max-w-3xl leading-relaxed text-sumi-soft">
+            {feature.description}
+          </p>
+          <p className="mt-3 text-xs leading-relaxed text-sumi-soft">
+            ※ AI日本度は商品情報をもとにした推定です。正確な生産国・原産地は販売ページでご確認ください。
+          </p>
+
+          <nav className="collection-jump-links" aria-label="ページ内の案内">
+            <a href={isGiftLanding && highlights[0] ? "#gift-candidate" : "#products"}>商品を見る</a>
+            {feature.selectionGuide && <a href="#selection-guide">選び方を読む</a>}
+            <a href="#related-features">関連する特集</a>
+          </nav>
         </div>
       </header>
 
       {isGiftLanding && highlights[0] && (
-        <GiftProductHero product={highlights[0].product} surfaceKey={slug} />
+        <div id="gift-candidate" className="collection-anchor">
+          <GiftProductHero product={highlights[0].product} surfaceKey={slug} />
+        </div>
       )}
 
-      {feature.selectionGuide && (
-        <section className="border-b border-line bg-washi-deep/35">
-          <div className="mx-auto max-w-6xl px-5 py-10 md:py-12">
-            <h2 className="font-mincho text-2xl font-semibold md:text-3xl">
-              {feature.selectionGuide.title}
-            </h2>
-            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-sumi-soft md:text-base">
-              {feature.selectionGuide.description}
-            </p>
-            <ol className="mt-7 grid gap-4 md:grid-cols-3">
-              {feature.selectionGuide.points.map((point, index) => (
-                <li key={point.title} className="border border-line bg-white/60 p-5">
-                  <p className="text-xs font-medium tracking-[0.18em] text-hinomaru">
-                    POINT {index + 1}
-                  </p>
-                  <h3 className="mt-2 font-mincho text-lg font-semibold">{point.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
-                    {point.description}
-                  </p>
-                </li>
-              ))}
-            </ol>
-            {feature.selectionGuide.officialLinks &&
-              feature.selectionGuide.officialLinks.length > 0 && (
-                <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-xs text-sumi-soft">
-                  <span>公式情報:</span>
-                  {feature.selectionGuide.officialLinks.map((link) => (
-                    <a
-                      key={link.href}
-                      href={link.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-medium text-hinomaru hover:underline"
-                    >
-                      {link.label} ↗
-                    </a>
-                  ))}
-                </div>
-              )}
-            {relatedRegionLink?.secondaryHref && relatedRegionLink.secondaryLabel && (
-              <nav
-                className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm"
-                aria-label="関連する産地・工芸"
-              >
-                <span className="text-sumi-soft">関連ページ:</span>
-                <Link
-                  href={relatedRegionLink.secondaryHref}
-                  className="font-medium text-hinomaru hover:underline"
-                >
-                  {relatedRegionLink.secondaryLabel} →
-                </Link>
-              </nav>
-            )}
-          </div>
-        </section>
-      )}
-
-      <section className="mx-auto max-w-6xl px-5 py-12 md:py-16">
+      <section id="products" className="collection-products mx-auto max-w-6xl px-5">
         {!isGiftLanding && highlights.length > 0 && (
           <div className="mb-14">
             <div className="border-b border-line pb-4">
@@ -659,15 +610,15 @@ export default async function FeaturePage({ params }: Props) {
             )}
           </div>
         )}
-        <div className="flex items-end justify-between gap-4 border-b border-line pb-4">
+        <div className="flex items-start justify-between gap-4 border-b border-line pb-4">
           <h2 className="font-mincho text-2xl font-semibold">
             {isGiftLanding
               ? "ほかの贈りものを見る"
               : highlights.length > 0
                 ? "条件に合う商品をさらに見る"
-                : "注目商品"}
+                : `${feature.shortTitle}の商品一覧`}
           </h2>
-          <p className="text-sm text-sumi-soft">{products.length}件</p>
+          <p className="shrink-0 text-sm text-sumi-soft">{remainingProducts.length}件</p>
         </div>
         {remainingProducts.length > 0 ? (
           <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
@@ -682,19 +633,31 @@ export default async function FeaturePage({ params }: Props) {
             ))}
           </div>
         ) : (
-          <p className="py-16 text-center text-sumi-soft">条件に合う公開商品を準備中です。</p>
+          <p className="py-10 text-center text-sumi-soft">
+            {products.length > 0 ? "条件に合う商品は上の比較欄に掲載しています。" : "条件に合う公開商品を準備中です。"}
+          </p>
         )}
       </section>
+
+      {feature.selectionGuide && (
+        <SelectionGuide guide={feature.selectionGuide}>
+          {relatedRegionLink?.secondaryHref && relatedRegionLink.secondaryLabel && (
+            <Link href={relatedRegionLink.secondaryHref} className="guide-related-link">
+              {relatedRegionLink.secondaryLabel} →
+            </Link>
+          )}
+        </SelectionGuide>
+      )}
 
       {isRevenueFocus && (
         <CommercialTopicNav
           topics={COMMERCIAL_TOPICS.filter((topic) => topic.href !== `/feature/${feature.slug}`)}
-          heading="次の購入目的も続けて比較"
-          description="商品を広く探し直さず、予算や用途が近い別テーマへ移動できます。"
+          compact
+          heading="用途・予算が近い特集"
         />
       )}
 
-      <nav className="border-y border-line bg-washi-deep/40" aria-label="他の特集">
+      <nav id="related-features" className="collection-anchor border-y border-line" aria-label="他の特集">
         <div className="mx-auto grid max-w-6xl md:grid-cols-2 lg:grid-cols-4">
           {relatedFeatures.map((item) => (
             <Link

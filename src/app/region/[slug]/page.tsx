@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { SelectionGuide } from "@/components/SelectionGuide";
 import { JsonLd } from "@/components/JsonLd";
 import { ProductCard } from "@/components/ProductCard";
 import {
@@ -244,11 +245,11 @@ export default async function RegionPage({ params }: Props) {
   ];
 
   return (
-    <div>
+    <div className="collection-page">
       <JsonLd data={structuredData} />
       <header className="border-b border-line">
-        <div className="mx-auto max-w-6xl px-5 py-12 md:py-16">
-          <nav className="mb-8 text-xs text-sumi-soft" aria-label="パンくず">
+        <div className="collection-header mx-auto max-w-6xl px-5">
+          <nav className="mb-5 text-xs text-sumi-soft" aria-label="パンくず">
             <Link href="/" className="hover:text-hinomaru">ホーム</Link>
             <span className="mx-2">/</span>
             <Link href="/region" className="hover:text-hinomaru">産地・工芸</Link>
@@ -256,10 +257,10 @@ export default async function RegionPage({ params }: Props) {
           <p className="text-xs font-medium tracking-[0.3em] text-hinomaru">
             {region.eyebrow} / CRAFT &amp; ORIGIN
           </p>
-          <h1 className="mt-3 max-w-4xl font-mincho text-3xl font-semibold leading-snug md:text-5xl">
+          <h1 className="collection-title">
             {region.titleChunks
               ? region.titleChunks.map((chunk) => (
-                  <span key={chunk} className="inline-block">
+                  <span key={chunk} className="inline-block max-w-full">
                     {chunk}
                   </span>
                 ))
@@ -271,209 +272,16 @@ export default async function RegionPage({ params }: Props) {
           <p className="mt-3 text-xs leading-relaxed text-sumi-soft">
             ※ 産地・工芸名は取得時の商品名に基づきます。AI日本度は推定であり、正確な生産国・原産地は販売ページでご確認ください。
           </p>
+
+          <nav className="collection-jump-links" aria-label="ページ内の案内">
+            <a href="#products">商品を見る</a>
+            {region.selectionGuide && <a href="#selection-guide">選び方を読む</a>}
+            <a href="#related-regions">他の産地・工芸</a>
+          </nav>
         </div>
       </header>
 
-      {region.selectionGuide && (
-        <section className="border-b border-line bg-washi-deep/35">
-          <div className="mx-auto max-w-6xl px-5 py-10 md:py-12">
-            <h2 className="font-mincho text-2xl font-semibold md:text-3xl">
-              {region.selectionGuide.title}
-            </h2>
-            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-sumi-soft md:text-base">
-              {region.selectionGuide.description}
-            </p>
-            <ol className="mt-7 grid gap-4 md:grid-cols-3">
-              {region.selectionGuide.points.map((point, index) => (
-                <li key={point.title} className="border border-line bg-white/60 p-5">
-                  <p className="text-xs font-medium tracking-[0.18em] text-hinomaru">
-                    POINT {index + 1}
-                  </p>
-                  <h3 className="mt-2 font-mincho text-lg font-semibold">{point.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
-                    {point.description}
-                  </p>
-                </li>
-              ))}
-            </ol>
-            {region.selectionGuide.relatedLink && (
-              <Link
-                href={region.selectionGuide.relatedLink.href}
-                className="mt-6 inline-flex border-b border-hinomaru pb-1 text-sm font-medium text-hinomaru transition-colors hover:text-hinomaru-deep"
-              >
-                {region.selectionGuide.relatedLink.label} →
-              </Link>
-            )}
-          </div>
-        </section>
-      )}
-
-      {region.slug === "imabari" && (
-        <section className="border-b border-line">
-          <div className="mx-auto max-w-6xl px-5 py-10 md:py-12">
-            <h2 className="font-mincho text-2xl font-semibold md:text-3xl">
-              ふるさと納税で今治タオルを選ぶときの確認事項
-            </h2>
-            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-sumi-soft md:text-base">
-              返礼品のカードに表示する金額は、申込先から取得した寄付額です。
-              通常販売の商品価格とは分けて見てください。候補を開いたら、
-              タオルの種類・枚数・色、発送時期、申込条件を申込先で確認します。
-            </p>
-            <div className="mt-7 grid gap-4 md:grid-cols-3">
-              <div className="border border-line bg-white/60 p-5">
-                <h3 className="font-mincho text-lg font-semibold">
-                  寄付額と商品価格を分ける
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
-                  返礼品カードの金額は寄付額として表示します。
-                  通常販売の商品と同じ価格比較には使いません。
-                </p>
-              </div>
-              <div className="border border-line bg-white/60 p-5">
-                <h3 className="font-mincho text-lg font-semibold">
-                  内容と発送時期を申込先で確認
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
-                  候補を開き、タオルの種類・枚数・色、発送時期を申込先で確認します。
-                  ヒノマルシェの取得日もあわせて確認してください。
-                </p>
-              </div>
-              <div className="border border-line bg-white/60 p-5">
-                <h3 className="font-mincho text-lg font-semibold">
-                  申込条件と認定表示を確認
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
-                  今治市内在住者には返礼品が提供されません。
-                  今治タオルブランド認定品を探す場合は、商品ページのブランドマークや認定表示を確認します。
-                </p>
-              </div>
-            </div>
-            <div className="mt-6 flex flex-col items-start gap-3 text-sm sm:flex-row sm:gap-6">
-              <a
-                href="https://www.city.imabari.ehime.jp/furusato-nouzei/003/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="border-b border-hinomaru pb-1 font-medium text-hinomaru transition-colors hover:text-hinomaru-deep"
-              >
-                今治市の寄附・返礼品案内（公式）↗
-              </a>
-              <a
-                href="https://www.imabaritowel.jp/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="border-b border-hinomaru pb-1 font-medium text-hinomaru transition-colors hover:text-hinomaru-deep"
-              >
-                今治タオルの品質基準（公式）↗
-              </a>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {region.slug === "tsubame-sanjo" && (
-        <section className="border-b border-line">
-          <div className="mx-auto max-w-6xl px-5 py-10 md:py-12">
-            <h2 className="font-mincho text-2xl font-semibold md:text-3xl">
-              「燕三条」表記の商品を選ぶときの確認事項
-            </h2>
-            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-sumi-soft md:text-base">
-              燕三条地場産業振興センターは、燕の洋食器・金属加工と、
-              三条の刃物・包丁を地域産業として案内しています。
-              ヒノマルシェの掲載条件は取得時の商品名の表記です。
-              個別商品の製造地や生産国は販売ページで確認してください。
-            </p>
-            <div className="mt-7 grid gap-4 md:grid-cols-3">
-              <div className="border border-line bg-white/60 p-5">
-                <h3 className="font-mincho text-lg font-semibold">
-                  「燕三条」表記と製造地を分ける
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
-                  掲載対象は、商品名に「燕三条」「燕市」「三条市」の表記がある商品です。
-                  商品名の表記だけで製造地や認定を決めず、販売ページで確認します。
-                </p>
-              </div>
-              <div className="border border-line bg-white/60 p-5">
-                <h3 className="font-mincho text-lg font-semibold">
-                  水切りラックは設置寸法を確認
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
-                  置き場所を測り、幅・奥行き・高さ、伸縮範囲、
-                  排水方向を販売ページで確認します。
-                </p>
-              </div>
-              <div className="border border-line bg-white/60 p-5">
-                <h3 className="font-mincho text-lg font-semibold">
-                  包丁と調理小物は用途と仕様を確認
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-sumi-soft">
-                  包丁は種類と刃渡り、対応する食材、素材を確認します。
-                  調理小物は寸法と素材、手入れ方法を販売ページで確認します。
-                </p>
-              </div>
-            </div>
-            <div className="mt-6 flex flex-col items-start gap-3 text-sm sm:flex-row sm:gap-6">
-              <a
-                href="https://www.tsjiba.or.jp/kankou/about/index.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="border-b border-hinomaru pb-1 font-medium text-hinomaru transition-colors hover:text-hinomaru-deep"
-              >
-                燕三条地場産業振興センター「物産館について」↗
-              </a>
-              <a
-                href="https://www.tsjiba.or.jp/kankou/item/index.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="border-b border-hinomaru pb-1 font-medium text-hinomaru transition-colors hover:text-hinomaru-deep"
-              >
-                燕三条地場産業振興センター「包丁の種類」↗
-              </a>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {region.slug === "tsubame-sanjo" && (
-        <section className="border-b border-line bg-washi-deep/35">
-          <div className="mx-auto max-w-6xl px-5 py-10 md:py-12">
-            <h2 className="font-mincho text-2xl font-semibold md:text-3xl">
-              このページの掲載条件と確認方法
-            </h2>
-            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-sumi-soft md:text-base">
-              商品名に地域名があるだけで、個別商品の製造地や認定を決めることはできません。
-              ヒノマルシェでは、掲載条件、候補の選び方、公式情報で確認した内容を分けて表示します。
-            </p>
-            <dl className="mt-7 grid gap-4 md:grid-cols-3">
-              <div className="border border-line bg-white/60 p-5">
-                <dt className="font-mincho text-lg font-semibold">掲載する商品</dt>
-                <dd className="mt-2 text-sm leading-relaxed text-sumi-soft">
-                  取得時の商品名に「燕三条」「燕市」「三条市」のいずれかがあり、
-                  AI日本度80%以上で公開中の商品を表示します。価格には取得日を併記します。
-                </dd>
-              </div>
-              <div className="border border-line bg-white/60 p-5">
-                <dt className="font-mincho text-lg font-semibold">3候補の選び方</dt>
-                <dd className="mt-2 text-sm leading-relaxed text-sumi-soft">
-                  水切りラック、5,000円以下の包丁、1,000円以下の調理小物に分け、
-                  商品名と取得価格で条件を絞り、販売先レビュー件数とAI日本度を確認して候補を選びます。
-                </dd>
-              </div>
-              <div className="border border-line bg-white/60 p-5">
-                <dt className="font-mincho text-lg font-semibold">人が確認する情報とAIの範囲</dt>
-                <dd className="mt-2 text-sm leading-relaxed text-sumi-soft">
-                  産業と包丁の種類は運営者が公式情報を確認しました。商品抽出とAI日本度には
-                  自動処理を使っています。AI日本度は製造地や原産地を保証しません。
-                </dd>
-              </div>
-            </dl>
-            <p className="mt-5 text-xs leading-relaxed text-sumi-soft">
-              公式情報の確認日: <time dateTime="2026-08-09">2026年8月9日</time>
-            </p>
-          </div>
-        </section>
-      )}
-
-      <section className="mx-auto max-w-6xl px-5 py-12 md:py-16">
+      <section id="products" className="collection-products mx-auto max-w-6xl px-5">
         {highlights.length > 0 && (
           <div className="mb-14">
             <div className="border-b border-line pb-4">
@@ -505,11 +313,11 @@ export default async function RegionPage({ params }: Props) {
             )}
           </div>
         )}
-        <div className="flex items-end justify-between gap-4 border-b border-line pb-4">
+        <div className="flex items-start justify-between gap-4 border-b border-line pb-4">
           <h2 className="font-mincho text-2xl font-semibold">
-            {highlights.length > 0 ? "条件に合う商品をさらに見る" : "注目商品"}
+            {highlights.length > 0 ? "条件に合う商品をさらに見る" : `${region.name}の商品一覧`}
           </h2>
-          <p className="text-sm text-sumi-soft">{products.length}件</p>
+          <p className="shrink-0 text-sm text-sumi-soft">{remainingProducts.length}件</p>
         </div>
         {remainingProducts.length > 0 ? (
           <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
@@ -524,21 +332,96 @@ export default async function RegionPage({ params }: Props) {
             ))}
           </div>
         ) : (
-          <p className="py-16 text-center text-sumi-soft">条件に合う公開商品を準備中です。</p>
+          <p className="py-10 text-center text-sumi-soft">
+            {products.length > 0 ? "条件に合う商品は上の比較欄に掲載しています。" : "条件に合う公開商品を準備中です。"}
+          </p>
         )}
       </section>
+
+      {region.selectionGuide && (
+        <SelectionGuide guide={region.selectionGuide}>
+          {region.selectionGuide.relatedLink && (
+            <Link href={region.selectionGuide.relatedLink.href} className="guide-related-link">
+              {region.selectionGuide.relatedLink.label} →
+            </Link>
+          )}
+        </SelectionGuide>
+      )}
+
+      {region.slug === "imabari" && (
+        <section className="collection-guide">
+          <div className="reading-column">
+            <h2>今治タオルの返礼品は寄付額・発送時期を確認する</h2>
+            <p className="guide-intro">
+              返礼品カードの金額は、申込先から取得した寄付額です。
+              通常販売の商品価格とは分けて比べてください。
+              タオルの種類・枚数・色、発送時期、申込条件は申込先で確認します。
+              ヒノマルシェに表示した取得日もあわせて確認してください。
+            </p>
+            <p className="guide-intro">
+              今治市内在住者には返礼品が提供されません。
+              今治タオルブランド認定品を探す場合は、商品ページのブランドマークや認定表示を確認します。
+            </p>
+            <div className="guide-sources">
+              <p>参考にした公式情報</p>
+              <ul>
+                <li><a href="https://www.city.imabari.ehime.jp/furusato-nouzei/003/" target="_blank" rel="noopener noreferrer">今治市の寄附・返礼品案内 ↗</a></li>
+                <li><a href="https://www.imabaritowel.jp/" target="_blank" rel="noopener noreferrer">今治タオルの品質基準 ↗</a></li>
+              </ul>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {region.slug === "tsubame-sanjo" && (
+        <section className="collection-guide">
+          <div className="reading-column">
+            <h2>燕三条の産業と商品の製造地を分けて確認する</h2>
+            <p className="guide-intro">
+              燕三条地場産業振興センターは、燕の洋食器・金属加工と、三条の刃物・包丁を地域産業として案内しています。
+              商品名に地域名があっても、個別商品の製造地や認定までは判断できません。
+              正確な製造地・生産国は販売ページで確認してください。
+            </p>
+            <div className="guide-sources">
+              <p>参考にした公式情報</p>
+              <ul>
+                <li><a href="https://www.tsjiba.or.jp/kankou/about/index.html" target="_blank" rel="noopener noreferrer">燕三条地場産業振興センター「物産館について」↗</a></li>
+                <li><a href="https://www.tsjiba.or.jp/kankou/item/index.html" target="_blank" rel="noopener noreferrer">燕三条地場産業振興センター「包丁の種類」↗</a></li>
+              </ul>
+            </div>
+            <h2 className="mt-10">燕三条の掲載条件と候補の選び方</h2>
+            <dl className="guide-points">
+              <div>
+                <dt>掲載する商品</dt>
+                <dd>取得時の商品名に「燕三条」「燕市」「三条市」のいずれかがあり、AI日本度80%以上で公開中の商品を表示します。価格には取得日を併記します。</dd>
+              </div>
+              <div>
+                <dt>比較候補の選び方</dt>
+                <dd>水切りラック、5,000円以下の包丁、1,000円以下の調理小物から候補を選びます。商品名と取得価格で絞り、販売先レビュー件数とAI日本度を確認しています。</dd>
+              </div>
+              <div>
+                <dt>公式情報とAI推定の範囲</dt>
+                <dd>地域産業と包丁の種類は、運営者が公式情報を確認しました。商品抽出とAI日本度には自動処理を使っています。AI日本度は製造地や原産地を保証しません。</dd>
+              </div>
+            </dl>
+            <p className="mt-5 text-xs leading-relaxed text-sumi-soft">
+              運営者による公式情報の確認日 <time dateTime="2026-08-09">2026年8月9日</time>
+            </p>
+          </div>
+        </section>
+      )}
 
       {isRevenueFocus && (
         <CommercialTopicNav
           topics={COMMERCIAL_TOPICS.filter(
             (topic) => topic.secondaryHref !== `/region/${region.slug}`,
           )}
-          heading="用途の近い比較ページへ"
-          description="地域名だけで広く探さず、包丁・タオルギフト・予算別ギフトへ候補を絞れます。"
+          compact
+          heading="用途・予算が近い特集"
         />
       )}
 
-      <nav className="border-y border-line bg-washi-deep/40" aria-label="他の産地・工芸">
+      <nav id="related-regions" className="collection-anchor border-y border-line" aria-label="他の産地・工芸">
         <div className="mx-auto grid max-w-6xl grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
           {REGIONS.filter((item) => item.slug !== region.slug).map((item) => (
             <Link

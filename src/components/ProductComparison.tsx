@@ -149,11 +149,13 @@ export function ProductComparison({
             </dl>
 
             <div className="mt-4 flex-1">
-              <p className="text-xs font-medium text-sumi">この候補の選定理由</p>
-              <p className="mt-1 text-xs leading-relaxed text-sumi-soft">{reason}</p>
-              <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-sumi-soft">
+              <p className="text-xs leading-relaxed text-sumi-soft">
                 <span className="font-medium text-sumi">AI判定根拠：</span>{product.evidenceText}
               </p>
+              <details className="mt-3 text-xs leading-relaxed text-sumi-soft">
+                <summary className="cursor-pointer py-2 font-medium text-sumi focus-visible:outline-2 focus-visible:outline-hinomaru">この候補の選び方</summary>
+                <p className="mt-1">{reason}</p>
+              </details>
             </div>
 
             <Link href={detailUrl} className="mt-4 block text-center text-xs font-medium text-hinomaru hover:underline">

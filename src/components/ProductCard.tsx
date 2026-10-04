@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Product } from "@/lib/types";
-import { formatPrice, SOURCE_LABEL } from "@/lib/format";
+import { formatDate, formatPrice, SOURCE_LABEL } from "@/lib/format";
 import { ScoreRing } from "./ScoreRing";
 import { CheckMarksCompact } from "./CheckMarks";
 import { displayProductTitle } from "@/lib/product-title";
@@ -75,6 +75,7 @@ export function ProductCard({
           </span>
           <div className="absolute bottom-2 right-2 md:hidden">
             <ScoreRing score={product.score} size={44} />
+            <span className="mt-1 block rounded-sm bg-white px-1 py-0.5 text-center text-[10px] text-sumi">AI推定</span>
           </div>
         </div>
 
@@ -92,6 +93,11 @@ export function ProductCard({
             <p className="mt-2 font-mincho text-lg font-semibold md:mt-1.5">
               {formatPrice(product.price)}
             </p>
+            {product.price != null && (
+              <p className="mt-1 text-[10px] leading-relaxed text-sumi-soft">
+                価格取得: {formatDate(product.priceUpdatedAt)}
+              </p>
+            )}
             {hasReview && (
               <p
                 className="mt-1 text-[11px] leading-tight text-sumi-soft"

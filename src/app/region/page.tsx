@@ -42,18 +42,18 @@ export default function RegionIndexPage() {
   ];
 
   return (
-    <div>
+    <div className="collection-page">
       <JsonLd data={structuredData} />
       <header className="border-b border-line">
-        <div className="mx-auto max-w-6xl px-5 py-12 md:py-16">
-          <nav className="mb-8 text-xs text-sumi-soft" aria-label="パンくず">
+        <div className="collection-header mx-auto max-w-6xl px-5">
+          <nav className="mb-5 text-xs text-sumi-soft" aria-label="パンくず">
             <Link href="/" className="hover:text-hinomaru">ホーム</Link>
             <span className="mx-2">/</span>
             <span>産地・工芸</span>
           </nav>
           <p className="text-xs font-medium tracking-[0.3em] text-hinomaru">CRAFT &amp; ORIGIN</p>
-          <h1 className="mt-3 font-mincho text-3xl font-semibold md:text-5xl">{title}</h1>
-          <p className="mt-5 max-w-3xl leading-relaxed text-sumi-soft">{description}</p>
+          <h1 className="collection-title">{title}</h1>
+          <p className="mt-4 max-w-3xl leading-relaxed text-sumi-soft">{description}</p>
         </div>
       </header>
 

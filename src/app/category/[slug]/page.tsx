@@ -147,7 +147,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   ];
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-12">
+    <div className="collection-page mx-auto max-w-6xl px-5 py-8">
       <JsonLd data={structuredData} />
       <nav className="mb-8 text-xs text-sumi-soft" aria-label="パンくず">
         <Link href="/" className="hover:text-hinomaru">ホーム</Link>
@@ -165,15 +165,18 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           <p className="text-xs tracking-[0.35em] text-hinomaru font-medium uppercase">
             Category
           </p>
-          <h1 className="mt-2 text-balance [word-break:auto-phrase] font-mincho text-3xl font-semibold md:text-4xl">
+          <h1 className="collection-title">
             {category.name}
           </h1>
-          <p className="mt-3 text-sm text-sumi-soft max-w-2xl leading-relaxed">
+          <p className="mt-3 max-w-2xl text-base leading-[1.9] text-sumi-soft">
             {content.intro}
           </p>
           <p className="mt-3 text-xs text-sumi-soft max-w-2xl leading-relaxed">
             ※ AI日本度は商品情報をもとにした推定です。正確な生産国・原産地は販売ページでご確認ください。
           </p>
+          <nav className="collection-jump-links" aria-label="ページ内の案内">
+            <a href="#category-products">商品を絞り込む</a>
+          </nav>
         </div>
       </div>
 
@@ -254,7 +257,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         </nav>
       )}
 
-      <div className="mt-8 space-y-4 md:space-y-3 border-b border-line pb-4">
+      <div id="category-products" className="collection-anchor mt-8 space-y-4 md:space-y-3 border-b border-line pb-4">
         <div className="md:flex md:items-center md:gap-2">
           <span className="block md:w-16 text-xs text-sumi-soft mb-1.5 md:mb-0">
             並び順

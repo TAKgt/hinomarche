@@ -88,6 +88,10 @@ export function GiftProductHero({
               <dd className="font-medium">{product.evidenceType}</dd>
             </dl>
 
+            <p className="mt-4 text-sm leading-relaxed text-sumi-soft">
+              <span className="font-medium text-sumi">AI判定根拠：</span>{product.evidenceText}
+            </p>
+
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
               <Link
                 href={detailUrl}

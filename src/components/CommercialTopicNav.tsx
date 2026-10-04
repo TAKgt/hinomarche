@@ -6,13 +6,35 @@ export function CommercialTopicNav({
   heading = "目的・予算から探す",
   description = "用途や予算に合うテーマから商品を探せます。",
   showSecondary = true,
+  compact = false,
 }: {
   topics: CommercialTopic[];
   heading?: string;
   description?: string;
   showSecondary?: boolean;
+  compact?: boolean;
 }) {
   if (topics.length === 0) return null;
+
+  if (compact) {
+    return (
+      <nav className="collection-related" aria-label={heading}>
+        <div className="mx-auto max-w-6xl px-5 py-8">
+          <h2 className="font-mincho text-xl font-semibold">{heading}</h2>
+          <ul className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            {topics.map((topic) => (
+              <li key={topic.slug} className="flex flex-wrap gap-x-4 gap-y-2">
+                <Link href={topic.href} className="collection-topic-link">{topic.title}</Link>
+                {showSecondary && topic.secondaryHref && topic.secondaryLabel && (
+                  <Link href={topic.secondaryHref} className="collection-topic-link">{topic.secondaryLabel}</Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <section className="border-b border-line bg-white/25">

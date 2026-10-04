@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
-    <div className="mx-auto max-w-3xl px-5 py-14">
+    <div className="reading-page mx-auto max-w-3xl px-5 py-10">
       <p className="text-xs tracking-[0.35em] text-hinomaru font-medium uppercase">
         About
       </p>
@@ -35,7 +35,7 @@ export default function AboutPage() {
           Amazonと楽天市場の販売ページを紹介しています。
         </p>
         <p>
-          燕三条の金属加工、堺の刃物、有田焼や波佐見焼の器、今治のタオル——
+          燕三条の金属加工、堺の刃物、有田焼や波佐見焼の器、今治のタオルなど、
           日本各地のものづくりを、産地や商品情報を手がかりに探せます。
           AI日本度だけでなく、その判定根拠も確認できる形で掲載しています。
         </p>
@@ -46,8 +46,8 @@ export default function AboutPage() {
           AI日本度は商品情報をもとにしたAI推定です
         </h2>
         <p>
-          掲載商品には「AI日本度（AI推定）」を表示しています。AI(大規模言語モデル)が
-          商品名・商品説明・メーカー・ブランド情報を解析し、次の基準で0〜100点に推定したものです。
+          掲載商品には「AI日本度（AI推定）」を表示しています。AIが
+          商品名・商品説明・メーカー・ブランド情報をもとに、次の基準で0〜100点に推定したものです。
         </p>
         <ul className="space-y-3 border border-line bg-white/60 p-5 text-sm">
           <li className="flex gap-3">
@@ -64,18 +64,18 @@ export default function AboutPage() {
           </li>
         </ul>
         <p>
-          スコアには必ず<strong>判定根拠</strong>(何を根拠にそう判定したか)を添えています。
+          スコアには、何を根拠に判定したかを必ず添えています。
         </p>
       </section>
 
       <section className="mt-12 space-y-4 leading-relaxed">
         <h2 className="font-mincho text-xl font-semibold border-l-4 border-hinomaru pl-3">
-          注目順はAI日本度と市場性シグナルを組み合わせます
+          注目順にはAI日本度・レビュー・紹介料率などを使います
         </h2>
         <p>
           TOPページやカテゴリの「注目順」では、AI日本度の高さを前提に、モール内の検索順位、
-          レビュー件数、レビュー平均、紹介料率などの市場性シグナルも加味しています。
-          日本度が高くても、購入ニーズが弱いと推定される商品は後ろに回ることがあります。
+          レビュー件数・平均評価、紹介料率なども考慮しています。
+          AI日本度が高くても、購入ニーズが弱いと推定される商品は後ろに表示されることがあります。
         </p>
       </section>
 
